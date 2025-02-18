@@ -2,7 +2,7 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 
 export type TreeContextProps = {
   /**
@@ -29,6 +29,10 @@ export type TreeContextProps = {
    * Function that scrolls to the node's parent node.
    */
   scrollToParent?: () => void;
+  /**
+   * Size of the tree.
+   */
+  size?: 'default' | 'small';
 };
 
 export const TreeContext = React.createContext<TreeContextProps | undefined>(

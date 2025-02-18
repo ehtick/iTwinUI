@@ -1,26 +1,46 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
+@use './base';
 
-// Internal mixin used as base for other components.
-@mixin iui-surface(
-  $background-color: var(--iui-color-background),
-  $border-color: var(--iui-color-border-subtle),
-  $border-radius: var(--iui-border-radius-1),
-  $elevation: var(--iui-shadow-1)
-) {
-  --iui-surface-background-color: #{$background-color};
-  --iui-surface-border-color: #{$border-color};
-  --iui-surface-border-radius: #{$border-radius};
-  --iui-surface-elevation: #{$elevation};
+$surface-padding: var(--iui-size-s);
+$surface-padding-with-gutter: var(--iui-size-2xs);
 
-  background-color: var(--iui-surface-background-color);
-  border: 1px solid var(--iui-surface-border-color);
-  border-radius: var(--iui-surface-border-radius);
-  box-shadow: var(--iui-surface-elevation);
-  color: var(--iui-color-text);
+.iui-surface {
+  @include base.iui-surface;
+
+  &:where(:has(.iui-surface-body), :has(.iui-surface-header), [data-iui-layout='true']) {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
-// Public facing surface component.
-@mixin iui-surface-component {
-  @include iui-surface;
+.iui-popover-surface {
+  @include base.iui-surface($border-color: var(--iui-color-border), $elevation: var(--iui-shadow-2));
+}
+
+.iui-surface-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  overflow: hidden;
+  border-block-end: 1px solid var(--iui-color-border-subtle);
+  padding-inline: $surface-padding;
+  min-block-size: var(--iui-component-height);
+}
+
+.iui-surface-body {
+  flex-grow: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  &[data-iui-padded='true'] {
+    padding: $surface-padding;
+
+    // Scrollbars might not always occupy space even with a stable gutter, so this can still
+    // result in (tolerable) differences on the right side, depending on scrollbar visibility.
+    // More importantly, the left side will remain aligned, because we are not using a gutter there.
+    // See: https://github.com/iTwin/iTwinUI/issues/1801
+    scrollbar-gutter: stable;
+    padding-inline-end: $surface-padding-with-gutter;
+  }
 }

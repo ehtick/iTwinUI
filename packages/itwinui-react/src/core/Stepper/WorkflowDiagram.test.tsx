@@ -2,14 +2,8 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import {
-  screen,
-  render,
-  waitForElementToBeRemoved,
-  fireEvent,
-} from '@testing-library/react';
-import React from 'react';
-import { WorkflowDiagram } from './WorkflowDiagram';
+import { screen, render, fireEvent, act } from '@testing-library/react';
+import { WorkflowDiagram } from './WorkflowDiagram.js';
 
 it('should display all step names in default workflow diagram', () => {
   const workflowDiagram = (
@@ -39,8 +33,31 @@ it('should display all step names in default workflow diagram', () => {
   expect(queryByText('3')).toBeNull();
 });
 
+it('should add custom prop to workflow diagram wrapper', () => {
+  const workflowDiagram = (
+    <WorkflowDiagram
+      steps={[
+        {
+          name: 'Step One',
+        },
+        {
+          name: 'Step Two',
+        },
+        {
+          name: 'Step Three',
+        },
+      ]}
+      wrapperProps={{ className: 'some-wrapper' }}
+    />
+  );
+
+  const { container } = render(workflowDiagram);
+
+  expect(container.querySelector('div')).toHaveClass('some-wrapper');
+});
+
 it('should display tooltip upon hovering step if description provided', async () => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
 
   const workflowDiagram = (
     <WorkflowDiagram
@@ -62,18 +79,19 @@ it('should display tooltip upon hovering step if description provided', async ()
 
   render(workflowDiagram);
 
-  expect(document.querySelector('.iui-tooltip')).toBeNull();
-  expect(screen.queryByText('Step one tooltip')).toBeNull();
+  expect(document.querySelector('.iui-tooltip')).not.toBeVisible();
   fireEvent.mouseEnter(screen.getByText('Step One'), { bubbles: true });
+  act(() => void vi.advanceTimersByTime(100));
   const tooltip = document.querySelector('.iui-tooltip') as HTMLElement;
   expect(tooltip).toBeVisible();
   expect(tooltip).toHaveTextContent('Step one tooltip');
 
   fireEvent.mouseLeave(screen.getByText('Step One'), { bubbles: true });
-  await waitForElementToBeRemoved(tooltip);
+  act(() => void vi.advanceTimersByTime(250));
 
   fireEvent.mouseEnter(screen.getByText('Step Three'), { bubbles: true });
-  expect(document.querySelector('.iui-tooltip')).toBeNull();
+  act(() => void vi.advanceTimersByTime(100));
+  expect(document.querySelector('.iui-tooltip')).not.toBeVisible();
 
-  jest.useRealTimers();
+  vi.useRealTimers();
 });

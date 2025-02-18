@@ -1,0 +1,29 @@
+// Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+// See LICENSE.md in the project root for license terms and full copyright notice.
+
+.iui-expandable-searchbox {
+  inline-size: fit-content;
+  padding-inline: 0; // To remove 1px padding from input-flex-container
+
+  &:where([data-iui-expanded='true']) {
+    inline-size: 100%;
+    border-color: var(--_iui-input-border-color);
+  }
+
+  &:not([data-iui-expanded='true']) {
+    background-color: transparent;
+
+    &::before {
+      transition: none;
+      border: none;
+    }
+  }
+}
+
+// noop https://github.com/iTwin/iTwinUI/pull/1881#discussion_r1506166537
+/* stylelint-disable-next-line block-no-empty */
+.iui-search-icon {
+}
+/* stylelint-disable-next-line block-no-empty */
+.iui-search-input {
+}

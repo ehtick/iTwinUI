@@ -2,34 +2,16 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import cx from 'classnames';
-import { useTheme } from '../utils';
-import '@itwin/itwinui-css/css/dialog.css';
-
-export type DialogTitleBarTitleProps = {
-  /**
-   * Dialog title content.
-   */
-  children: React.ReactNode;
-} & React.ComponentPropsWithRef<'div'>;
+import { polymorphic } from '../../utils/index.js';
 
 /**
  * Dialog title bar. Recommended to be used as a child of `Dialog`.
  * @example
- * <Dialog.TitleBar>My dialog title</Dialog.TitleBar>
+ * <Dialog.TitleBar>
+ *   <Dialog.TitleBar.Title>My dialog title</Dialog.TitleBar.Title>
+ * </Dialog.TitleBar>
  */
-export const DialogTitleBarTitle = React.forwardRef<
-  HTMLDivElement,
-  DialogTitleBarTitleProps
->((props, ref) => {
-  const { children, className, ...rest } = props;
-  useTheme();
-  return (
-    <div className={cx('iui-dialog-title', className)} ref={ref} {...rest}>
-      {children}
-    </div>
-  );
-});
-
-export default DialogTitleBarTitle;
+export const DialogTitleBarTitle = polymorphic.div('iui-dialog-title');
+if (process.env.NODE_ENV === 'development') {
+  DialogTitleBarTitle.displayName = 'Dialog.TitleBar.Title';
+}

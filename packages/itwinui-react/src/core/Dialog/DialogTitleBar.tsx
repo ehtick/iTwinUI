@@ -2,16 +2,18 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useTheme, SvgClose } from '../utils';
-import { IconButton } from '../Buttons';
-import '@itwin/itwinui-css/css/dialog.css';
-import { DialogContextProps, useDialogContext } from './DialogContext';
-import { DialogTitleBarTitle } from './DialogTitleBarTitle';
-import { useDialogDragContext } from './DialogDragContext';
+import { SvgClose, mergeEventHandlers, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { IconButton } from '../Buttons/IconButton.js';
+import { useDialogContext } from './DialogContext.js';
+import { useDialogMainContext } from './DialogMainContext.js';
+import type { DialogContextProps } from './DialogContext.js';
+import { DialogTitleBarTitle } from './DialogTitleBarTitle.js';
+import { useDialogDragContext } from './DialogDragContext.js';
 
-export type DialogTitleBarProps = {
+type DialogTitleBarProps = {
   /**
    * Dialog title bar content. If passed, then `title` prop is ignored.
    */
@@ -20,8 +22,7 @@ export type DialogTitleBarProps = {
    * Dialog title.
    */
   titleText?: React.ReactNode;
-} & Pick<DialogContextProps, 'isDismissible' | 'onClose' | 'isDraggable'> &
-  React.ComponentPropsWithRef<'div'>;
+} & Pick<DialogContextProps, 'isDismissible' | 'onClose' | 'isDraggable'>;
 
 /**
  * Dialog title bar. Recommended to be used as a child of `Dialog`.
@@ -41,8 +42,10 @@ export type DialogTitleBarProps = {
  * </Dialog.TitleBar>
  */
 export const DialogTitleBar = Object.assign(
-  React.forwardRef<HTMLDivElement, DialogTitleBarProps>((props, ref) => {
+  React.forwardRef((props, ref) => {
     const dialogContext = useDialogContext();
+    const dialogMainContext = useDialogMainContext();
+
     const {
       children,
       titleText,
@@ -55,25 +58,22 @@ export const DialogTitleBar = Object.assign(
     } = props;
 
     const { onPointerDown } = useDialogDragContext();
-    const handlePointerDown = React.useCallback(
-      (event: React.PointerEvent<HTMLDivElement>) => {
-        onPointerDownProp?.(event);
-        if (!event.defaultPrevented) {
-          onPointerDown?.(event);
-        }
+
+    const onClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        dialogMainContext?.beforeClose();
+        onClose?.(e);
       },
-      [onPointerDown, onPointerDownProp],
+      [dialogMainContext, onClose],
     );
 
-    useTheme();
-
     return (
-      <div
+      <Box
         className={cx('iui-dialog-title-bar', className, {
           'iui-dialog-title-bar-filled': isDraggable,
         })}
         ref={ref}
-        onPointerDown={handlePointerDown}
+        onPointerDown={mergeEventHandlers(onPointerDownProp, onPointerDown)}
         {...rest}
       >
         {children ? (
@@ -85,20 +85,22 @@ export const DialogTitleBar = Object.assign(
               <IconButton
                 size='small'
                 styleType='borderless'
-                onClick={onClose}
+                onClick={onClick}
                 aria-label='Close'
+                data-iui-shift='right'
               >
                 <SvgClose />
               </IconButton>
             )}
           </>
         )}
-      </div>
+      </Box>
     );
-  }),
+  }) as PolymorphicForwardRefComponent<'div', DialogTitleBarProps>,
   {
     Title: DialogTitleBarTitle,
   },
 );
-
-export default DialogTitleBar;
+if (process.env.NODE_ENV === 'development') {
+  DialogTitleBar.displayName = 'Dialog.TitleBar';
+}

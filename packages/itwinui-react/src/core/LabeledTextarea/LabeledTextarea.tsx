@@ -2,14 +2,14 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { StatusIconMap, useTheme, InputContainer } from '../utils';
-import { Textarea } from '../Textarea';
-import { TextareaProps } from '../Textarea/Textarea';
-import { LabeledInputProps } from '../LabeledInput';
-import '@itwin/itwinui-css/css/input.css';
+import * as React from 'react';
+import { Icon } from '../Icon/Icon.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import type { LabeledInputProps } from '../LabeledInput/LabeledInput.js';
+import { InputGrid } from '../InputGrid/InputGrid.js';
+import { LabeledInput } from '../LabeledInput/LabeledInput.js';
 
-export type LabeledTextareaProps = {
+type LabeledTextareaProps = {
   /**
    * Label for the textarea.
    */
@@ -23,15 +23,22 @@ export type LabeledTextareaProps = {
    */
   status?: 'positive' | 'warning' | 'negative';
   /**
-   * Custom class name for textarea.
+   * Pass props to wrapper element.
    */
-  textareaClassName?: string;
+  wrapperProps?: React.ComponentProps<typeof InputGrid>;
   /**
-   * Custom style for textarea.
+   * Passes properties for label.
    */
-  textareaStyle?: React.CSSProperties;
-} & Pick<LabeledInputProps, 'svgIcon' | 'displayStyle' | 'iconDisplayStyle'> &
-  TextareaProps;
+  labelProps?: React.ComponentProps<'label'>;
+  /**
+   * Passes properties for message content.
+   */
+  messageContentProps?: React.ComponentPropsWithRef<'div'>;
+  /**
+   * Passes properties for svgIcon.
+   */
+  iconProps?: React.ComponentProps<typeof Icon>;
+} & Pick<LabeledInputProps, 'svgIcon' | 'displayStyle'>;
 
 /**
  * Textarea wrapper that allows for additional styling and labelling
@@ -54,53 +61,14 @@ export type LabeledTextareaProps = {
  *  status='negative'
  * />
  */
-export const LabeledTextarea = React.forwardRef(
-  (props: LabeledTextareaProps, ref: React.RefObject<HTMLTextAreaElement>) => {
-    const {
-      className,
-      style,
-      disabled = false,
-      label,
-      message,
-      status,
-      textareaClassName,
-      textareaStyle,
-      displayStyle = 'default',
-      iconDisplayStyle = displayStyle === 'default' ? 'block' : 'inline',
-      svgIcon,
-      required = false,
-      ...textareaProps
-    } = props;
-
-    useTheme();
-
-    const icon = svgIcon ?? (status && StatusIconMap[status]());
-
-    return (
-      <InputContainer
-        as='label'
-        label={label}
-        disabled={disabled}
-        required={required}
-        status={status}
-        message={message}
-        icon={icon}
-        isLabelInline={displayStyle === 'inline'}
-        isIconInline={iconDisplayStyle === 'inline'}
-        className={className}
-        style={style}
-      >
-        <Textarea
-          disabled={disabled}
-          className={textareaClassName}
-          style={textareaStyle}
-          required={required}
-          {...textareaProps}
-          ref={ref}
-        />
-      </InputContainer>
-    );
-  },
-);
-
-export default LabeledTextarea;
+export const LabeledTextarea = React.forwardRef((props, forwardedRef) => {
+  return (
+    // ref types don't match but it's internal, so ts-ignore is ok here
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    <LabeledInput as='textarea' rows={3} ref={forwardedRef} {...props} />
+  );
+}) as PolymorphicForwardRefComponent<'textarea', LabeledTextareaProps>;
+if (process.env.NODE_ENV === 'development') {
+  LabeledTextarea.displayName = 'LabeledTextarea';
+}

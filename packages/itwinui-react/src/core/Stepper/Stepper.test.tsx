@@ -2,14 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import {
-  screen,
-  render,
-  waitForElementToBeRemoved,
-  fireEvent,
-} from '@testing-library/react';
-import React from 'react';
-import { Stepper } from './Stepper';
+import { screen, render, fireEvent, act } from '@testing-library/react';
+import { Stepper } from './Stepper.js';
+import { SvgCheckmarkSmall } from '../../utils/index.js';
 
 it('should render all step names and numbers in default stepper', () => {
   const stepper = (
@@ -40,8 +35,81 @@ it('should render all step names and numbers in default stepper', () => {
   getByText('Step Three');
 });
 
+it('should add custom props to Stepper', () => {
+  const stepper = (
+    <Stepper
+      currentStep={1}
+      type='long'
+      localization={{
+        stepsCountLabel: (currentStep, totalSteps) =>
+          `This is ${currentStep} of great ${totalSteps}:`,
+      }}
+      steps={[
+        {
+          name: 'Step One',
+        },
+        {
+          name: 'Step Two',
+        },
+        {
+          name: 'Step Three',
+        },
+      ]}
+      labelProps={{ className: 'some-label' }}
+      labelCountProps={{ className: 'some-count' }}
+    />
+  );
+
+  const { container } = render(stepper);
+
+  expect(
+    container.querySelector('.iui-stepper-steps-label.some-label'),
+  ).toBeTruthy();
+  expect(
+    container.querySelector('.iui-stepper-steps-label-count.some-count'),
+  ).toBeTruthy();
+});
+
+it('should pass custom icon for completed steps', () => {
+  const stepper = (
+    <Stepper
+      currentStep={3}
+      steps={[
+        {
+          name: 'Step One',
+          stepContent: () => (
+            <span className={`test-icon`}>
+              <SvgCheckmarkSmall />
+            </span>
+          ),
+        },
+        {
+          name: 'Step Two',
+          stepContent: () => (
+            <span className={`test-icon`}>
+              <SvgCheckmarkSmall />
+            </span>
+          ),
+        },
+        {
+          name: 'Step Three',
+          stepContent: () => (
+            <span className={`test-icon`}>
+              <SvgCheckmarkSmall />
+            </span>
+          ),
+        },
+      ]}
+    />
+  );
+
+  const { container } = render(stepper);
+  const completedSteps = container.querySelectorAll('.test-icon');
+  expect(completedSteps).toHaveLength(3);
+});
+
 it('should set the active step to the step provided and raises onClick event on completed steps', () => {
-  const mockedOnClick = jest.fn();
+  const mockedOnClick = vi.fn();
   const stepper = (
     <Stepper
       currentStep={1}
@@ -180,7 +248,7 @@ it('should display localized string in long stepper', () => {
 });
 
 it('should display tooltip upon hovering step if description provided', async () => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
 
   const stepper = (
     <Stepper
@@ -203,18 +271,19 @@ it('should display tooltip upon hovering step if description provided', async ()
 
   render(stepper);
 
-  expect(document.querySelector('.iui-tooltip')).toBeNull();
-  expect(screen.queryByText('Step one tooltip')).toBeNull();
+  expect(document.querySelector('.iui-tooltip')).not.toBeVisible();
   fireEvent.mouseEnter(screen.getByText('Step One'), { bubbles: true });
+  act(() => void vi.advanceTimersByTime(100));
   const tooltip = document.querySelector('.iui-tooltip') as HTMLElement;
   expect(tooltip).toBeVisible();
   expect(tooltip).toHaveTextContent('Step one tooltip');
 
   fireEvent.mouseLeave(screen.getByText('Step One'), { bubbles: true });
-  await waitForElementToBeRemoved(tooltip);
+  act(() => void vi.advanceTimersByTime(250));
 
   fireEvent.mouseEnter(screen.getByText('Step Three'), { bubbles: true });
-  expect(document.querySelector('.iui-tooltip')).toBeNull();
+  act(() => void vi.advanceTimersByTime(200));
+  expect(tooltip).not.toBeVisible();
 
-  jest.useRealTimers();
+  vi.useRealTimers();
 });

@@ -1,20 +1,20 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
-@import '../button/index';
-@import '../text/muted';
+@use '../mixins';
+@use '../text/muted';
 
 @mixin iui-table-paginator {
-  @include iui-reset;
+  @include mixins.iui-reset;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 var(--iui-size-m);
+  padding-inline: var(--iui-size-m);
   user-select: none;
   background-color: var(--iui-color-background);
-  border-bottom-left-radius: var(--iui-border-radius-1);
-  border-bottom-right-radius: var(--iui-border-radius-1);
-  border-top: 1px solid var(--iui-color-border);
+  border-end-start-radius: var(--iui-border-radius-1);
+  border-end-end-radius: var(--iui-border-radius-1);
+  border-block-start: 1px solid var(--iui-color-border);
+  isolation: isolate;
 
   > .iui-left,
   > .iui-center,
@@ -23,13 +23,14 @@
     align-items: center;
     position: relative;
     flex: 1;
-    min-width: 0;
+    min-inline-size: 0;
   }
 
   > .iui-center {
     justify-content: center;
     flex: 2 1;
     color: var(--iui-color-text);
+    z-index: 1;
   }
 
   > .iui-right {
@@ -38,7 +39,7 @@
 }
 
 @mixin iui-table-paginator-page-size-label {
-  @include iui-text-muted;
+  @include muted.iui-text-muted;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -58,22 +59,13 @@
 @mixin iui-table-paginator-pages-group {
   display: inline-flex;
   align-items: center;
-  margin: 0 var(--iui-size-xs);
+  margin-inline: var(--iui-size-xs);
 }
 
 @mixin iui-table-paginator-page-button {
-  @include iui-button;
-  @include iui-button-borderless;
-
-  &-small {
-    @include iui-button-size(small);
-  }
-
   &[data-iui-active='true'] {
-    @include iui-button-default-active;
-    @include iui-button-borderless-active;
-
-    // Adds stripe above active button
-    --_iui-button-active-stripe-inset: calc(100% - #{var(--iui-size-2xs)}) #{var(--iui-size-3xs)} #{var(--iui-size-3xs)};
+    // Adds stripe below active button
+    --_iui-button-active-stripe-inset-block: calc(100% - #{var(--iui-size-2xs)}) #{var(--iui-size-3xs)};
+    --_iui-button-active-stripe-inset-inline: #{var(--iui-size-3xs)};
   }
 }

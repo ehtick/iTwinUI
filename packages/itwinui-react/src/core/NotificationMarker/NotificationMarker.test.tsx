@@ -2,12 +2,11 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { NotificationMarker } from './NotificationMarker';
+import { NotificationMarker } from './NotificationMarker.js';
 import { SvgNotification } from '@itwin/itwinui-icons-react';
-import Anchor from '../Typography/Anchor/Anchor';
+import { Anchor } from '../Typography/Anchor.js';
 
 it('should render in its most basic state', () => {
   const { container } = render(<NotificationMarker>Demo</NotificationMarker>);
@@ -44,9 +43,9 @@ it('should propagate misc props', () => {
       🔔
     </NotificationMarker>,
   );
-  const notificationMarker = container.querySelector('span');
+  const notificationMarker = container.querySelector('span') as HTMLSpanElement;
   expect(notificationMarker).toHaveClass('test-class');
-  expect(notificationMarker).toHaveStyle('color: rebeccapurple');
+  expect(notificationMarker.style.color).toEqual('rebeccapurple');
   expect(notificationMarker).toHaveTextContent('🔔');
   expect(notificationMarker).toHaveAttribute('aria-label', 'Home');
 });

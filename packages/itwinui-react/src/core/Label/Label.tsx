@@ -2,17 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useTheme } from '../utils';
-import '@itwin/itwinui-css/css/utils.css';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-type LabelOwnProps<T extends React.ElementType = 'label'> = {
-  /**
-   * What element should the label be rendered as?
-   * @default 'label'
-   */
-  as?: T;
+type LabelOwnProps = {
   /**
    * Set the display style of the label.
    *   - 'block' - default, no extra spacing (label and input will be on separate lines)
@@ -25,11 +20,12 @@ type LabelOwnProps<T extends React.ElementType = 'label'> = {
    * This adds an asterisk next to the label text.
    */
   required?: boolean;
+  /**
+   * Adds disabled styling to a label.
+   * @default false
+   */
+  disabled?: boolean;
 };
-
-export type LabelProps<T extends React.ElementType = 'label'> =
-  LabelOwnProps<T> &
-    Omit<React.ComponentPropsWithoutRef<T>, keyof LabelOwnProps<T>>;
 
 /**
  * A standalone label to be used with input components (using `htmlFor`).
@@ -38,22 +34,19 @@ export type LabelProps<T extends React.ElementType = 'label'> =
  * <Label htmlFor='name-input'>Name</Label>
  * <Input id='name-input' />
  */
-export const Label = <T extends React.ElementType = 'label'>(
-  props: LabelProps<T>,
-) => {
+export const Label = React.forwardRef((props, forwardedRef) => {
   const {
-    as: Element = 'label',
     displayStyle = 'block',
     required,
+    disabled,
     className,
     children,
     ...rest
   } = props;
 
-  useTheme();
-
   return (
-    <Element
+    <Box
+      as='label'
       className={cx(
         'iui-input-label',
         {
@@ -62,11 +55,14 @@ export const Label = <T extends React.ElementType = 'label'>(
         },
         className,
       )}
+      data-iui-disabled={disabled ? true : undefined}
+      ref={forwardedRef}
       {...rest}
     >
       {children}
-    </Element>
+    </Box>
   );
-};
-
-export default Label;
+}) as PolymorphicForwardRefComponent<'label', LabelOwnProps>;
+if (process.env.NODE_ENV === 'development') {
+  Label.displayName = 'Label';
+}

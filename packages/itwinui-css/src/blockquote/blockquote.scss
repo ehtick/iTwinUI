@@ -1,20 +1,21 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
-@import '../surface/index';
+@use '../mixins';
+@use '../surface/base' as surface;
 
-@mixin iui-blockquote {
-  @include iui-reset;
-  @include iui-surface;
+.iui-blockquote {
+  @include mixins.iui-reset;
+  @include surface.iui-surface;
   display: block;
   position: relative;
-  padding: var(--iui-size-s) var(--iui-size-m);
-  margin: var(--iui-size-s) 0;
+  padding-block: var(--iui-size-s);
+  padding-inline: var(--iui-size-m);
+  margin-block: var(--iui-size-s);
   text-align: justify;
-  border-left: var(--iui-size-xs) solid var(--iui-color-border);
+  border-inline-start: var(--iui-size-xs) solid var(--iui-color-border);
 
   > footer {
-    text-align: right;
+    text-align: end;
     color: var(--iui-color-text-muted);
 
     > cite {

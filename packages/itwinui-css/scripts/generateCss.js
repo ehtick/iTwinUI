@@ -19,17 +19,18 @@ const compileScss = async (path, outFile) => {
   return new Promise(async (resolve, reject) => {
     try {
       const sassOutput = await sass.compileAsync(path);
+      const outFilename = `${outFile}.css`;
 
       const processedOutput = css.transform({
-        filename: `${outFile}.css`,
+        filename: outFilename,
         code: Buffer.from(sassOutput.css),
         minify: true,
         targets,
-      });
+      }).code;
 
-      fs.writeFileSync(`${outDir}/${outFile}.css`, processedOutput.code);
-      console.log(` Wrote -> ${outFile}.css`);
-      resolve();
+      fs.writeFileSync(`${outDir}/${outFilename}`, processedOutput);
+      console.log(` Wrote -> ${outFilename}`);
+      resolve(processedOutput);
     } catch (error) {
       reject(`${error}\n in ${path}`);
     }
@@ -37,20 +38,9 @@ const compileScss = async (path, outFile) => {
 };
 
 const run = async () => {
-  const files = await fs.promises.readdir(inDir, { withFileTypes: true });
-  const directories = files.filter((f) => f.isDirectory()).map((f) => f.name);
-  const promiseList = [];
-  promiseList.push(compileScss(`${inDir}/all.scss`, 'all'));
-  promiseList.push(compileScss(`${inDir}/global.scss`, 'global'));
-
-  for (const directory of directories) {
-    if (!ignorePaths.includes(directory) && fs.existsSync(path.join(inDir, directory, 'classes.scss'))) {
-      promiseList.push(compileScss(`${inDir}/${directory}/classes.scss`, directory));
-    }
-  }
-
-  await Promise.all(promiseList);
-  console.log(green(`Converted ${promiseList.length} files to CSS.`));
+  await compileScss(`${inDir}/global.scss`, 'global');
+  await compileScss(`${inDir}/all.scss`, 'all');
+  console.log(green(`Converted all SCSS files to CSS.`));
 };
 
 const main = async () => {

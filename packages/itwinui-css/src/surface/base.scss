@@ -1,0 +1,19 @@
+// Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+// See LICENSE.md in the project root for license terms and full copyright notice.
+
+// Internal mixin used as base for other components.
+@mixin iui-surface(
+  $background-color: var(--iui-color-background),
+  $border-color: var(--iui-color-border-subtle),
+  $border-radius: var(--iui-border-radius-1),
+  $elevation: var(--iui-shadow-1)
+) {
+  --iui-surface-border: 1px solid #{$border-color};
+  --iui-surface-elevation: #{$elevation};
+
+  background-color: $background-color;
+  border: var(--iui-surface-border);
+  border-radius: $border-radius;
+  box-shadow: var(--iui-surface-elevation);
+  color: var(--iui-color-text);
+}

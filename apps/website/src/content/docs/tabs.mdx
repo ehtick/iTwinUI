@@ -1,0 +1,151 @@
+---
+title: Tabs
+description: Tabs make it easy to explore and switch between different views or functional aspects of an app, or to browse categorized data sets.
+thumbnail: Tabs
+---
+
+<p>{frontmatter.description}</p>
+
+<LiveExample src='Tabs.main.jsx'>
+  <AllExamples.TabsMainExample client:load />
+</LiveExample>
+
+## Usage
+
+### Composition API
+
+You can build Tabs with subcomponents that are fully customizable.
+
+```tsx
+<Tabs.Wrapper>
+  <Tabs.TabList>
+    <Tabs.Tab value='apple' label='Apple' key='apple' />
+    <Tabs.Tab value='orange' label='Orange' key='orange' />
+    <Tabs.Tab value='pear' label='Pear' key='pear' />
+  </Tabs.TabList>
+
+  <Tabs.Panel value='apple' key='apple'>
+    {/*...Content for apple*/}
+  </Tabs.Panel>
+  <Tabs.Panel value='orange' key='orange'>
+    {/*...Content for orange*/}
+  </Tabs.Panel>
+  <Tabs.Panel value='pear' key='pear'>
+    {/*...Content for pear*/}
+  </Tabs.Panel>
+</Tabs.Wrapper>
+```
+
+`Tabs.Tab` and `Tabs.Panel` can be associated with each other by passing them the same `value`. `Tabs.Panel` will be shown when its `value` matches the `value` of the currently active `Tabs.Tab`.
+
+`Tabs.Tab` has a `label` prop for ease of use. You can also build `Tabs.Tab` with subcomponents and add a sublabel or an icon to your tab.
+
+```tsx
+<Tabs.Tab value='apple' key='apple' label='Apple' />
+```
+
+```tsx
+<Tabs.Tab value='apple' key='apple'>
+  <Tabs.TabIcon>
+    <SvgAppleIcon />
+  </Tabs.TabIcon>
+  <Tabs.TabLabel>Apple</Tabs.TabLabel>
+  <Tabs.TabDescription>A red fruit</Tabs.TabDescription>
+</Tabs.Tab>
+```
+
+### Legacy API
+
+Alternatively, you can use Tabs directly with labels, actions, and children as panels. Although this pattern can suffice for simple cases, we strongly recommend using composition API for the best experience.
+
+The following code is (mostly) equivalent to the [composition example](#composition-api) above:
+
+```tsx
+<Tabs
+  labels={[
+    <Tab key='apple' label='Apple' />,
+    <Tab key='orange' label='Orange' />,
+    <Tab key='pear' label='Pear' />,
+  ]}
+>
+  {/* … content for active tab */}
+</Tabs>
+```
+
+One difference is that the legacy API requires the panel content to be conditionally rendered only for the currently active tab. This can be problematic if the content is expensive to render, or if you need to preserve some state when switching tabs.
+
+### Controlled state
+
+By default, the tabs maintain their own state. You can specify the initially active tab using the `defaultValue` prop in `Tabs.Wrapper`; the tabs will continue to maintain their own state after the initial render.
+
+If you need to manually maintain the active state, you can use `value` and `onValueChange` props in `Tabs.Wrapper`.
+
+<LiveExample src='Tabs.controlled.jsx'>
+  <AllExamples.TabsControlledExample client:load />
+</LiveExample>
+
+### Resetting panel state
+
+When using the composition API, inactive panels will be hidden but will not be unmounted. This approach is more performant and preserves state.
+
+If you need to reset the state of the inactive panels, you can pass a [`key`](https://react.dev/reference/react/useState#resetting-state-with-a-key) to `Tabs.Panel`. For example, you can set the `key` to the currently active tab's value (following the [controlled state](#controlled-state) example from above).
+
+```tsx
+<Tabs.Panel value='apple' key={currentTabValue}>
+  …
+</Tabs.Panel>
+```
+
+### Keyboard activation mode
+
+By default, tabs are activated automatically when focused (e.g. with keyboard). In other words, when a tab has keyboard focus, pressing the arrow keys to focus a different tab will automatically activate that tab.
+
+While the default behavior should work fine in many cases, it can hurt the user experience for keyboard users if the panel content is expensive to render or lazily loaded. In such cases, you can set `focusActivationMode` to `"manual"` to disable automatic activation. This will allow the user to navigate between tabs with the arrow keys without activating them. The user can then activate a tab by pressing the <kbd>Enter</kbd> or <kbd>Space</kbd> key.
+
+## Variants
+
+### Vertical
+
+The `orientation` prop can be used to show vertical tabs.
+
+<LiveExample src='Tabs.vertical.jsx'>
+  <AllExamples.TabsVerticalExample client:load />
+</LiveExample>
+
+### Borderless
+
+The `type` prop can be set to `"borderless"` to show borderless tabs.
+
+As their name implies, borderless tabs have no frame or stroke surrounding them.
+
+Use borderless tabs when the tabbed content can be easily told apart from its surroundings (or lack thereof).
+
+<LiveExample src='Tabs.borderless.jsx'>
+  <AllExamples.TabsBorderlessExample client:load />
+</LiveExample>
+
+### Pill
+
+The `type` prop can be set to `"pill"` to show pill tabs.
+
+Pill tabs are meant to be used with content that belong to a similar category. They act like a filter for toggling through different states of similar content.
+
+The maximum recommended amount of pill tabs is 4.
+
+<LiveExample src='Tabs.pill.jsx'>
+  <AllExamples.TabsPillExample client:load />
+</LiveExample>
+
+### Actions
+
+The `Tabs.Action` subcomponent can be used to add action buttons to the end of tab list.
+
+<LiveExample src='Tabs.actions.jsx'>
+  <AllExamples.TabsActionsExample client:load />
+</LiveExample>
+
+## Props
+
+Unfinished
+
+<PropsTable path='@itwin/itwinui-react/esm/core/Tabs/Tabs.d.ts' />

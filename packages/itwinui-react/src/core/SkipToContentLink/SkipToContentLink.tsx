@@ -2,12 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useTheme } from '../utils';
-import '@itwin/itwinui-css/css/skip-to-content.css';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type SkipToContentLinkProps = {
+type SkipToContentLinkProps = {
   /**
    * The id of the main content that the link directs to. Don't forget the #!
    */
@@ -17,7 +17,7 @@ export type SkipToContentLinkProps = {
    * @default 'Skip to main content'
    */
   children?: React.ReactNode;
-} & Omit<React.ComponentPropsWithoutRef<'a'>, 'href'>;
+};
 
 /**
  * `SkipToContentLink` is for screen reader and keyboard users and will not be visible unless tabbed to.
@@ -27,23 +27,20 @@ export type SkipToContentLinkProps = {
  * <body><SkipToContentLink href='#main-content-id' /> ... </body>
  * <body><SkipToContentLink href='#main-content-id'>{localizedLabel}</SkipToContentLink> ... </body>
  */
-export const SkipToContentLink = React.forwardRef<
-  HTMLAnchorElement,
-  SkipToContentLinkProps
->((props, ref) => {
+export const SkipToContentLink = React.forwardRef((props, ref) => {
   const { children = 'Skip to main content', className, ...rest } = props;
 
-  useTheme();
-
   return (
-    <a
+    <Box
+      as='a'
       ref={ref}
       className={cx('iui-skip-to-content-link', className)}
       {...rest}
     >
       {children}
-    </a>
+    </Box>
   );
-});
-
-export default SkipToContentLink;
+}) as PolymorphicForwardRefComponent<'a', SkipToContentLinkProps>;
+if (process.env.NODE_ENV === 'development') {
+  SkipToContentLink.displayName = 'SkipToContentLink';
+}

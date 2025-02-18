@@ -1,49 +1,64 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../menu/index';
-@import '../utils/index';
-@import '../tag/index';
-@import '../button/index';
+@use '../mixins';
+@use '../tag/base' as tag;
 
 @mixin iui-select-button {
-  @include iui-focus($offset: -2px, $thickness: 2px);
-  width: 100%;
-  border-radius: var(--iui-border-radius-1);
-  min-height: var(--_iui-select-min-height);
+  inline-size: 100%;
   padding-block: var(--_iui-select-padding-block);
   padding-inline: var(--iui-size-s);
-  transition: border-color var(--iui-duration-1) ease-out;
-  display: flex;
-  align-items: center;
   user-select: none;
-  position: relative;
-  overflow: hidden;
-  color: var(--iui-color-text);
-  background-color: var(--iui-color-background);
-  border: 1px solid var(--iui-color-border-foreground);
+  line-height: var(--_iui-select-line-height);
+  cursor: pointer;
   @include iui-select-size;
 
-  &.iui-disabled {
-    background-color: var(--iui-color-background-disabled);
-    border-color: var(--iui-color-border-disabled);
-    --_iui-input-with-icon-hover-border-color: var(--iui-color-border-disabled);
+  &:is(select) {
+    appearance: none;
+
+    option {
+      color: var(--iui-color-text);
+      font-weight: var(--iui-font-weight-normal);
+
+      &[disabled] {
+        color: var(--iui-color-text-disabled);
+      }
+    }
+  }
+
+  &:not(select) {
+    display: flex;
+    align-items: center;
+    gap: var(--iui-size-xs);
+    position: relative;
+    overflow: hidden;
+  }
+
+  &:where([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']) {
+    opacity: 1;
     cursor: not-allowed;
   }
 
   .iui-icon {
-    @include iui-menu-icon;
-    fill: currentColor;
+    flex: 0 0 auto;
+
+    svg {
+      @include mixins.iui-icon-style('m');
+      fill: inherit;
+    }
   }
 
   .iui-content {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    min-height: var(--iui-size-l);
+    min-block-size: var(--_iui-select-block-size);
+    color: inherit;
   }
 
-  &.iui-placeholder {
-    color: var(--iui-color-text-disabled);
+  &.iui-placeholder,
+  &:has(option[value='']:checked) {
+    color: var(--iui-color-text-placeholder);
+    font-weight: var(--iui-font-weight-light);
   }
 }
 
@@ -52,82 +67,106 @@
 @mixin iui-select-size($size: medium) {
   @if $size == small {
     --_iui-select-padding-block: 0;
-    --_iui-select-min-height: var(--iui-component-height-small);
+    --_iui-select-block-size: var(--iui-size-m);
+    --_iui-select-line-height: var(--iui-size-m);
   }
 
   @if $size == medium {
     --_iui-select-padding-block: var(--iui-size-2xs);
-    --_iui-select-min-height: var(--iui-component-height);
+    --_iui-select-block-size: var(--iui-size-l);
+    --_iui-select-line-height: var(--iui-size-l);
   }
 
   @if $size == large {
     --_iui-select-padding-block: var(--iui-size-xs);
-    --_iui-select-min-height: var(--iui-component-height-large);
-    font-size: var(--iui-font-size-2);
+    --_iui-select-block-size: var(--iui-size-l);
+    --_iui-select-line-height: var(--iui-size-l);
   }
 }
 
 @mixin iui-select-tag-container {
   position: absolute;
+  inset-block: 0;
   // align wth Select's padding
-  inset: 0 calc(var(--iui-size-m) + var(--iui-size-l)) 0 var(--iui-size-s);
-  height: 100%;
+  inset-inline: var(--iui-size-s) calc(var(--iui-size-m) + var(--iui-size-l));
+  block-size: 100%;
   display: flex;
   align-items: center;
   gap: var(--iui-size-2xs);
   overflow: hidden;
 
   > * + * {
-    margin-left: var(--iui-size-2xs);
+    margin-inline-start: var(--iui-size-2xs);
     @supports (gap: var(--iui-size-2xs)) {
-      margin-left: 0;
+      margin-inline-start: 0;
     }
   }
 }
 
 @mixin iui-select-tag {
-  @include iui-tag;
   // Override hardcoded Tag margin
-  margin-top: 0;
-  margin-bottom: 0;
+  margin-block: 0;
   display: inline-flex;
   align-items: center;
-  height: 80%;
-  max-height: calc(var(--iui-size-s) * 3);
+  block-size: 80%;
+  max-inline-size: 100%;
+  max-block-size: calc(var(--iui-size-s) * 3);
 }
 
 @mixin iui-select-tag-label {
-  @include iui-tag-label;
-  display: inline-flex;
-  align-items: center;
-
-  @at-root .iui-select-button[data-iui-size='small'] & {
+  .iui-select-button[data-iui-size='small'] & {
     font-size: var(--iui-font-size-0);
-    line-height: calc(var(--iui-size-s) * 1.5);
   }
 }
 
 @mixin iui-select-tag-button {
-  @include iui-button;
-  @include iui-button-borderless;
-  @include iui-tag-button;
-  padding: 0 var(--iui-size-2xs);
-  min-height: unset;
-  min-width: unset;
-  height: 100%;
+  padding-inline: var(--iui-size-2xs);
+  min-block-size: unset;
+  min-inline-size: unset;
+  block-size: 100%;
   aspect-ratio: 1 / 1;
 
-  @at-root .iui-select-button[data-iui-size='small'] & {
+  .iui-select-button[data-iui-size='small'] & {
     font-size: var(--iui-font-size-0);
-    line-height: calc(var(--iui-size-s) * 1.5);
+
+    svg {
+      @include mixins.iui-icon-style('s');
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+    }
   }
 }
 
-@mixin iui-select-tag-button-icon {
-  @include iui-button-icon;
-  flex-shrink: 0;
+// ----------------------------------------------------------------------------
 
-  @at-root .iui-select-button[data-iui-size='small'] & svg {
-    @include iui-icon-style('s');
+.iui-select-button {
+  @include iui-select-button;
+
+  &[data-iui-size='small'] {
+    @include iui-select-size(small);
   }
+
+  &[data-iui-size='large'] {
+    @include iui-select-size(large);
+  }
+}
+
+.iui-select-tag-container {
+  @include iui-select-tag-container;
+}
+
+.iui-select-tag:is(.iui-tag) {
+  @include iui-select-tag;
+}
+
+.iui-select-tag-label:is(.iui-tag-label) {
+  @include iui-select-tag-label;
+}
+
+.iui-select-tag-button:is(.iui-tag-button) {
+  @include iui-select-tag-button;
 }

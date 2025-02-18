@@ -2,36 +2,68 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { CommonProps, getFocusableElements, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/tree.css';
+import * as React from 'react';
+import {
+  getFocusableElements,
+  Box,
+  useMergedRefs,
+  mergeEventHandlers,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 import cx from 'classnames';
-import { TreeNodeExpander } from './TreeNodeExpander';
-import { useTreeContext } from './TreeContext';
+import { TreeNodeExpander } from './TreeNodeExpander.js';
+import { useTreeContext } from './TreeContext.js';
 
-export type TreeNodeProps = {
+type TreeNodeProps = {
   /**
    * Unique id of the node.
    * It has to be compatible with HTML id attribute.
    */
   nodeId: string;
   /**
+   * Props for main node inside the treeitem (excluding the sub-tree).
+   *
+   * If you need to customize the root node instead, pass top-level props
+   * directly to the `TreeNode` component.
+   */
+  nodeProps?: React.ComponentProps<'div'>;
+  /**
    * The main text displayed on the node.
    */
   label: React.ReactNode;
+  /**
+   * Props for TreeNode label(affects both the main and sub label).
+   */
+  labelProps?: React.ComponentProps<'div'>;
+  /**
+   * Props for the TreeNode's main label.
+   */
+  titleProps?: React.ComponentProps<'div'>;
   /**
    * Small note displayed below main label.
    */
   sublabel?: React.ReactNode;
   /**
+   * Props for TreeNode sublabel
+   */
+  sublabelProps?: React.ComponentProps<'div'>;
+  /**
    * Icon shown before label and sublabel content.
    */
-  icon?: JSX.Element;
+  icon?: React.JSX.Element;
+  /**
+   * Props for TreeNode Icon
+   */
+  iconProps?: React.ComponentProps<'span'>;
   /**
    * Flag whether the node has child sub-nodes. It is used to show expander icon.
    * @default false
    */
   hasSubNodes?: boolean;
+  /**
+   * Props for subTree list(affects all subnodes of this node).
+   */
+  subTreeProps?: React.ComponentProps<'div'>;
   /**
    * Flag whether the node is disabled.
    * @default false
@@ -64,14 +96,32 @@ export type TreeNodeProps = {
    */
   checkbox?: React.ReactNode;
   /**
+   * Props for TreeNode checkbox.
+   */
+  checkboxProps?: React.ComponentProps<'div'>;
+  /**
    * Custom expander element. If `hasSubNodes` is false, it won't be shown.
    */
   expander?: React.ReactNode;
   /**
+   * Props for the default TreeNodeExpander that is shown when there are sub nodes and no expander is given.
+   */
+  expanderProps?: React.ComponentProps<typeof TreeNodeExpander>;
+  /**
+   * Props for content of the TreeNode.
+   * This affects all passed in children of the node, as well as the label, sublabel, icon, and expander.
+   * Note that this does not affect the checkbox.
+   */
+  contentProps?: React.ComponentProps<'div'>;
+  /**
    * Content shown after `TreeNode`.
    */
   children?: React.ReactNode;
-} & Omit<CommonProps, 'id'>;
+  /**
+   * @deprecated Use `nodeId` instead.
+   */
+  id?: never;
+};
 
 /**
  * `TreeNode` component to display node content within a `Tree`.
@@ -92,14 +142,18 @@ export type TreeNodeProps = {
     icon={<SvgPlaceholder />}
   />
  */
-export const TreeNode = (props: TreeNodeProps) => {
+export const TreeNode = React.forwardRef((props, forwardedRef) => {
   const {
     nodeId,
+    nodeProps = {},
     label,
+    labelProps = {},
     sublabel,
+    sublabelProps = {},
     children,
     className,
     icon,
+    iconProps = {},
     hasSubNodes = false,
     isDisabled = false,
     isExpanded = false,
@@ -107,10 +161,14 @@ export const TreeNode = (props: TreeNodeProps) => {
     onSelected,
     onExpanded,
     checkbox,
+    checkboxProps = {},
+    subTreeProps = {},
+    contentProps = {},
+    titleProps = {},
+    expanderProps = {},
     expander,
     ...rest
   } = props;
-  useTheme();
 
   const {
     nodeDepth,
@@ -122,9 +180,12 @@ export const TreeNode = (props: TreeNodeProps) => {
   } = useTreeContext();
 
   const [isFocused, setIsFocused] = React.useState(false);
-  const nodeRef = React.useRef<HTMLLIElement>(null);
+  const nodeRef = React.useRef<HTMLDivElement>(null);
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLLIElement>) => {
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey) {
+      return;
+    }
     const isNodeFocused =
       nodeRef.current === nodeRef.current?.ownerDocument.activeElement;
     switch (event.key) {
@@ -202,10 +263,10 @@ export const TreeNode = (props: TreeNodeProps) => {
   );
 
   return (
-    <li
+    <Box
+      as='div'
       role='treeitem'
       className={cx('iui-tree-item', className)}
-      id={nodeId}
       aria-expanded={hasSubNodes ? isExpanded : undefined}
       aria-disabled={isDisabled}
       aria-selected={isSelected}
@@ -213,72 +274,115 @@ export const TreeNode = (props: TreeNodeProps) => {
       aria-setsize={groupSize}
       aria-posinset={indexInGroup + 1}
       tabIndex={-1}
-      onFocus={(e) => {
+      {...rest}
+      id={nodeId}
+      ref={useMergedRefs(nodeRef, forwardedRef)}
+      onFocus={mergeEventHandlers(props.onFocus, (e) => {
         setIsFocused(true);
         // Prevents from triggering onFocus on parent Tree
         e.stopPropagation();
-      }}
-      onBlur={() => {
+      })}
+      onBlur={mergeEventHandlers(props.onBlur, () => {
         setIsFocused(false);
-      }}
-      ref={nodeRef}
-      onKeyDown={onKeyDown}
-      {...rest}
+      })}
+      onKeyDown={mergeEventHandlers(props.onKeyDown, onKeyDown)}
     >
-      {
-        <div
-          className={cx('iui-tree-node', {
+      <Box
+        as='div'
+        style={{ '--level': nodeDepth } as React.CSSProperties}
+        onClick={() => !isDisabled && onSelected?.(nodeId, !isSelected)}
+        {...nodeProps}
+        className={cx(
+          'iui-tree-node',
+          {
             'iui-active': isSelected,
             'iui-disabled': isDisabled,
-          })}
-          style={{ '--level': nodeDepth } as React.CSSProperties}
-          onClick={() => !isDisabled && onSelected?.(nodeId, !isSelected)}
+          },
+          nodeProps?.className,
+        )}
+      >
+        {checkbox && (
+          <Box
+            as='div'
+            {...checkboxProps}
+            className={cx('iui-tree-node-checkbox', checkboxProps?.className)}
+          >
+            {React.isValidElement(checkbox)
+              ? React.cloneElement(checkbox as React.JSX.Element, {
+                  tabIndex: isFocused ? 0 : -1,
+                })
+              : checkbox}
+          </Box>
+        )}
+        <Box
+          as='div'
+          {...contentProps}
+          className={cx('iui-tree-node-content', contentProps?.className)}
         >
-          {checkbox && React.isValidElement(checkbox)
-            ? React.cloneElement(checkbox, {
-                className: cx(
-                  'iui-tree-node-checkbox',
-                  checkbox.props.className,
-                ),
-                tabIndex: isFocused ? 0 : -1,
-              })
-            : checkbox}
-          <div className='iui-tree-node-content'>
-            {hasSubNodes && expander}
-            {hasSubNodes && !expander && (
-              <TreeNodeExpander
-                isExpanded={isExpanded}
-                disabled={isDisabled}
-                onClick={onExpanderClick}
-                tabIndex={isFocused ? 0 : -1}
-              />
-            )}
-            {icon &&
-              React.cloneElement(icon, {
-                className: cx(
-                  'iui-tree-node-content-icon',
-                  icon.props.className,
-                ),
-              })}
-            <span className='iui-tree-node-content-label'>
-              <div className='iui-tree-node-content-title'>{label}</div>
-              {sublabel && (
-                <div className='iui-tree-node-content-caption'>{sublabel}</div>
+          {hasSubNodes && expander}
+          {hasSubNodes && !expander && (
+            <TreeNodeExpander
+              isExpanded={isExpanded}
+              disabled={isDisabled}
+              onClick={onExpanderClick}
+              tabIndex={isFocused ? 0 : -1}
+              {...expanderProps}
+            />
+          )}
+          {icon && (
+            <Box
+              as='span'
+              aria-hidden
+              {...iconProps}
+              className={cx('iui-tree-node-content-icon', iconProps?.className)}
+            >
+              {icon}
+            </Box>
+          )}
+          <Box
+            as='div'
+            {...labelProps}
+            className={cx('iui-tree-node-content-label', labelProps?.className)}
+          >
+            <Box
+              as='div'
+              {...titleProps}
+              className={cx(
+                'iui-tree-node-content-title',
+                titleProps?.className,
               )}
-            </span>
-            {children}
-          </div>
-        </div>
-      }
+            >
+              {label}
+            </Box>
+            {sublabel && (
+              <Box
+                as='div'
+                {...sublabelProps}
+                className={cx(
+                  'iui-tree-node-content-caption',
+                  sublabelProps?.className,
+                )}
+              >
+                {sublabel}
+              </Box>
+            )}
+          </Box>
+          {children}
+        </Box>
+      </Box>
+
       {hasSubNodes && (
-        <ul
-          className='iui-sub-tree'
+        <Box
+          as='div'
           role='group'
-          aria-owns={subNodeIds.join(',')}
+          aria-owns={subNodeIds.join(' ')}
+          {...subTreeProps}
+          className={cx('iui-sub-tree', subTreeProps?.className)}
         />
       )}
-    </li>
+    </Box>
   );
-};
-
-export default TreeNode;
+}) as PolymorphicForwardRefComponent<'div', TreeNodeProps>;
+if (process.env.NODE_ENV === 'development') {
+  TreeNode.displayName = 'TreeNode';
+}

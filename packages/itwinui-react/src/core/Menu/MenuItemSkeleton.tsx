@@ -2,12 +2,13 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { CommonProps, useTheme, VisuallyHidden } from '../utils';
-import '@itwin/itwinui-css/css/menu.css';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { VisuallyHidden } from '../VisuallyHidden/VisuallyHidden.js';
 
-export type MenuItemSkeletonProps = {
+type MenuItemSkeletonProps = {
   /**
    * Flag whether to show skeleton for sub-label.
    */
@@ -30,12 +31,12 @@ export type MenuItemSkeletonProps = {
      */
     loading: string;
   };
-} & CommonProps;
+};
 
 /**
  * Menu item that uses skeletons to indicate loading state.
  */
-export const MenuItemSkeleton = (props: MenuItemSkeletonProps) => {
+export const MenuItemSkeleton = React.forwardRef((props, forwardedRef) => {
   const {
     hasSublabel,
     hasIcon,
@@ -46,34 +47,30 @@ export const MenuItemSkeleton = (props: MenuItemSkeletonProps) => {
     ...rest
   } = props;
 
-  useTheme();
-
   return (
-    <li
-      className={cx(
-        'iui-menu-item',
-        'iui-menu-item-skeleton',
-        { 'iui-large': hasSublabel },
-        className,
-      )}
+    <Box
+      className={cx('iui-menu-item-skeleton', className)}
+      data-iui-size={hasSublabel && 'large'}
       style={{
         ...{
           '--iui-menu-item-content-skeleton-max-width': contentWidth,
         },
         ...style,
       }}
+      ref={forwardedRef}
       {...rest}
     >
-      {hasIcon && <div className='iui-icon iui-skeleton' aria-hidden />}
-      <span className='iui-content'>
-        <div className='iui-menu-label iui-skeleton' aria-hidden />
+      {hasIcon && <Box className='iui-icon iui-skeleton' aria-hidden />}
+      <Box as='span' className='iui-content'>
+        <Box className='iui-menu-label iui-skeleton' aria-hidden />
         {hasSublabel && (
-          <div className='iui-menu-description iui-skeleton' aria-hidden />
+          <Box className='iui-menu-description iui-skeleton' aria-hidden />
         )}
         <VisuallyHidden>{translatedStrings.loading}</VisuallyHidden>
-      </span>
-    </li>
+      </Box>
+    </Box>
   );
-};
-
-export default MenuItemSkeleton;
+}) as PolymorphicForwardRefComponent<'div', MenuItemSkeletonProps>;
+if (process.env.NODE_ENV === 'development') {
+  MenuItemSkeleton.displayName = 'MenuItemSkeleton';
+}

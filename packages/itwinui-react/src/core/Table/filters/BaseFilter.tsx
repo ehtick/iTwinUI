@@ -2,18 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import '@itwin/itwinui-css/css/table.css';
-import { useTheme } from '../../utils';
-import { CommonProps } from '../../utils';
-
-export type BaseFilterProps = {
-  /**
-   * Filter body.
-   */
-  children: React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+import { Box, mergeEventHandlers } from '../../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../../utils/index.js';
 
 /**
  * Filter wrapper that should be used when creating custom filters.
@@ -29,22 +21,21 @@ export type BaseFilterProps = {
  *   />
  * </BaseFilter>
  */
-export const BaseFilter = (props: BaseFilterProps) => {
-  const { children, className, style, id } = props;
-
-  useTheme();
-
+export const BaseFilter = React.forwardRef((props, forwardedRef) => {
   return (
-    <div
-      className={cx('iui-table-column-filter', className)}
-      style={style}
-      // Prevents from triggering sort
-      onClick={(e: React.MouseEvent) => {
-        e.stopPropagation();
+    <Box
+      as='form'
+      {...props}
+      ref={forwardedRef}
+      className={cx('iui-table-column-filter', props.className)}
+      onSubmit={(e) => {
+        e.preventDefault(); // prevent default browser form submission
+        props.onSubmit?.(e);
       }}
-      id={id}
-    >
-      {children}
-    </div>
+      onClick={mergeEventHandlers(props.onClick, (e) => {
+        // Prevents from triggering sort
+        e.stopPropagation();
+      })}
+    />
   );
-};
+}) as PolymorphicForwardRefComponent<'form'>;

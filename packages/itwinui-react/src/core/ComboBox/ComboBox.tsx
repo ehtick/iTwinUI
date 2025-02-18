@@ -2,43 +2,42 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import cx from 'classnames';
-import { InputProps } from '../Input';
-import { MenuExtraContent } from '../Menu';
-import { SelectOption } from '../Select';
-import SelectTag from '../Select/SelectTag';
-import { Text } from '../Typography';
+import * as React from 'react';
+import { MenuExtraContent } from '../Menu/MenuExtraContent.js';
+import type { SelectOption } from '../Select/Select.js';
+import { SelectTag } from '../Select/SelectTag.js';
+import { Text } from '../Typography/Text.js';
+import type { Input } from '../Input/Input.js';
 import {
-  useTheme,
-  PopoverProps,
-  CommonProps,
-  getRandomValue,
-  InputContainerProps,
   mergeRefs,
   useLatestRef,
-  useIsomorphicLayoutEffect,
-} from '../utils';
-import 'tippy.js/animations/shift-away.css';
-import {
-  ComboBoxActionContext,
-  comboBoxReducer,
-  ComboBoxRefsContext,
-  ComboBoxStateContext,
-} from './helpers';
-import { ComboBoxDropdown } from './ComboBoxDropdown';
-import { ComboBoxEndIcon } from './ComboBoxEndIcon';
-import { ComboBoxInput } from './ComboBoxInput';
-import { ComboBoxInputContainer } from './ComboBoxInputContainer';
-import { ComboBoxMenu } from './ComboBoxMenu';
-import { ComboBoxMenuItem } from './ComboBoxMenuItem';
+  useLayoutEffect,
+  AutoclearingHiddenLiveRegion,
+  useId,
+  useControlledState,
+} from '../../utils/index.js';
+import { usePopover } from '../Popover/Popover.js';
+import type {
+  InputContainerProps,
+  CommonProps,
+  PortalProps,
+} from '../../utils/index.js';
+import { ComboBoxRefsContext, ComboBoxStateContext } from './helpers.js';
+import { ComboBoxEndIcon } from './ComboBoxEndIcon.js';
+import { ComboBoxInput } from './ComboBoxInput.js';
+import { ComboBoxInputContainer } from './ComboBoxInputContainer.js';
+import { ComboBoxMenu } from './ComboBoxMenu.js';
+import { ComboBoxMenuItem } from './ComboBoxMenuItem.js';
 
 // Type guard for enabling multiple
 const isMultipleEnabled = <T,>(
-  variable: (T | undefined) | (T[] | undefined),
+  variable: (T | null | undefined) | (T[] | null | undefined),
   multiple: boolean,
-): variable is T[] | undefined => {
-  return multiple && (Array.isArray(variable) || variable === undefined);
+): variable is T[] | null | undefined => {
+  return (
+    multiple &&
+    (Array.isArray(variable) || variable === null || variable === undefined)
+  );
 };
 
 // Type guard for user onChange
@@ -68,17 +67,40 @@ export type ComboboxMultipleTypeProps<T> =
       /**
        * Controlled value of ComboBox.
        * If `multiple` is enabled, it is an array of values.
+       *
+       * Pass `null` or `undefined` to reset the value. Apart from resetting the value:
+       * * `value={null}` will switch to/remain in the *controlled* state.
+       * * `value={undefined}` will switch to/remain in the *uncontrolled* state.
        */
-      value?: T;
+      value?: T | null | undefined;
+      /**
+       * Default value of `value` that is set on initial render. This is useful when you don't want to
+       * maintain your own state but still want to control the initial `value`.
+       */
+      defaultValue?: T | null;
       /**
        * Callback fired when selected value changes.
        */
       onChange?: (value: T) => void;
+      /**
+       * Only applicable when `multiple` is enabled.
+       *
+       * If `true`, toggling an option will clear the filter.
+       * Useful when users would likely want to re-filter after toggling an option.
+       *
+       * If `false`, the filter will remain as-is after toggling an option.
+       * Useful when users would likely want to toggle multiple options from the _same_ filtered results.
+       *
+       * @default true
+       */
+      clearFilterOnOptionToggle?: never;
     }
   | {
       multiple: true;
-      value?: T[];
+      value?: T[] | null | undefined;
+      defaultValue?: T[] | null;
       onChange?: (value: T[], event: MultipleOnChangeProps<T>) => void;
+      clearFilterOnOptionToggle?: boolean;
     };
 
 export type ComboBoxProps<T> = {
@@ -101,14 +123,20 @@ export type ComboBoxProps<T> = {
   /**
    * Native input element props.
    */
-  inputProps?: Omit<InputProps, 'setFocus'>;
+  inputProps?: React.ComponentProps<typeof Input>;
   /**
    * Props to customize dropdown menu behavior.
    */
-  dropdownMenuProps?: PopoverProps;
+  dropdownMenuProps?: React.ComponentProps<'div'> &
+    Pick<Parameters<typeof usePopover>['0'], 'middleware'> &
+    Pick<PortalProps, 'portal'>;
+  /**
+   * End icon props.
+   */
+  endIconProps?: React.ComponentProps<typeof ComboBoxEndIcon>;
   /**
    * Message shown when no options are available.
-   * If `JSX.Element` is provided, it will be rendered as is and won't be wrapped with `MenuExtraContent`.
+   * If `React.JSX.Element` is provided, it will be rendered as is and won't be wrapped with `MenuExtraContent`.
    * @default 'No options found'
    */
   emptyStateMessage?: React.ReactNode;
@@ -127,7 +155,7 @@ export type ComboBoxProps<T> = {
       id: string;
       index: number;
     },
-  ) => JSX.Element;
+  ) => React.JSX.Element;
   /**
    * If enabled, virtualization is used for the scrollable dropdown list.
    * Use it if you expect a very long list of items.
@@ -145,7 +173,7 @@ export type ComboBoxProps<T> = {
   onHide?: () => void;
 } & ComboboxMultipleTypeProps<T> &
   Pick<InputContainerProps, 'status'> &
-  Omit<CommonProps, 'title'>;
+  CommonProps;
 
 /** Returns either `option.id` or derives a stable id using `idPrefix` and `option.label` (without whitespace) */
 const getOptionId = (option: SelectOption<unknown>, idPrefix: string) => {
@@ -165,384 +193,492 @@ const getOptionId = (option: SelectOption<unknown>, idPrefix: string) => {
  *   onChange={() => {}}
  * />
  */
-export const ComboBox = <T,>(props: ComboBoxProps<T>) => {
-  const {
-    options,
-    value: valueProp,
-    onChange,
-    filterFunction,
-    inputProps,
-    dropdownMenuProps,
-    emptyStateMessage = 'No options found',
-    itemRenderer,
-    enableVirtualization = false,
-    multiple = false,
-    onShow,
-    onHide,
-    ...rest
-  } = props;
+export const ComboBox = React.forwardRef(
+  <T,>(
+    props: ComboBoxProps<T>,
+    forwardedRef: React.ForwardedRef<HTMLInputElement>,
+  ) => {
+    const idPrefix = useId();
 
-  // Generate a stateful random id if not specified
-  const [id] = React.useState(
-    () =>
-      props.id ??
-      (inputProps?.id && `${inputProps.id}-cb`) ??
-      `iui-cb-${getRandomValue(10)}`,
-  );
-
-  useTheme();
-
-  // Refs get set in subcomponents
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const menuRef = React.useRef<HTMLUListElement>(null);
-  const toggleButtonRef = React.useRef<HTMLSpanElement>(null);
-  const onChangeProp = useLatestRef(onChange);
-  const optionsRef = useLatestRef(options);
-
-  // Record to store all extra information (e.g. original indexes), where the key is the id of the option
-  const optionsExtraInfoRef = React.useRef<
-    Record<string, { __originalIndex: number }>
-  >({});
-
-  // Clear the extra info when the options change so that it can be reinitialized below
-  React.useEffect(() => {
-    optionsExtraInfoRef.current = {};
-  }, [options]);
-
-  // Initialize the extra info only if it is not already initialized
-  if (
-    options.length > 0 &&
-    Object.keys(optionsExtraInfoRef.current).length === 0
-  ) {
-    options.forEach((option, index) => {
-      optionsExtraInfoRef.current[getOptionId(option, id)] = {
-        __originalIndex: index,
-      };
-    });
-  }
-
-  // Get indices of selected elements in options array when we have selected values.
-  const getSelectedIndexes = React.useCallback(() => {
-    if (isMultipleEnabled(valueProp, multiple)) {
-      const indexArray: number[] = [];
-      valueProp?.forEach((value) => {
-        indexArray.push(options.findIndex((option) => option.value === value));
-      });
-      return indexArray;
-    } else {
-      return options.findIndex((option) => option.value === valueProp);
-    }
-  }, [multiple, options, valueProp]);
-
-  // Reducer where all the component-wide state is stored
-  const [{ isOpen, selected, focusedIndex }, dispatch] = React.useReducer(
-    comboBoxReducer,
-    {
-      isOpen: false,
-      selected: getSelectedIndexes(),
-      focusedIndex: -1,
-    },
-  );
-
-  useIsomorphicLayoutEffect(() => {
-    // When the dropdown opens
-    if (isOpen) {
-      inputRef.current?.focus(); // Focus the input
-      // Reset the filtered list (does not reset when multiple enabled)
-      if (!multiple) {
-        setFilteredOptions(optionsRef.current);
-        dispatch({ type: 'focus', value: undefined });
-      }
-    }
-    // When the dropdown closes
-    else {
-      // Reset the focused index
-      dispatch({ type: 'focus', value: undefined });
-      // Reset the input value if not multiple
-      if (!isMultipleEnabled(selected, multiple)) {
-        setInputValue(
-          selected != undefined && selected >= 0
-            ? optionsRef.current[selected]?.label
-            : '',
+    const defaultFilterFunction = React.useCallback(
+      (options: SelectOption<T>[], inputValue: string) => {
+        return options.filter((option) =>
+          option.label.toLowerCase().includes(inputValue.toLowerCase()),
         );
-      }
-    }
-  }, [isOpen, multiple, optionsRef, selected]);
+      },
+      [],
+    );
 
-  // Set min-width of menu to be same as input
-  const [minWidth, setMinWidth] = React.useState(0);
-  React.useEffect(() => {
-    if (inputRef.current) {
-      setMinWidth(inputRef.current.offsetWidth);
-    }
-  }, [isOpen]);
-
-  // Update filtered options to the latest value options according to input value
-  const [filteredOptions, setFilteredOptions] = React.useState(options);
-  React.useEffect(() => {
-    if (inputValue) {
-      setFilteredOptions(
-        filterFunction?.(options, inputValue) ??
-          options.filter((option) =>
-            option.label.toLowerCase().includes(inputValue.toLowerCase()),
-          ),
-      );
-    } else {
-      setFilteredOptions(options);
-    }
-    dispatch({ type: 'focus', value: undefined });
-    // Only need to call on options update
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options]);
-
-  // Filter options based on input value
-  const [inputValue, setInputValue] = React.useState<string>(
-    inputProps?.value?.toString() ?? '',
-  );
-
-  const handleOnInput = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const { value } = event.currentTarget;
-      setInputValue(value);
-      dispatch({ type: 'open' }); // reopen when typing
-      setFilteredOptions(
-        filterFunction?.(optionsRef.current, value) ??
-          optionsRef.current.filter((option) =>
-            option.label.toLowerCase().includes(value.toLowerCase()),
-          ),
-      );
-      if (focusedIndex != -1) {
-        dispatch({ type: 'focus', value: -1 });
-      }
-      inputProps?.onChange?.(event);
-    },
-    [filterFunction, focusedIndex, inputProps, optionsRef],
-  );
-
-  // When the value prop changes, update the selected index/indices
-  React.useEffect(() => {
-    if (isMultipleEnabled(valueProp, multiple)) {
-      if (valueProp) {
-        // If user provided array of selected values
-        const indexes = valueProp.map((value) => {
-          return options.findIndex((option) => option.value === value);
-        });
-        dispatch({
-          type: 'multiselect',
-          value: indexes.filter((index) => index !== -1), // Add available options
-        });
-      } else {
-        // if user provided one value or undefined
-        dispatch({
-          type: 'multiselect',
-          value: [], // Add empty list
-        });
-      }
-    } else {
-      dispatch({
-        type: 'select',
-        value: options.findIndex((option) => option.value === valueProp),
-      });
-    }
-  }, [valueProp, options, multiple]);
-
-  const isMenuItemSelected = React.useCallback(
-    (index: number) => {
-      if (isMultipleEnabled(selected, multiple)) {
-        return !!selected.includes(index as number);
-      } else {
-        return selected === index;
-      }
-    },
-    [multiple, selected],
-  );
-
-  // Generates new array when item is added or removed
-  const selectedChangeHandler = React.useCallback(
-    (__originalIndex: number, action: ActionType) => {
-      if (action === 'added') {
-        return [...(selected as number[]), __originalIndex];
-      } else {
-        return (selected as number[]).filter(
-          (index) => index !== __originalIndex,
-        );
-      }
-    },
-    [selected],
-  );
-
-  // Calls user defined onChange
-  const onChangeHandler = React.useCallback(
-    (__originalIndex: number, actionType?: ActionType, newArray?: number[]) => {
-      if (isSingleOnChange(onChangeProp.current, multiple)) {
-        onChangeProp.current?.(optionsRef.current[__originalIndex]?.value);
-      } else {
-        actionType &&
-          newArray &&
-          onChangeProp.current?.(
-            newArray?.map((item) => optionsRef.current[item]?.value),
-            {
-              value: optionsRef.current[__originalIndex]?.value,
-              type: actionType,
-            },
-          );
-      }
-    },
-    [multiple, onChangeProp, optionsRef],
-  );
-
-  const onClickHandler = React.useCallback(
-    (__originalIndex: number) => {
-      if (isMultipleEnabled(selected, multiple)) {
-        const actionType = isMenuItemSelected(__originalIndex)
-          ? 'removed'
-          : 'added';
-        const newArray = selectedChangeHandler(__originalIndex, actionType);
-        dispatch({ type: 'multiselect', value: newArray });
-        onChangeHandler(__originalIndex, actionType, newArray);
-      } else {
-        dispatch({ type: 'select', value: __originalIndex });
-        dispatch({ type: 'close' });
-        onChangeHandler(__originalIndex);
-      }
-    },
-    [
-      selectedChangeHandler,
-      isMenuItemSelected,
-      multiple,
-      onChangeHandler,
-      selected,
-    ],
-  );
-
-  const getMenuItem = React.useCallback(
-    (option: SelectOption<T>, filteredIndex?: number) => {
-      const optionId = getOptionId(option, id);
-      const { __originalIndex } = optionsExtraInfoRef.current[optionId];
-
-      const customItem = itemRenderer
-        ? itemRenderer(option, {
-            isFocused: focusedIndex === __originalIndex,
-            isSelected: selected === __originalIndex,
-            index: __originalIndex,
-            id: optionId,
-          })
-        : null;
-
-      return customItem ? (
-        React.cloneElement(customItem, {
-          onClick: (e: unknown) => {
-            onClickHandler(__originalIndex);
-            customItem.props.onClick?.(e);
-          },
-          // ComboBox.MenuItem handles scrollIntoView, data-iui-index and iui-focused through context
-          // but we still need to pass them here for backwards compatibility with MenuItem
-          className: cx(customItem.props.className, {
-            'iui-focused': focusedIndex === __originalIndex,
-          }),
-          'data-iui-index': __originalIndex,
-          'data-iui-filtered-index': filteredIndex,
-          ref: mergeRefs(customItem.props.ref, (el: HTMLLIElement | null) => {
-            if (!enableVirtualization && focusedIndex === __originalIndex) {
-              el?.scrollIntoView({ block: 'nearest' });
-            }
-          }),
-        })
-      ) : (
-        <ComboBoxMenuItem
-          key={optionId}
-          id={optionId}
-          {...option}
-          isSelected={isMenuItemSelected(__originalIndex)}
-          onClick={() => {
-            onClickHandler(__originalIndex);
-          }}
-          index={__originalIndex}
-          data-iui-filtered-index={filteredIndex}
-        >
-          {option.label}
-        </ComboBoxMenuItem>
-      );
-    },
-    [
-      enableVirtualization,
-      focusedIndex,
-      id,
-      isMenuItemSelected,
+    const {
+      options,
+      value: valueProp,
+      onChange,
+      filterFunction = defaultFilterFunction,
+      inputProps,
+      endIconProps,
+      dropdownMenuProps: { middleware, ...dropdownMenuProps } = {},
+      emptyStateMessage = 'No options found',
       itemRenderer,
-      onClickHandler,
-      selected,
-    ],
-  );
+      enableVirtualization = false,
+      multiple = false,
+      onShow: onShowProp,
+      onHide: onHideProp,
+      id = inputProps?.id ? `iui-${inputProps.id}-cb` : idPrefix,
+      defaultValue,
+      clearFilterOnOptionToggle = true,
+      ...rest
+    } = props;
 
-  const emptyContent = React.useMemo(
-    () => (
-      <>
-        {React.isValidElement(emptyStateMessage) ? (
-          emptyStateMessage
+    // Refs get set in subcomponents
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const menuRef = React.useRef<HTMLElement>(null);
+    const onChangeProp = useLatestRef(onChange);
+    const optionsRef = useLatestRef(options);
+    const filterFunctionRef = useLatestRef(filterFunction);
+
+    const optionsExtraInfo = React.useMemo(() => {
+      const newOptionsExtraInfo: Record<string, { __originalIndex: number }> =
+        {};
+
+      options.forEach((option, index) => {
+        newOptionsExtraInfo[getOptionId(option, id)] = {
+          __originalIndex: index,
+        };
+      });
+
+      return newOptionsExtraInfo;
+    }, [id, options]);
+
+    /**
+     * - When multiple is enabled, it is an array of indices.
+     * - When multiple is disabled, it is a single index; -1 if no item is selected.
+     */
+    const getSelectedIndexes = React.useCallback(
+      (value: typeof valueProp) => {
+        // If value is undefined, use uncontrolled state
+        if (value === undefined) {
+          return undefined;
+        }
+
+        if (isMultipleEnabled(value, multiple)) {
+          const indexArray: number[] = [];
+          value?.forEach((value) => {
+            const indexToAdd = options.findIndex(
+              (option) => option.value === value,
+            );
+            if (indexToAdd > -1) {
+              indexArray.push(indexToAdd);
+            }
+          });
+          return indexArray;
+        } else {
+          return options.findIndex((option) => option.value === value);
+        }
+      },
+      [multiple, options],
+    );
+
+    const [selectedIndexes, setSelectedIndexes] = useControlledState(
+      getSelectedIndexes(defaultValue) ?? (multiple ? [] : -1),
+      getSelectedIndexes(valueProp),
+    );
+
+    const previousValue = React.useRef(valueProp);
+    useLayoutEffect(() => {
+      if (valueProp !== previousValue.current) {
+        previousValue.current = valueProp;
+
+        // Passing value={undefined} resets the value (needed to prevent a breaking change)
+        if (valueProp === undefined) {
+          if (isMultipleEnabled(selectedIndexes, multiple)) {
+            setSelectedIndexes([]);
+          } else {
+            setSelectedIndexes(-1);
+          }
+        }
+      }
+    }, [multiple, selectedIndexes, setSelectedIndexes, valueProp]);
+
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [focusedIndex, setFocusedIndex] = React.useState<number>(-1);
+
+    const onShowRef = useLatestRef(onShowProp);
+    const onHideRef = useLatestRef(onHideProp);
+
+    const show = React.useCallback(() => {
+      setIsOpen(true);
+      onShowRef.current?.();
+    }, [onShowRef]);
+
+    const hide = React.useCallback(() => {
+      setIsOpen(false);
+      onHideRef.current?.();
+    }, [onHideRef]);
+
+    useLayoutEffect(() => {
+      // When the dropdown opens
+      if (isOpen) {
+        inputRef.current?.focus(); // Focus the input
+        if (!isMultipleEnabled(selectedIndexes, multiple)) {
+          setFocusedIndex(selectedIndexes ?? -1);
+        }
+      }
+      // When the dropdown closes
+      else {
+        // Reset the focused index
+        setFocusedIndex(-1);
+
+        // Reset/update the input value
+        if (isMultipleEnabled(selectedIndexes, multiple)) {
+          setInputValue('');
+        } else {
+          setInputValue(
+            selectedIndexes >= 0
+              ? optionsRef.current[selectedIndexes]?.label ?? ''
+              : '',
+          );
+        }
+
+        setIsInputDirty(false);
+      }
+    }, [isOpen, multiple, optionsRef, selectedIndexes]);
+
+    // To reconfigure internal state whenever the options change
+    const previousOptions = React.useRef(options);
+    React.useEffect(() => {
+      if (options !== previousOptions.current) {
+        previousOptions.current = options;
+        onOptionsChange();
+      }
+
+      /**
+       * Should be called internally whenever the options change.
+       */
+      function onOptionsChange() {
+        // If multiple=false, refocus the selected option.
+        // If no option is selected (i.e. selected === -1), reset the focus to the input.
+        if (!isMultipleEnabled(selectedIndexes, multiple)) {
+          setFocusedIndex(selectedIndexes);
+        }
+        // If multiple=true, reset the focus to the input.
+        else {
+          setFocusedIndex(-1);
+        }
+
+        // Reset/update the input value if multiple=false and if the dropdown is closed (i.e. don't override user input when dropdown is open)
+        if (!isMultipleEnabled(selectedIndexes, multiple) && !isOpen) {
+          setInputValue(
+            selectedIndexes >= 0 ? options[selectedIndexes]?.label : '',
+          );
+        }
+      }
+    }, [options, isOpen, multiple, selectedIndexes]);
+
+    // Filter options based on input value
+    const [inputValue, setInputValue] = React.useState<string>(
+      inputProps?.value?.toString() ?? '',
+    );
+    const [isInputDirty, setIsInputDirty] = React.useState(false);
+
+    const filteredOptions = React.useMemo(() => {
+      // We filter the list only when the user is typing (i.e. input is "dirty")
+      if (!isInputDirty) {
+        return options;
+      }
+
+      return filterFunctionRef.current?.(options, inputValue);
+    }, [filterFunctionRef, inputValue, options, isInputDirty]);
+
+    const [liveRegionSelection, setLiveRegionSelection] = React.useState('');
+
+    const handleOnInput = React.useCallback(
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.currentTarget;
+        setInputValue(value);
+        show(); // reopen when typing
+        setIsInputDirty(true);
+
+        if (focusedIndex != -1) {
+          setFocusedIndex(-1);
+        }
+        inputProps?.onChange?.(event);
+      },
+      [focusedIndex, inputProps, show],
+    );
+
+    const isMenuItemSelected = React.useCallback(
+      (index: number) => {
+        if (isMultipleEnabled(selectedIndexes, multiple)) {
+          return selectedIndexes.includes(index);
+        } else {
+          return selectedIndexes === index;
+        }
+      },
+      [multiple, selectedIndexes],
+    );
+
+    /**
+     * Generates new array when item is added or removed. Only applicable when multiple is enabled.
+     */
+    const selectedChangeHandler = React.useCallback(
+      (__originalIndex: number, action: ActionType) => {
+        if (!isMultipleEnabled(selectedIndexes, multiple)) {
+          return;
+        }
+
+        if (action === 'added') {
+          return [...selectedIndexes, __originalIndex];
+        } else {
+          return selectedIndexes?.filter((index) => index !== __originalIndex);
+        }
+      },
+      [selectedIndexes, multiple],
+    );
+
+    /**
+     * Calls user defined onChange
+     */
+    const onChangeHandler = React.useCallback(
+      (
+        __originalIndex: number,
+        actionType?: ActionType,
+        newSelectedIndexes?: number[],
+      ) => {
+        if (isSingleOnChange(onChangeProp.current, multiple)) {
+          onChangeProp.current?.(optionsRef.current[__originalIndex]?.value);
+        } else {
+          actionType &&
+            newSelectedIndexes &&
+            onChangeProp.current?.(
+              newSelectedIndexes?.map(
+                (index) => optionsRef.current[index]?.value,
+              ),
+              {
+                value: optionsRef.current[__originalIndex]?.value,
+                type: actionType,
+              },
+            );
+        }
+      },
+      [multiple, onChangeProp, optionsRef],
+    );
+
+    const onClickHandler = React.useCallback(
+      (__originalIndex: number) => {
+        inputRef.current?.focus({ preventScroll: true }); // return focus to input
+
+        if (optionsRef.current[__originalIndex]?.disabled) {
+          return;
+        }
+
+        if (multiple) {
+          const actionType = isMenuItemSelected(__originalIndex)
+            ? 'removed'
+            : 'added';
+          const newSelectedIndexes = selectedChangeHandler(
+            __originalIndex,
+            actionType,
+          );
+
+          if (newSelectedIndexes == null) {
+            return;
+          }
+          setSelectedIndexes(newSelectedIndexes);
+          onChangeHandler(__originalIndex, actionType, newSelectedIndexes);
+
+          // update live region
+          setLiveRegionSelection(
+            newSelectedIndexes
+              .map((item) => optionsRef.current[item]?.label)
+              .filter(Boolean)
+              .join(', '),
+          );
+
+          // If clearFilterOnOptionToggle, clear the filter
+          if (clearFilterOnOptionToggle) {
+            setInputValue('');
+            setIsInputDirty(false);
+          }
+        } else {
+          setSelectedIndexes(__originalIndex);
+          hide();
+          onChangeHandler(__originalIndex);
+        }
+      },
+      [
+        optionsRef,
+        multiple,
+        isMenuItemSelected,
+        selectedChangeHandler,
+        setSelectedIndexes,
+        onChangeHandler,
+        clearFilterOnOptionToggle,
+        hide,
+      ],
+    );
+
+    const getMenuItem = React.useCallback(
+      (option: SelectOption<T>, filteredIndex?: number) => {
+        const optionId = getOptionId(option, id);
+        const { __originalIndex } = optionsExtraInfo[optionId];
+        const {
+          icon,
+          startIcon: startIconProp,
+          label,
+          ...restOptions
+        } = option;
+
+        const startIcon = startIconProp ?? icon;
+
+        const customItem = itemRenderer
+          ? itemRenderer(option, {
+              isFocused: focusedIndex === __originalIndex,
+              isSelected: isMenuItemSelected(__originalIndex),
+              index: __originalIndex,
+              id: optionId,
+            })
+          : null;
+
+        return customItem ? (
+          React.cloneElement(customItem, {
+            onClick: (e: unknown) => {
+              onClickHandler(__originalIndex);
+              customItem.props.onClick?.(e);
+            },
+            // ComboBox.MenuItem handles scrollIntoView, data-iui-index and focused through context
+            // but we still need to pass them here for backwards compatibility with MenuItem
+            focused: focusedIndex === __originalIndex,
+            'data-iui-index': __originalIndex,
+            'data-iui-filtered-index': filteredIndex,
+            ref: mergeRefs(customItem.props.ref, (el: HTMLElement | null) => {
+              if (!enableVirtualization && focusedIndex === __originalIndex) {
+                el?.scrollIntoView({ block: 'nearest' });
+              }
+            }),
+          })
         ) : (
-          <MenuExtraContent>
-            <Text isMuted>{emptyStateMessage}</Text>
-          </MenuExtraContent>
-        )}
-      </>
-    ),
-    [emptyStateMessage],
-  );
+          <ComboBoxMenuItem
+            key={optionId}
+            id={optionId}
+            startIcon={startIcon}
+            {...restOptions}
+            isSelected={isMenuItemSelected(__originalIndex)}
+            onClick={() => {
+              onClickHandler(__originalIndex);
+            }}
+            index={__originalIndex}
+            data-iui-filtered-index={filteredIndex}
+          >
+            {label}
+          </ComboBoxMenuItem>
+        );
+      },
+      [
+        enableVirtualization,
+        focusedIndex,
+        id,
+        isMenuItemSelected,
+        itemRenderer,
+        onClickHandler,
+        optionsExtraInfo,
+      ],
+    );
 
-  return (
-    <ComboBoxRefsContext.Provider
-      value={{ inputRef, menuRef, toggleButtonRef, optionsExtraInfoRef }}
-    >
-      <ComboBoxActionContext.Provider value={dispatch}>
+    const emptyContent = React.useMemo(
+      () => (
+        <>
+          {React.isValidElement(emptyStateMessage) ? (
+            emptyStateMessage
+          ) : (
+            <MenuExtraContent>
+              <Text isMuted>{emptyStateMessage}</Text>
+            </MenuExtraContent>
+          )}
+        </>
+      ),
+      [emptyStateMessage],
+    );
+
+    const popover = usePopover({
+      visible: isOpen,
+      onVisibleChange: (open) => (open ? show() : hide()),
+      matchWidth: true,
+      middleware: {
+        size: { maxHeight: 'var(--iui-menu-max-height)' },
+        ...middleware,
+      },
+      closeOnOutsideClick: true,
+      interactions: { click: false, focus: true },
+    });
+
+    return (
+      <ComboBoxRefsContext.Provider
+        value={{ inputRef, menuRef, optionsExtraInfo }}
+      >
         <ComboBoxStateContext.Provider
           value={{
             id,
-            minWidth,
             isOpen,
             focusedIndex,
+            setFocusedIndex,
             onClickHandler,
             enableVirtualization,
             filteredOptions,
             getMenuItem,
             multiple,
+            popover,
+            show,
+            hide,
           }}
         >
-          <ComboBoxInputContainer disabled={inputProps?.disabled} {...rest}>
+          <ComboBoxInputContainer
+            ref={forwardedRef}
+            disabled={inputProps?.disabled}
+            {...rest}
+          >
             <>
               <ComboBoxInput
                 value={inputValue}
+                disabled={inputProps?.disabled}
                 {...inputProps}
                 onChange={handleOnInput}
                 selectTags={
-                  isMultipleEnabled(selected, multiple)
-                    ? selected.map((index) => {
-                        const item = optionsRef.current[index];
-                        return (
-                          <SelectTag key={item.label} label={item.label} />
-                        );
-                      })
+                  isMultipleEnabled(selectedIndexes, multiple)
+                    ? (selectedIndexes
+                        ?.map((index) => {
+                          const item = options[index];
+
+                          return (
+                            <SelectTag key={item.label} label={item.label} />
+                          );
+                        })
+                        .filter(Boolean) as React.JSX.Element[])
                     : undefined
                 }
               />
             </>
-            <ComboBoxEndIcon disabled={inputProps?.disabled} isOpen={isOpen} />
-          </ComboBoxInputContainer>
-          <ComboBoxDropdown
-            {...dropdownMenuProps}
-            onShow={onShow}
-            onHide={onHide}
-          >
-            <ComboBoxMenu>
-              {filteredOptions.length > 0 && !enableVirtualization
-                ? filteredOptions.map(getMenuItem)
-                : emptyContent}
-            </ComboBoxMenu>
-          </ComboBoxDropdown>
-        </ComboBoxStateContext.Provider>
-      </ComboBoxActionContext.Provider>
-    </ComboBoxRefsContext.Provider>
-  );
-};
+            <ComboBoxEndIcon
+              {...endIconProps}
+              disabled={inputProps?.disabled}
+              isOpen={isOpen}
+            />
 
-export default ComboBox;
+            {multiple ? (
+              <AutoclearingHiddenLiveRegion text={liveRegionSelection} />
+            ) : null}
+          </ComboBoxInputContainer>
+          <ComboBoxMenu as='div' {...dropdownMenuProps}>
+            {filteredOptions.length > 0 && !enableVirtualization
+              ? filteredOptions.map(getMenuItem)
+              : emptyContent}
+          </ComboBoxMenu>
+        </ComboBoxStateContext.Provider>
+      </ComboBoxRefsContext.Provider>
+    );
+  },
+) as <T>(
+  props: ComboBoxProps<T> & { ref?: React.ForwardedRef<HTMLElement> },
+) => React.JSX.Element;
+if (process.env.NODE_ENV === 'development') {
+  (ComboBox as any).displayName = 'ComboBox';
+}

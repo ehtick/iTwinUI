@@ -2,24 +2,18 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import cx from 'classnames';
+import * as React from 'react';
 import {
-  CommonProps,
-  useTheme,
-  Popover,
-  useMergedRefs,
   SvgCaretRightSmall,
-} from '../utils';
-import '@itwin/itwinui-css/css/menu.css';
-import { Menu } from './Menu';
-
-/**
- * Context used to provide menu item ref to sub-menu items.
- */
-const MenuItemContext = React.createContext<{
-  ref: React.RefObject<HTMLLIElement> | undefined;
-}>({ ref: undefined });
+  useMergedRefs,
+  useId,
+  useWarningLogger,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { Menu, MenuContext } from './Menu.js';
+import { ListItem } from '../List/ListItem.js';
+import type { ListItemOwnProps } from '../List/ListItem.js';
+import cx from 'classnames';
 
 export type MenuItemProps = {
   /**
@@ -52,11 +46,21 @@ export type MenuItemProps = {
   /**
    * SVG icon component shown on the left.
    */
-  icon?: JSX.Element;
+  startIcon?: React.JSX.Element;
+  /**
+   * @deprecated Use startIcon.
+   * SVG icon component shown on the left.
+   */
+  icon?: React.JSX.Element;
   /**
    * SVG icon component shown on the right.
    */
-  badge?: JSX.Element;
+  endIcon?: React.JSX.Element;
+  /**
+   * @deprecated Use endIcon.
+   * SVG icon component shown on the right.
+   */
+  badge?: React.JSX.Element;
   /**
    * ARIA role. For menu item use 'menuitem', for select item use 'option'.
    * @default 'menuitem'
@@ -65,154 +69,146 @@ export type MenuItemProps = {
   /**
    * Items to be shown in the submenu when hovered over the item.
    */
-  subMenuItems?: JSX.Element[];
+  subMenuItems?: React.JSX.Element[];
   /**
    * Content of the menu item.
    */
   children?: React.ReactNode;
-} & CommonProps;
+} & Pick<ListItemOwnProps, 'focused'>;
 
 /**
  * Basic menu item component. Should be used inside `Menu` component for each item.
  */
-export const MenuItem = React.forwardRef<HTMLLIElement, MenuItemProps>(
-  (props, ref) => {
-    const {
-      children,
-      isSelected,
-      disabled,
-      value,
-      onClick,
-      sublabel,
-      size = !!sublabel ? 'large' : 'default',
-      icon,
-      badge,
-      className,
-      style,
-      role = 'menuitem',
-      subMenuItems = [],
-      ...rest
-    } = props;
+export const MenuItem = React.forwardRef((props, forwardedRef) => {
+  const {
+    className,
+    children,
+    isSelected,
+    disabled,
+    value,
+    onClick: onClickProp,
+    sublabel,
+    size = !!sublabel ? 'large' : 'default',
+    icon,
+    startIcon = icon,
+    badge,
+    endIcon = badge,
+    role = 'menuitem',
+    subMenuItems = [],
+    ...rest
+  } = props;
 
-    useTheme();
+  const logWarning = useWarningLogger();
 
-    const menuItemRef = React.useRef<HTMLLIElement>(null);
-    const refs = useMergedRefs(menuItemRef, ref);
-
-    const { ref: parentMenuItemRef } = React.useContext(MenuItemContext);
-
-    const subMenuRef = React.useRef<HTMLUListElement>(null);
-
-    const [isSubmenuVisible, setIsSubmenuVisible] = React.useState(false);
-
-    const onKeyDown = (event: React.KeyboardEvent<HTMLLIElement>) => {
-      if (event.altKey) {
-        return;
-      }
-
-      switch (event.key) {
-        case 'Enter':
-        case ' ':
-        case 'Spacebar': {
-          !disabled && onClick?.(value);
-          event.preventDefault();
-          break;
-        }
-        case 'ArrowRight': {
-          if (subMenuItems.length > 0) {
-            setIsSubmenuVisible(true);
-            event.preventDefault();
-            event.stopPropagation();
-          }
-          break;
-        }
-        case 'ArrowLeft': {
-          parentMenuItemRef?.current?.focus();
-          event.stopPropagation();
-          event.preventDefault();
-          break;
-        }
-        default:
-          break;
-      }
-    };
-
-    const listItem = (
-      <li
-        className={cx(
-          'iui-menu-item',
-          {
-            'iui-large': size === 'large',
-            'iui-active': isSelected,
-            'iui-disabled': disabled,
-          },
-          className,
-        )}
-        onClick={() => !disabled && onClick?.(value)}
-        ref={refs}
-        style={style}
-        role={role}
-        tabIndex={disabled || role === 'presentation' ? undefined : -1}
-        aria-selected={isSelected}
-        aria-haspopup={subMenuItems.length > 0}
-        aria-disabled={disabled}
-        onKeyDown={onKeyDown}
-        onMouseEnter={() => setIsSubmenuVisible(true)}
-        onMouseLeave={(e) => {
-          if (
-            !(e.relatedTarget instanceof Node) ||
-            !subMenuRef.current?.contains(e.relatedTarget as Node)
-          ) {
-            setIsSubmenuVisible(false);
-          }
-        }}
-        {...rest}
-      >
-        {icon &&
-          React.cloneElement(icon, {
-            className: cx(icon.props.className, 'iui-icon'),
-          })}
-        <span className='iui-content'>
-          <div className='iui-menu-label'>{children}</div>
-          {sublabel && <div className='iui-menu-description'>{sublabel}</div>}
-        </span>
-        {!badge && subMenuItems.length > 0 && (
-          <SvgCaretRightSmall className='iui-icon' />
-        )}
-        {badge &&
-          React.cloneElement(badge, {
-            className: cx(badge.props.className, 'iui-icon'),
-          })}
-      </li>
+  if (
+    process.env.NODE_ENV === 'development' &&
+    onClickProp != null &&
+    subMenuItems.length > 0
+  ) {
+    logWarning(
+      'Passing a non-empty submenuItems array and onClick to MenuItem at the same time is not supported. This is because when a non empty submenuItems array is passed, clicking the MenuItem toggles the submenu visibility.',
     );
+  }
 
-    return subMenuItems.length === 0 ? (
-      listItem
-    ) : (
-      <MenuItemContext.Provider value={{ ref: menuItemRef }}>
-        <Popover
-          placement='right-start'
-          visible={isSubmenuVisible}
-          appendTo='parent'
-          content={
-            <div
-              onMouseLeave={() => setIsSubmenuVisible(false)}
-              onBlur={(e) => {
-                !!(e.relatedTarget instanceof Node) &&
-                  !subMenuRef.current?.contains(e.relatedTarget as Node) &&
-                  !subMenuRef.current?.isEqualNode(e.relatedTarget as Node) &&
-                  setIsSubmenuVisible(false);
-              }}
-            >
-              <Menu ref={subMenuRef}>{subMenuItems}</Menu>
-            </div>
-          }
-        >
-          {listItem}
-        </Popover>
-      </MenuItemContext.Provider>
-    );
-  },
-);
+  const parentMenu = React.useContext(MenuContext);
 
-export default MenuItem;
+  const menuItemRef = React.useRef<HTMLElement>(null);
+  const submenuId = useId();
+
+  const popoverProps = React.useMemo(() => {
+    return {
+      placement: 'right-start',
+      interactions: {
+        click: true,
+        hover: true,
+        listNavigation: {
+          nested: subMenuItems.length > 0,
+          openOnArrowKeyDown: true,
+        },
+      },
+    } satisfies Parameters<typeof Menu>[0]['popoverProps'];
+  }, [subMenuItems.length]);
+
+  const onClick = () => {
+    if (disabled) {
+      return;
+    }
+
+    onClickProp?.(value);
+  };
+
+  const handlers: React.DOMAttributes<HTMLButtonElement> = { onClick };
+
+  /** Index of this item out of all the focusable items in the parent `Menu` */
+  const focusableItemIndex = parentMenu?.focusableElements.findIndex(
+    (el) => el === menuItemRef.current,
+  );
+
+  const trigger = (
+    <ListItem
+      as='button'
+      type='button'
+      className={cx('iui-button-base', className)}
+      actionable
+      size={size}
+      active={isSelected}
+      disabled={disabled}
+      ref={useMergedRefs(menuItemRef, forwardedRef)}
+      role={role}
+      tabIndex={isSelected ? 0 : -1}
+      aria-selected={isSelected}
+      aria-haspopup={subMenuItems.length > 0 ? 'true' : undefined}
+      aria-controls={subMenuItems.length > 0 ? submenuId : undefined}
+      aria-disabled={disabled}
+      {...(parentMenu?.popoverGetItemProps != null
+        ? parentMenu.popoverGetItemProps({
+            focusableItemIndex,
+            userProps: handlers,
+          })
+        : handlers)}
+      {...(rest as React.DOMAttributes<HTMLButtonElement>)}
+    >
+      {startIcon && (
+        <ListItem.Icon as='span' aria-hidden>
+          {startIcon}
+        </ListItem.Icon>
+      )}
+      <ListItem.Content>
+        <div>{children}</div>
+        {sublabel && <ListItem.Description>{sublabel}</ListItem.Description>}
+      </ListItem.Content>
+      {!endIcon && subMenuItems.length > 0 && (
+        <ListItem.Icon as='span' aria-hidden>
+          <SvgCaretRightSmall />
+        </ListItem.Icon>
+      )}
+      {endIcon && (
+        <ListItem.Icon as='span' aria-hidden>
+          {endIcon}
+        </ListItem.Icon>
+      )}
+    </ListItem>
+  );
+
+  return (
+    <>
+      {subMenuItems.length > 0 && !disabled ? (
+        <Menu id={submenuId} trigger={trigger} popoverProps={popoverProps}>
+          {subMenuItems}
+        </Menu>
+      ) : (
+        trigger
+      )}
+    </>
+  );
+}) as PolymorphicForwardRefComponent<'div', MenuItemProps>;
+if (process.env.NODE_ENV === 'development') {
+  MenuItem.displayName = 'MenuItem';
+}
+
+// ----------------------------------------------------------------------------
+
+export type TreeEvent = {
+  nodeId: string;
+  parentId: string | null;
+};

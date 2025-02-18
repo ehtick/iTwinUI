@@ -15,8 +15,13 @@ export default () => {
   };
 
   return (
-    <ThemeProvider theme='dark' style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Dialog relativeTo='container' isOpen={isModalOpen} onClose={() => closeModal()}>
+    <ThemeProvider theme='dark'>
+      <Dialog
+        relativeTo='container'
+        isOpen={isModalOpen}
+        onClose={() => closeModal()}
+        setFocus={false}
+      >
         <Dialog.Main
           trapFocus={false}
           style={{

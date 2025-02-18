@@ -2,11 +2,17 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { CellProps, Row, TableInstance, TableState } from 'react-table';
-import { useIntersection, useMergedRefs, WithCSSTransition } from '../utils';
-import { TableCell } from './TableCell';
+import type {
+  CellProps,
+  Row,
+  TableInstance,
+  TableState,
+} from '../../react-table/react-table.js';
+import { Box, useIntersection, useMergedRefs } from '../../utils/index.js';
+import { TableCell } from './TableCell.js';
+import type { Virtualizer, VirtualItem } from '@tanstack/react-virtual';
 
 /**
  * Memoization is needed to avoid unnecessary re-renders of all rows when additional data is added when lazy-loading.
@@ -31,8 +37,11 @@ export const TableRow = <T extends Record<string, unknown>>(props: {
   tableHasSubRows: boolean;
   tableInstance: TableInstance<T>;
   expanderCell?: (cellProps: CellProps<T>) => React.ReactNode;
-  bodyRef: HTMLDivElement | null;
+  scrollContainerRef: HTMLDivElement | null;
   tableRowRef?: React.Ref<HTMLDivElement>;
+  density?: 'default' | 'condensed' | 'extra-condensed';
+  virtualItem?: VirtualItem;
+  virtualizer?: Virtualizer<Element, Element>;
 }) => {
   const {
     row,
@@ -47,8 +56,11 @@ export const TableRow = <T extends Record<string, unknown>>(props: {
     tableHasSubRows,
     tableInstance,
     expanderCell,
-    bodyRef,
+    scrollContainerRef,
     tableRowRef,
+    density,
+    virtualItem,
+    virtualizer,
   } = props;
 
   const onIntersect = React.useCallback(() => {
@@ -57,16 +69,17 @@ export const TableRow = <T extends Record<string, unknown>>(props: {
   }, [isLast, onBottomReached, onRowInViewport, row.original]);
 
   const intersectionRoot = React.useMemo(() => {
-    const isTableBodyScrollable =
-      (bodyRef?.scrollHeight ?? 0) > (bodyRef?.offsetHeight ?? 0);
+    const isTableScrollable =
+      (scrollContainerRef?.scrollHeight ?? 0) >
+      (scrollContainerRef?.offsetHeight ?? 0);
     // If table body is scrollable, make it the intersection root
-    if (isTableBodyScrollable) {
-      return bodyRef;
+    if (isTableScrollable) {
+      return scrollContainerRef;
     }
 
     // Otherwise, make the viewport the intersection root
     return undefined;
-  }, [bodyRef]);
+  }, [scrollContainerRef]);
 
   const intersectionRef = useIntersection(onIntersect, {
     rootMargin: `${intersectionMargin}px`,
@@ -76,7 +89,15 @@ export const TableRow = <T extends Record<string, unknown>>(props: {
   const userRowProps = rowProps?.(row) ?? {};
   const { status, isLoading, ...restUserRowProps } = userRowProps;
   const mergedProps = {
-    ...row.getRowProps({ style: { flex: `0 0 auto`, minWidth: '100%' } }),
+    ...row.getRowProps({
+      style: {
+        flex: `0 0 auto`,
+        minWidth: '100%',
+        ...(virtualItem != null
+          ? { transform: `translateY(${virtualItem.start}px)` }
+          : {}),
+      },
+    }),
     ...restUserRowProps,
     ...{
       className: cx(
@@ -90,15 +111,23 @@ export const TableRow = <T extends Record<string, unknown>>(props: {
       'aria-selected': row.isSelected || undefined,
       'aria-disabled': isDisabled || undefined,
       'data-iui-status': status,
+      'data-iui-index': virtualItem?.index,
+      ...(virtualItem != null && { 'data-iui-virtualizer': 'item' }),
     },
   };
 
-  const refs = useMergedRefs(intersectionRef, mergedProps.ref, tableRowRef);
+  const refs = useMergedRefs(
+    intersectionRef,
+    mergedProps.ref,
+    tableRowRef,
+    virtualizer?.measureElement,
+  );
 
   return (
     <>
-      <div
+      <Box
         {...mergedProps}
+        key={mergedProps.key}
         ref={refs}
         onClick={(event) => {
           mergedProps?.onClick?.(event);
@@ -115,20 +144,11 @@ export const TableRow = <T extends Record<string, unknown>>(props: {
               tableHasSubRows={tableHasSubRows}
               tableInstance={tableInstance}
               expanderCell={expanderCell}
+              density={density}
             />
           );
         })}
-      </div>
-      {subComponent && (
-        <WithCSSTransition in={row.isExpanded}>
-          <div
-            className={cx('iui-table-row', 'iui-table-expanded-content')}
-            aria-disabled={isDisabled}
-          >
-            {subComponent(row)}
-          </div>
-        </WithCSSTransition>
-      )}
+      </Box>
     </>
   );
 };
@@ -177,12 +197,16 @@ export const TableRowMemoized = React.memo(
     prevProp.rowProps === nextProp.rowProps &&
     prevProp.expanderCell === nextProp.expanderCell &&
     prevProp.tableHasSubRows === nextProp.tableHasSubRows &&
-    prevProp.bodyRef === nextProp.bodyRef &&
+    prevProp.scrollContainerRef === nextProp.scrollContainerRef &&
     prevProp.state.columnOrder === nextProp.state.columnOrder &&
     !nextProp.state.columnResizing.isResizingColumn &&
     prevProp.state.isTableResizing === nextProp.state.isTableResizing &&
     prevProp.state.sticky.isScrolledToLeft ===
       nextProp.state.sticky.isScrolledToLeft &&
     prevProp.state.sticky.isScrolledToRight ===
-      nextProp.state.sticky.isScrolledToRight,
+      nextProp.state.sticky.isScrolledToRight &&
+    prevProp.density === nextProp.density &&
+    prevProp.virtualizer === nextProp.virtualizer &&
+    prevProp.virtualItem?.index === nextProp.virtualItem?.index &&
+    prevProp.virtualItem?.start === nextProp.virtualItem?.start,
 ) as typeof TableRow;

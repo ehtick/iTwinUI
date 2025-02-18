@@ -7,12 +7,17 @@ build
 # Compiled Components
 cjs
 esm
+DEV-cjs
+DEV-esm
+
+# Build outputs
+react-table.d.ts
 
 # Compiled Styles
 src/**/*.css
 
-# Storybook
-storybook-static/*
+# CSS modules output
+styles.css
 
 # Yalc
 .yalc/*

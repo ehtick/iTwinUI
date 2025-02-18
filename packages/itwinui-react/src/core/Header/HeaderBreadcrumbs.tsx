@@ -2,11 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { useTheme, SvgChevronRight } from '../utils';
-import '@itwin/itwinui-css/css/header.css';
+import * as React from 'react';
+import cx from 'classnames';
+import { SvgChevronRight, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type HeaderBreadcrumbsProps = {
+type HeaderBreadcrumbsProps = {
   /**
    * Array of elements, chevrons will be put between them.
    * (expects HeaderButton[])
@@ -29,32 +30,41 @@ export type HeaderBreadcrumbsProps = {
  *   ]}
  * />
  */
-export const HeaderBreadcrumbs = (props: HeaderBreadcrumbsProps) => {
-  const { items, ...rest } = props;
+export const HeaderBreadcrumbs = React.forwardRef((props, forwardedRef) => {
+  const { className, items, ...rest } = props;
 
-  useTheme();
   return (
-    <nav aria-label='breadcrumbs' className='iui-header-breadcrumbs' {...rest}>
-      <ol className='iui-header-breadcrumbs-list'>
+    <Box
+      as='nav'
+      aria-label='breadcrumbs'
+      className={cx('iui-breadcrumbs', 'iui-header-breadcrumbs', className)}
+      ref={forwardedRef}
+      {...rest}
+    >
+      <Box
+        as='ol'
+        className={cx('iui-breadcrumbs-list', 'iui-header-breadcrumbs-list')}
+      >
         {items.reduce(
           (previous: React.ReactNode[], current, index) => [
             ...previous,
             current,
             index !== items.length - 1 && (
-              <li className='iui-breadcrumbs-separator' key={index}>
+              <Box as='li' className='iui-breadcrumbs-separator' key={index}>
                 <SvgChevronRight
                   key={`chevron${index}`}
                   aria-hidden
                   className='iui-chevron'
                 />
-              </li>
+              </Box>
             ),
           ],
           [],
         )}
-      </ol>
-    </nav>
+      </Box>
+    </Box>
   );
-};
-
-export default HeaderBreadcrumbs;
+}) as PolymorphicForwardRefComponent<'nav', HeaderBreadcrumbsProps>;
+if (process.env.NODE_ENV === 'development') {
+  HeaderBreadcrumbs.displayName = 'HeaderBreadcrumbs';
+}

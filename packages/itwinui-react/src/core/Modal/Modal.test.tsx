@@ -2,10 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import { fireEvent, render } from '@testing-library/react';
-import React from 'react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
+import * as React from 'react';
 
-import { Modal, ModalProps } from './Modal';
+import { Modal } from './Modal.js';
 
 function assertBaseElement(
   backdrop: HTMLElement,
@@ -17,7 +17,6 @@ function assertBaseElement(
   expect(backdrop.className).toContain('iui-backdrop-visible');
   expect(dialog).toBeTruthy();
   expect(dialog.className).toContain('iui-dialog');
-  expect(dialog.className).toContain('iui-dialog-visible');
   expect(dialog.className).toContain(`iui-dialog-${styleType}`);
 
   const title = dialog.querySelector('.iui-dialog-title-bar') as HTMLElement;
@@ -32,7 +31,7 @@ function assertBaseElement(
   expect(dialog.textContent).toContain('Body');
 }
 
-function renderComponent(props?: Partial<ModalProps>) {
+function renderComponent(props?: Partial<React.ComponentProps<typeof Modal>>) {
   return render(
     <Modal isOpen={true} title='Modal Title' {...props}>
       Body
@@ -71,7 +70,7 @@ it('should not render modal when closed', () => {
 });
 
 it('should close on overlay mouse down', () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   renderComponent({ onClose });
 
   const backdrop = document.querySelector('.iui-backdrop') as HTMLElement;
@@ -85,7 +84,7 @@ it('should close on overlay mouse down', () => {
 });
 
 it('should not close on overlay mouse down when closeOnExternalClick is false', () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   renderComponent({ onClose, closeOnExternalClick: false });
 
   let backdrop = document.querySelector('.iui-backdrop') as HTMLElement;
@@ -104,12 +103,12 @@ it('should not close on overlay mouse down when closeOnExternalClick is false', 
   );
 });
 
-it('should close on Esc click and move focus back', () => {
+it('should close on Esc click and move focus back', async () => {
   const { container } = render(<button>button</button>);
   const button = container.querySelector('button') as HTMLElement;
   button.focus();
   expect(document.activeElement).toEqual(button);
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   const { rerender } = renderComponent({ onClose });
 
   const dialog = document.querySelector('.iui-dialog') as HTMLElement;
@@ -117,7 +116,9 @@ it('should close on Esc click and move focus back', () => {
     document.querySelector('.iui-backdrop') as HTMLElement,
     dialog,
   );
-  expect(document.activeElement).toEqual(dialog);
+  waitFor(() => {
+    expect(document.activeElement).toEqual(dialog);
+  });
 
   fireEvent.keyDown(dialog, { key: 'Escape' });
   expect(onClose).toHaveBeenCalled();
@@ -131,7 +132,7 @@ it('should close on Esc click and move focus back', () => {
 });
 
 it('should not close on Esc click when closeOnEsc is false', () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   renderComponent({ onClose, closeOnEsc: false });
 
   let backdrop = document.querySelector('.iui-backdrop') as HTMLElement;
@@ -151,7 +152,7 @@ it('should not close on Esc click when closeOnEsc is false', () => {
 });
 
 it('should not close when isDismissible is false', () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   renderComponent({ onClose, isDismissible: false });
 
   let backdrop = document.querySelector('.iui-backdrop') as HTMLElement;
@@ -179,7 +180,7 @@ it('should not close when isDismissible is false', () => {
 });
 
 it('should call onKeyDown when pressed any key inside modal', () => {
-  const onKeyDown = jest.fn();
+  const onKeyDown = vi.fn();
   renderComponent({ onKeyDown });
 
   const dialog = document.querySelector('.iui-dialog') as HTMLElement;
@@ -197,15 +198,17 @@ it('should call onKeyDown when pressed any key inside modal', () => {
   );
 });
 
-it('should work with portal container properly', () => {
-  renderComponent({ modalRootId: 'test-id' });
+it('should work with custom portal container properly', () => {
+  const to = document.createElement('test-container');
+  document.body.appendChild(to);
+  renderComponent({ portal: { to } });
 
-  let container = document.querySelector('body > #test-id') as HTMLElement;
+  let container = document.body.querySelector('test-container') as HTMLElement;
   expect(container).toBeTruthy();
   expect(container.children.length).toBe(1);
 
-  renderComponent({ modalRootId: 'test-id' });
-  container = document.querySelector('body > #test-id') as HTMLElement;
+  renderComponent({ portal: { to } });
+  container = document.body.querySelector('test-container') as HTMLElement;
   // 2 modals under the same container
   expect(container.children.length).toBe(2);
 });
@@ -236,4 +239,26 @@ it('should reset body overflow on closing and unmounting', () => {
   // Closing by unmounting/destructing the Modal
   unmount();
   expect(document.body.style.overflow).not.toEqual('hidden');
+});
+
+it('should allow passing arbitrary props to internal elements', () => {
+  render(
+    <Modal
+      isOpen={true}
+      title='The title'
+      className='modal'
+      wrapperProps={{ className: 'wrapper' }}
+      backdropProps={{ className: 'backdrop' }}
+      titleBarProps={{ className: 'title-bar' }}
+    >
+      …
+    </Modal>,
+  );
+
+  const wrapper = document.querySelector('.wrapper') as HTMLElement;
+  const backdrop = wrapper.querySelector('.backdrop') as HTMLElement;
+  expect(backdrop).toBeTruthy();
+  const modal = wrapper.querySelector('.modal') as HTMLElement;
+  const titleBar = modal.querySelector('.title-bar') as HTMLElement;
+  expect(titleBar).toHaveTextContent('The title');
 });

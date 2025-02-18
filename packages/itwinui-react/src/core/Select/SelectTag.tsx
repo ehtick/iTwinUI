@@ -3,30 +3,33 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { useTheme, CommonProps } from '../utils';
-import '@itwin/itwinui-css/css/select.css';
+import * as React from 'react';
+import { Tag } from '../Tag/Tag.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type SelectTagProps = {
+type SelectTagProps = {
   /**
    * Text inside the tag.
    */
   label: string;
-} & CommonProps;
+} & Pick<React.ComponentProps<typeof Tag>, 'onClick' | 'onRemove'>;
 
 /**
  * Tag for showing selected value in `Select`.
  * @private
  */
-export const SelectTag = (props: SelectTagProps) => {
+export const SelectTag = React.forwardRef((props, forwardedRef) => {
   const { className, label, ...rest } = props;
-  useTheme();
 
   return (
-    <span className={cx('iui-select-tag', className)} {...rest}>
-      <span className='iui-select-tag-label'>{label}</span>
-    </span>
+    <Tag
+      className={cx('iui-select-tag', className)}
+      labelProps={{ className: 'iui-select-tag-label' }}
+      removeButtonProps={{ className: 'iui-select-tag-button' }}
+      ref={forwardedRef}
+      {...rest}
+    >
+      {label}
+    </Tag>
   );
-};
-
-export default SelectTag;
+}) as PolymorphicForwardRefComponent<'span', SelectTagProps>;

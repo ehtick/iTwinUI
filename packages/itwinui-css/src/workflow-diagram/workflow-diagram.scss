@@ -1,13 +1,14 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../stepper/index';
+@use '../stepper/mixins' as *;
+@use '../text/mixins' as *;
 
-@mixin iui-workflow-diagram {
+.iui-workflow-diagram {
   @include iui-stepper-list;
   align-items: center;
 }
 
-@mixin iui-workflow-diagram-step {
+.iui-workflow-diagram-step {
   --_iui-workflow-diagram-circle-background-color: var(--iui-color-background-positive);
   --_iui-workflow-diagram-circle-border-color: var(--iui-color-background-positive);
   --_iui-workflow-diagram-circle-border-radius: var(--iui-border-radius-1);
@@ -32,7 +33,7 @@
   &::before,
   &::after {
     content: '';
-    height: var(--iui-size-3xs);
+    block-size: var(--iui-size-3xs);
     flex: 1 2 auto;
   }
 
@@ -53,8 +54,9 @@
   }
 }
 
-@mixin iui-workflow-diagram-content {
-  padding: 0 var(--iui-size-m);
+.iui-workflow-diagram-content {
+  padding-block: var(--iui-size-3xs);
+  padding-inline: var(--iui-size-m);
   font-weight: var(--iui-font-weight-normal);
   text-align: center;
   background-color: var(--_iui-workflow-diagram-circle-background-color);

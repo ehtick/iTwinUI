@@ -2,16 +2,15 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
-import MenuItemSkeleton from './MenuItemSkeleton';
+import { MenuItemSkeleton } from './MenuItemSkeleton.js';
 
 it('should render skeleton menu item with only label', () => {
   const { container } = render(<MenuItemSkeleton />);
 
   const menuItem = container.querySelector(
     '.iui-menu-item-skeleton',
-  ) as HTMLLIElement;
+  ) as HTMLElement;
   expect(menuItem).toBeTruthy();
 
   const label = menuItem.querySelector(
@@ -31,7 +30,7 @@ it('should render skeleton menu item with icon, label and sublabel', () => {
 
   const menuItem = container.querySelector(
     '.iui-menu-item-skeleton',
-  ) as HTMLLIElement;
+  ) as HTMLElement;
   expect(menuItem).toBeTruthy();
 
   const icon = menuItem.querySelector('.iui-icon.iui-skeleton') as HTMLElement;
@@ -60,7 +59,7 @@ it('should render skeleton menu item with custom loading string', () => {
 
   const menuItem = container.querySelector(
     '.iui-menu-item-skeleton',
-  ) as HTMLLIElement;
+  ) as HTMLElement;
   expect(menuItem).toBeTruthy();
 
   expect(menuItem.textContent).toEqual('Item is loading');
@@ -71,7 +70,7 @@ it('should render skeleton menu item with custom width', () => {
 
   const menuItem = container.querySelector(
     '.iui-menu-item-skeleton',
-  ) as HTMLLIElement;
+  ) as HTMLElement;
   expect(menuItem).toBeTruthy();
   expect(
     menuItem.style.getPropertyValue(
@@ -87,7 +86,7 @@ it('should render skeleton menu item with custom style and className', () => {
 
   const menuItem = container.querySelector(
     '.iui-menu-item-skeleton',
-  ) as HTMLLIElement;
+  ) as HTMLElement;
   expect(menuItem).toBeTruthy();
   expect(menuItem.classList.contains('test-class')).toBeTruthy();
   expect(menuItem.style.color).toEqual('red');

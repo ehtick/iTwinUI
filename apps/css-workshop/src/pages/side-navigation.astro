@@ -1,0 +1,510 @@
+---
+import Layout from './_layout.astro';
+import Anchor_ from '../components/Anchor.astro';
+import Button_ from '../components/Button.astro';
+import IconButton_ from '../components/IconButton.astro';
+---
+
+<Layout title='Side navigation'>
+  <script>
+    import '@itwin/itwinui-icons-elements/chevron-right';
+    import '@itwin/itwinui-icons-elements/home';
+    import '@itwin/itwinui-icons-elements/document';
+    import '@itwin/itwinui-icons-elements/map';
+    import '@itwin/itwinui-icons-elements/archive';
+    import '@itwin/itwinui-icons-elements/calendar';
+    import '@itwin/itwinui-icons-elements/setup';
+    import '@itwin/itwinui-icons-elements/chevron-left';
+    import '@itwin/itwinui-icons-elements/settings';
+  </script>
+  <style is:global>
+    section {
+      height: 666px;
+    }
+
+    .iui-tooltip {
+      position: absolute;
+      margin-top: 14px;
+      display: none;
+    }
+
+    .iui-top .iui-tooltip {
+      margin-left: 80px;
+    }
+    .iui-bottom .iui-tooltip {
+      margin-left: 80px;
+    }
+
+    .iui-sidenav-button:hover + .iui-tooltip {
+      display: inline-block;
+    }
+
+    .iui-expanded .iui-tooltip {
+      display: none !important;
+    }
+  </style>
+
+  <h1>Side navigation</h1>
+
+  <hr />
+
+  <h2>Default</h2>
+  <section id='demo-side-navigation'>
+    <div class='iui-side-navigation iui-collapsed' id='demo-sidenav-container'>
+      <!-- Expand arrow -->
+      <IconButton_
+        class='iui-sidenav-button iui-expand'
+        size='small'
+        role='button'
+        aria-label='Expand menu'
+        onclick='togglePanelExpansion(this)'
+        id='test-expand'
+      >
+        <svg-chevron-right></svg-chevron-right>
+      </IconButton_>
+
+      <!-- Rest of the tabs -->
+      <div class='iui-sidenav-content' role='tablist' aria-label='Applications'>
+        <div class='iui-top'>
+          <Button_
+            class='iui-sidenav-button'
+            size='large'
+            isActive
+            role='tab'
+            aria-selected='true'
+            aria-label='Home'
+            aria-controls='home-tab'
+            onclick='toggleActiveState(this)'
+          >
+            <svg-home aria-hidden='true' slot='start-icon'></svg-home>
+             Home
+          </Button_>
+          <span class='iui-tooltip'>Home</span>
+
+          <Button_
+            class='iui-sidenav-button'
+            size='large'
+            role='tab'
+            aria-selected='false'
+            aria-label='Documents'
+            aria-controls='documents-tab'
+            onclick='toggleActiveState(this)'
+          >
+            <span
+              class='iui-notification-marker'
+              data-iui-variant='negative'
+              data-iui-urgent='true'
+              slot='start-icon'
+            >
+              <svg-document></svg-document>
+            </span>
+             Documents
+          </Button_>
+          <span class='iui-tooltip'>Documents</span>
+
+          <Button_
+            class='iui-sidenav-button'
+            size='large'
+            role='tab'
+            aria-selected='false'
+            aria-label='Map'
+            aria-controls='map-tab'
+            onclick='toggleActiveState(this)'
+          >
+            <span class='iui-notification-marker' data-iui-variant='positive' slot='start-icon'>
+              <svg-map></svg-map>
+            </span>
+             Map
+          </Button_>
+          <span class='iui-tooltip'>Map</span>
+
+          <Button_
+            class='iui-sidenav-button'
+            size='large'
+            role='tab'
+            aria-selected='false'
+            aria-label='Archives'
+            aria-controls='archives-tab'
+            disabled
+            onclick='toggleActiveState(this)'
+          >
+            <svg-archive aria-hidden='true' slot='start-icon'></svg-archive>
+             Archives
+          </Button_>
+          <span class='iui-tooltip'>Archives</span>
+
+          <Button_
+            class='iui-sidenav-button'
+            size='large'
+            role='tab'
+            aria-selected='false'
+            aria-label='Calendar'
+            aria-controls='calendar-tab'
+            id='test-tab-1'
+            onclick='toggleActiveState(this)'
+          >
+            <svg-calendar aria-hidden='true' slot='start-icon'></svg-calendar>
+             Calendar
+          </Button_>
+          <span class='iui-tooltip'>Calendar</span>
+        </div>
+
+        <div class='iui-bottom'>
+          <Button_
+            class='iui-sidenav-button'
+            size='large'
+            role='tab'
+            aria-selected='false'
+            aria-label='Administration'
+            aria-controls='administration-tab'
+            id='test-tab-2'
+            onclick='toggleActiveState(this)'
+          >
+            <svg-setup aria-hidden='true' slot='start-icon'></svg-setup>
+             Administration
+          </Button_>
+          <span class='iui-tooltip' style='margin-bottom: 10px;'>Administration</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <br /><br />
+
+  <h3>With submenu open</h3>
+  <section id='demo-side-navigation-submenu'>
+    <div class='iui-side-navigation-wrapper'>
+      <div class='iui-side-navigation iui-collapsed' id='demo-sidenav-container'>
+        <!-- Rest of the tabs -->
+        <div class='iui-sidenav-content' role='tablist' aria-label='Applications'>
+          <div class='iui-top'>
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              isActive
+              role='tab'
+              aria-selected='false'
+              aria-label='Home'
+              aria-controls='home-tab'
+            >
+              <svg-home aria-hidden='true' slot='start-icon'></svg-home>
+               Home
+            </Button_>
+            <span class='iui-tooltip'>Home</span>
+
+            <Button_
+              class='iui-sidenav-button iui-submenu-open'
+              size='large'
+              role='tab'
+              aria-selected='true'
+              aria-label='Documents'
+              aria-controls='documents-tab'
+            >
+              <svg-document aria-hidden='true' slot='start-icon'></svg-document>
+               Documents
+            </Button_>
+            <span class='iui-tooltip'>Documents</span>
+
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Map'
+              aria-controls='map-tab'
+            >
+              <svg-map aria-hidden='true' slot='start-icon'></svg-map>
+               Map
+            </Button_>
+            <span class='iui-tooltip'>Map</span>
+
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Archives'
+              aria-controls='archives-tab'
+              disabled
+            >
+              <svg-archive aria-hidden='true' slot='start-icon'></svg-archive>
+               Archives
+            </Button_>
+            <span class='iui-tooltip'>Archives</span>
+
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Calendar'
+              aria-controls='calendar-tab'
+            >
+              <svg-calendar aria-hidden='true' slot='start-icon'></svg-calendar>
+               Calendar
+            </Button_>
+            <span class='iui-tooltip'>Calendar</span>
+          </div>
+
+          <div class='iui-bottom'>
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Administration'
+              aria-controls='administration-tab'
+            >
+              <svg-setup aria-hidden='true' slot='start-icon'></svg-setup>
+               Administration
+            </Button_>
+            <span class='iui-tooltip' style='margin-bottom: 10px;'>Administration</span>
+          </div>
+        </div>
+
+        <!-- Expand arrow -->
+        <IconButton_
+          class='iui-sidenav-button iui-expand'
+          size='small'
+          role='button'
+          aria-label='Expand menu'
+          onclick='togglePanelExpansion(this)'
+          id='test-expand-2'
+        >
+          <svg-chevron-right></svg-chevron-right>
+        </IconButton_>
+      </div>
+
+      <div class='iui-side-navigation-submenu' style='width: 384px;'>
+        <div class='iui-side-navigation-submenu-content'>
+          <div class='iui-side-navigation-submenu-header'>
+            <div class='iui-side-navigation-submenu-header-label'>
+              <IconButton_ variant='borderless'>
+                <svg-chevron-left></svg-chevron-left>
+              </IconButton_>
+              <span>Documents with a long label to test for truncation</span>
+            </div>
+            <div class='iui-side-navigation-submenu-header-actions'>
+              <IconButton_ variant='borderless'>
+                <svg-settings></svg-settings>
+              </IconButton_>
+            </div>
+          </div>
+
+          <div class='iui-text-leading'>Frequently viewed</div>
+          <ul>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+          </ul>
+          <div class='iui-text-leading'>All documents</div>
+          <ul>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <br /><br />
+
+  <h3>With submenu open & active</h3>
+  <section id='demo-side-navigation-submenu-active'>
+    <div class='iui-side-navigation-wrapper'>
+      <div class='iui-side-navigation iui-collapsed' id='demo-sidenav-container'>
+        <!-- Rest of the tabs -->
+        <div class='iui-sidenav-content' role='tablist' aria-label='Applications'>
+          <div class='iui-top'>
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Home'
+              aria-controls='home-tab'
+            >
+              <svg-home aria-hidden='true' slot='start-icon'></svg-home>
+               Home
+            </Button_>
+            <span class='iui-tooltip'>Home</span>
+
+            <Button_
+              class='iui-sidenav-button iui-submenu-open'
+              isActive
+              size='large'
+              role='tab'
+              aria-selected='true'
+              aria-label='Documents'
+              aria-controls='documents-tab'
+            >
+              <svg-document aria-hidden='true' slot='start-icon'></svg-document>
+               Documents
+            </Button_>
+            <span class='iui-tooltip'>Documents</span>
+
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Map'
+              aria-controls='map-tab'
+            >
+              <svg-map aria-hidden='true' slot='start-icon'></svg-map>
+               Map
+            </Button_>
+            <span class='iui-tooltip'>Map</span>
+
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Archives'
+              aria-controls='archives-tab'
+              disabled
+            >
+              <svg-archive aria-hidden='true' slot='start-icon'></svg-archive>
+               Archives
+            </Button_>
+            <span class='iui-tooltip'>Archives</span>
+
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Calendar'
+              aria-controls='calendar-tab'
+            >
+              <svg-calendar aria-hidden='true' slot='start-icon'></svg-calendar>
+               Calendar
+            </Button_>
+            <span class='iui-tooltip'>Calendar</span>
+          </div>
+
+          <div class='iui-bottom'>
+            <Button_
+              class='iui-sidenav-button'
+              size='large'
+              role='tab'
+              aria-selected='false'
+              aria-label='Administration'
+              aria-controls='administration-tab'
+            >
+              <svg-setup aria-hidden='true' slot='start-icon'></svg-setup>
+               Administration
+            </Button_>
+            <span class='iui-tooltip' style='margin-bottom: 10px;'>Administration</span>
+          </div>
+        </div>
+
+        <!-- Expand arrow -->
+        <IconButton_
+          class='iui-sidenav-button iui-expand'
+          size='small'
+          role='button'
+          aria-label='Expand menu'
+          onclick='togglePanelExpansion(this)'
+          id='test-expand-2'
+        >
+          <svg-chevron-right></svg-chevron-right>
+        </IconButton_>
+      </div>
+
+      <div class='iui-side-navigation-submenu' style='width: 384px;'>
+        <div class='iui-side-navigation-submenu-content'>
+          <div class='iui-side-navigation-submenu-header'>
+            <div class='iui-side-navigation-submenu-header-label'>
+              <IconButton_ variant='borderless'>
+                <svg-chevron-left></svg-chevron-left>
+              </IconButton_>
+              <span>Documents with a long label to test for truncation</span>
+            </div>
+            <div class='iui-side-navigation-submenu-header-actions'>
+              <IconButton_ variant='borderless'>
+                <svg-settings></svg-settings>
+              </IconButton_>
+            </div>
+          </div>
+
+          <div class='iui-text-leading'>Frequently viewed</div>
+          <ul>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+          </ul>
+          <div class='iui-text-leading'>All documents</div>
+          <ul>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+            <li><Anchor_ href='#'>Lorem ipsum</Anchor_></li>
+            <li><Anchor_ href='#'>Dolor sit amet</Anchor_></li>
+            <li><Anchor_ href='#'>Consectetur adipiscing elit</Anchor_></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    const tooltips = document.querySelectorAll('.iui-top .iui-tooltip');
+    tooltips.forEach((tooltip, index) => {
+      tooltip.style.top = `${tooltip.previousElementSibling.offsetTop}px`;
+    });
+  </script>
+
+  <!-- Expand/collapse panel -->
+  <script is:inline>
+    function togglePanelExpansion(el) {
+      el.parentElement.classList.toggle('iui-expanded');
+      el.parentElement.classList.toggle('iui-collapsed');
+    }
+  </script>
+
+  <!-- Toggle active state -->
+  <script is:inline>
+    function toggleActiveState(el) {
+      el.parentElement.parentElement.querySelectorAll('.iui-sidenav-button').forEach((button) => {
+        button.removeAttribute('data-iui-active');
+      });
+      el.setAttribute('data-iui-active', 'true');
+    }
+  </script>
+</Layout>

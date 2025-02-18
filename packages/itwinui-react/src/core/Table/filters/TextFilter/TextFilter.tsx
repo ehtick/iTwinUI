@@ -2,16 +2,13 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import '@itwin/itwinui-css/css/table.css';
-import { useTheme } from '../../../utils';
-import { Input } from '../../../Input';
-import {
-  FilterButtonBar,
-  FilterButtonBarTranslation,
-} from '../FilterButtonBar';
-import { BaseFilter } from '../BaseFilter';
-import { TableFilterProps } from '../types';
+import * as React from 'react';
+import { useGlobals } from '../../../../utils/index.js';
+import { Input } from '../../../Input/Input.js';
+import { FilterButtonBar } from '../FilterButtonBar.js';
+import type { FilterButtonBarTranslation } from '../FilterButtonBar.js';
+import { BaseFilter } from '../BaseFilter.js';
+import type { TableFilterProps } from '../types.js';
 
 export type TextFilterProps<T extends Record<string, unknown>> =
   TableFilterProps<T> & {
@@ -23,26 +20,27 @@ export const TextFilter = <T extends Record<string, unknown>>(
 ) => {
   const { column, translatedLabels, setFilter, clearFilter } = props;
 
-  useTheme();
+  useGlobals();
 
   const [text, setText] = React.useState(column.filterValue ?? '');
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter') {
-      setFilter(text);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
-  };
+  }, []);
 
   return (
-    <BaseFilter>
+    <BaseFilter onSubmit={() => setFilter(text)}>
       <Input
+        ref={inputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={onKeyDown}
-        setFocus
+        required
       />
       <FilterButtonBar
-        setFilter={() => setFilter(text)}
         clearFilter={clearFilter}
         translatedLabels={translatedLabels}
       />

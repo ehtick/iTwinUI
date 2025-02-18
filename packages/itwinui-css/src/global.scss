@@ -1,24 +1,36 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import './utils/index';
+@use 'mixins';
+
+@mixin iui-scrollbar {
+  scrollbar-color: hsl(var(--iui-color-foreground-hsl) / var(--iui-opacity-4)) transparent;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    max-inline-size: var(--iui-size-xs);
+    max-block-size: var(--iui-size-xs);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--iui-color-foreground-hsl) / var(--iui-opacity-4));
+    border-radius: var(--iui-border-radius-round);
+
+    &:hover {
+      background-color: hsl(var(--iui-color-foreground-hsl) / var(--iui-opacity-3));
+    }
+  }
+
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+}
 
 :where(.iui-root) {
   color: var(--iui-color-text);
   font-size: var(--iui-font-size-1);
-  line-height: var(--iui-size-l);
+  line-height: 1.5;
   font-family: var(--iui-font-sans);
-
-  // border-box on all iui- elements and their descendants under iui-root, excluding any nested iui-root elements
-  :where([class*='iui-']) {
-    &:where(:not(.iui-root)),
-    * {
-      &,
-      &::before,
-      &::after {
-        box-sizing: border-box;
-      }
-    }
-  }
 }
 
 // reset margin only for <body> element.
@@ -32,10 +44,20 @@
   background-color: var(--iui-color-background-backdrop);
 }
 
-// text selection and scrollbar styling on [data-iui-theme], iui-root and all elements under it
-:where([data-iui-theme]),
-:where(.iui-root),
-:where(.iui-root *) {
-  @include iui-text-selection;
+// box-sizing, text selection and scrollbar styling on iui-root and all elements under it
+:where(.iui-root, .iui-root *) {
+  @include mixins.iui-text-selection;
   @include iui-scrollbar;
+
+  &,
+  &::before,
+  &::after {
+    box-sizing: border-box;
+  }
+
+  &:where(:focus-visible) {
+    outline: 2px solid var(--iui-color-border-accent);
+  }
 }
+
+@include mixins.animations;

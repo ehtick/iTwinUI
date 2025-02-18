@@ -2,22 +2,23 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
 import {
   FocusTrap,
-  getTranslateValues,
-  useLatestRef,
+  getTranslateValuesFromElement,
   Resizer,
   useMergedRefs,
-  useTheme,
-  useIsomorphicLayoutEffect,
-} from '../utils';
-import '@itwin/itwinui-css/css/dialog.css';
-import { DialogContextProps, useDialogContext } from './DialogContext';
-import { CSSTransition } from 'react-transition-group';
-import { DialogDragContext } from './DialogDragContext';
-import useDragAndDrop from '../utils/hooks/useDragAndDrop';
+  useLayoutEffect,
+  Box,
+  ShadowRoot,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { useDialogContext } from './DialogContext.js';
+import type { DialogContextProps } from './DialogContext.js';
+import { DialogDragContext } from './DialogDragContext.js';
+import { useDragAndDrop } from '../../utils/hooks/useDragAndDrop.js';
+import { DialogMainContext } from './DialogMainContext.js';
 
 export type DialogMainProps = {
   /**
@@ -29,8 +30,7 @@ export type DialogMainProps = {
    * Content of the dialog.
    */
   children: React.ReactNode;
-} & Omit<DialogContextProps, 'closeOnExternalClick' | 'dialogRootRef'> &
-  React.ComponentPropsWithRef<'div'>;
+} & Omit<DialogContextProps, 'closeOnExternalClick' | 'dialogRootRef'>;
 
 /**
  * Dialog component which can wrap any content.
@@ -52,195 +52,200 @@ export type DialogMainProps = {
  *   </Dialog.ButtonBar>
  * </Dialog.Main>
  */
-export const DialogMain = React.forwardRef<HTMLDivElement, DialogMainProps>(
-  (props, ref) => {
-    const dialogContext = useDialogContext();
-    const {
-      className,
-      children,
-      styleType = 'default',
-      isOpen = dialogContext.isOpen,
-      isDismissible = dialogContext.isDismissible,
-      onClose = dialogContext.onClose,
-      closeOnEsc = dialogContext.closeOnEsc,
-      trapFocus = dialogContext.trapFocus,
-      setFocus = dialogContext.setFocus,
-      preventDocumentScroll = dialogContext.preventDocumentScroll,
-      onKeyDown,
-      isDraggable = dialogContext.isDraggable,
-      isResizable = dialogContext.isResizable,
-      style: propStyle,
-      ...rest
-    } = props;
+export const DialogMain = React.forwardRef((props, ref) => {
+  const dialogContext = useDialogContext();
+  const {
+    className,
+    children,
+    styleType = 'default',
+    isOpen = dialogContext.isOpen,
+    isDismissible = dialogContext.isDismissible,
+    onClose = dialogContext.onClose,
+    closeOnEsc = dialogContext.closeOnEsc,
+    trapFocus = dialogContext.trapFocus,
+    setFocus = dialogContext.setFocus,
+    preventDocumentScroll = dialogContext.preventDocumentScroll,
+    onKeyDown,
+    isDraggable = dialogContext.isDraggable,
+    isResizable = dialogContext.isResizable,
+    style: propStyle,
+    placement = dialogContext.placement,
+    ...rest
+  } = props;
 
-    useTheme();
+  const { dialogRootRef } = dialogContext;
 
-    const [style, setStyle] = React.useState<React.CSSProperties>();
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const previousFocusedElement = React.useRef<HTMLElement | null>(null);
 
-    const dialogRef = React.useRef<HTMLDivElement>(null);
-    const refs = useMergedRefs(dialogRef, ref);
-    const hasBeenResized = React.useRef(false);
+  const [style, setStyle] = React.useState<React.CSSProperties>();
+  const hasBeenResized = React.useRef(false);
 
-    // Focuses dialog when opened and brings back focus to the previously focused element when closed.
-    const previousFocusedElement = React.useRef<HTMLElement | null>();
-    const setFocusRef = useLatestRef(setFocus);
-    React.useEffect(() => {
-      if (!setFocusRef.current) {
-        return;
-      }
+  const originalBodyOverflow = React.useRef('');
+  useLayoutEffect(() => {
+    if (isOpen) {
+      originalBodyOverflow.current = document.body.style.overflow;
+    }
+  }, [isOpen]);
 
-      if (isOpen) {
-        previousFocusedElement.current = dialogRef.current?.ownerDocument
-          .activeElement as HTMLElement;
-        dialogRef.current?.focus();
-      } else {
-        previousFocusedElement.current?.focus();
-      }
-      const ref = dialogRef.current;
-      return () => {
-        ref?.contains(document.activeElement) &&
-          previousFocusedElement.current?.focus();
-      };
-    }, [isOpen, setFocusRef]);
+  // Prevents document from scrolling when the dialog is open.
+  React.useEffect(() => {
+    const ownerDocument = dialogRef.current?.ownerDocument;
+    // If there is no `ownerDocument` or `preventDocumentScroll` is false or
+    // document body originally has `overflow: hidden` (possibly from other/parent dialog), then do nothing.
+    if (
+      !ownerDocument ||
+      !preventDocumentScroll ||
+      originalBodyOverflow.current === 'hidden'
+    ) {
+      return;
+    }
 
-    const originalBodyOverflow = React.useRef('');
-    React.useEffect(() => {
-      if (isOpen) {
-        originalBodyOverflow.current = document.body.style.overflow;
-      }
-    }, [isOpen]);
-
-    // Prevents document from scrolling when the dialog is open.
-    React.useEffect(() => {
-      const ownerDocument = dialogRef.current?.ownerDocument;
-      // If there is no `ownerDocument` or `preventDocumentScroll` is false or
-      // document body originally has `overflow: hidden` (possibly from other/parent dialog), then do nothing.
-      if (
-        !ownerDocument ||
-        !preventDocumentScroll ||
-        originalBodyOverflow.current === 'hidden'
-      ) {
-        return;
-      }
-
-      if (isOpen) {
-        ownerDocument.body.style.overflow = 'hidden';
-      } else {
-        ownerDocument.body.style.overflow = originalBodyOverflow.current;
-      }
-      return () => {
-        ownerDocument.body.style.overflow = originalBodyOverflow.current;
-      };
-    }, [isOpen, preventDocumentScroll]);
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-      // Prevents React from resetting its properties
-      event.persist();
-      if (isDismissible && closeOnEsc && event.key === 'Escape' && onClose) {
-        onClose(event);
-      }
-      onKeyDown?.(event);
+    if (isOpen) {
+      ownerDocument.body.style.overflow = 'hidden';
+    } else {
+      ownerDocument.body.style.overflow = originalBodyOverflow.current;
+    }
+    return () => {
+      ownerDocument.body.style.overflow = originalBodyOverflow.current;
     };
+  }, [dialogRef, isOpen, preventDocumentScroll]);
 
-    const { onPointerDown, transform } = useDragAndDrop(
-      dialogRef,
-      dialogContext.dialogRootRef,
-      isDraggable,
-    );
-    const handlePointerDown = React.useCallback(
-      (event: React.PointerEvent<HTMLElement>) => {
-        if (isDraggable) {
-          onPointerDown(event);
-        }
-      },
-      [isDraggable, onPointerDown],
-    );
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey) {
+      return;
+    }
+    // Prevents React from resetting its properties
+    event.persist();
+    if (isDismissible && closeOnEsc && event.key === 'Escape' && onClose) {
+      beforeClose();
+      onClose(event);
+    }
+    onKeyDown?.(event);
+  };
 
-    // Prevents dialog from moving when window is being resized
-    useIsomorphicLayoutEffect(() => {
-      if (!isDraggable || !isOpen) {
-        return;
+  const { onPointerDown, transform } = useDragAndDrop(
+    dialogRef,
+    dialogRootRef,
+    isDraggable,
+  );
+  const handlePointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (isDraggable) {
+        onPointerDown(event);
       }
-      const rect = dialogRef.current?.getBoundingClientRect();
-      const [translateX, translateY] = getTranslateValues(dialogRef.current);
-      setStyle((oldStyle) => ({
-        ...oldStyle,
-        width: rect?.width,
-        height: rect?.height,
-        left: dialogRef.current?.offsetLeft,
-        top: dialogRef.current?.offsetTop,
-        transform: `translate(${translateX}px,${translateY}px)`,
-      }));
-    }, [isDraggable, isOpen]);
+    },
+    [isDraggable, onPointerDown],
+  );
 
-    const setResizeStyle = React.useCallback(
-      (newStyle: React.CSSProperties) => {
-        setStyle((oldStyle) => ({
-          ...oldStyle,
-          ...newStyle,
-        }));
-      },
-      [],
+  // Prevents dialog from moving when window is being resized
+  useLayoutEffect(() => {
+    if (!isDraggable || !isOpen) {
+      return;
+    }
+    const [translateX, translateY] = getTranslateValuesFromElement(
+      dialogRef.current,
     );
+    setStyle((oldStyle) => ({
+      ...oldStyle,
+      insetInlineStart: dialogRef.current?.offsetLeft,
+      insetBlockStart: dialogRef.current?.offsetTop,
+      transform: `translate(${translateX}px,${translateY}px)`,
+    }));
+  }, [dialogRef, isDraggable, isOpen]);
 
-    const content = (
-      <div
-        className={cx(
-          'iui-dialog',
-          {
-            'iui-dialog-default': styleType === 'default',
-            'iui-dialog-full-page': styleType === 'fullPage',
-            'iui-dialog-visible': isOpen,
-            'iui-dialog-draggable': isDraggable,
-          },
-          className,
-        )}
-        role='dialog'
-        ref={refs}
-        onKeyDown={handleKeyDown}
-        tabIndex={-1}
-        style={{
-          transform,
-          overflow: 'unset',
-          ...style,
-          ...propStyle,
-        }}
-        {...rest}
-      >
+  const setResizeStyle = React.useCallback((newStyle: React.CSSProperties) => {
+    setStyle((oldStyle) => ({
+      ...oldStyle,
+      ...newStyle,
+    }));
+  }, []);
+
+  /** Focuses dialog when opened. */
+  const onEnter = React.useCallback(() => {
+    previousFocusedElement.current = dialogRef.current?.ownerDocument
+      .activeElement as HTMLElement;
+    if (setFocus) {
+      dialogRef.current?.focus({ preventScroll: true });
+    }
+  }, [dialogRef, previousFocusedElement, setFocus]);
+
+  /** Brings back focus to the previously focused element when closed. */
+  const beforeClose = React.useCallback(() => {
+    if (
+      dialogRef.current?.contains(
+        dialogRef.current?.ownerDocument.activeElement,
+      )
+    ) {
+      previousFocusedElement.current?.focus();
+    }
+  }, [dialogRef, previousFocusedElement]);
+
+  const mountRef = React.useCallback(
+    (element: HTMLElement | null) => {
+      if (element) {
+        onEnter();
+      }
+    },
+    [onEnter],
+  );
+
+  const content = (
+    <Box
+      className={cx(
+        'iui-dialog',
+        {
+          'iui-dialog-default': styleType === 'default',
+          'iui-dialog-full-page': styleType === 'fullPage',
+          'iui-dialog-visible': isOpen,
+          'iui-dialog-draggable': isDraggable,
+        },
+        className,
+      )}
+      role='dialog'
+      ref={useMergedRefs(dialogRef, mountRef, ref)}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+      data-iui-placement={placement}
+      style={{
+        transform,
+        ...style,
+        ...propStyle,
+      }}
+      {...rest}
+    >
+      <ShadowRoot>
+        <slot />
         {isResizable && (
           <Resizer
             elementRef={dialogRef}
-            containerRef={dialogContext.dialogRootRef}
+            containerRef={dialogRootRef}
             onResizeStart={() => {
               if (!hasBeenResized.current) {
                 hasBeenResized.current = true;
-                setResizeStyle({ maxWidth: '100%' });
+                setResizeStyle({ maxInlineSize: '100%' });
               }
             }}
             onResizeEnd={setResizeStyle}
           />
         )}
-        {children}
-      </div>
-    );
+      </ShadowRoot>
 
-    return (
-      <CSSTransition
-        in={isOpen}
-        classNames='iui-dialog-animation'
-        timeout={{ exit: 600 }}
-        unmountOnExit={true}
-        nodeRef={dialogRef}
-      >
-        <DialogDragContext.Provider
-          value={{ onPointerDown: handlePointerDown }}
-        >
-          {trapFocus && <FocusTrap>{content}</FocusTrap>}
-          {!trapFocus && content}
-        </DialogDragContext.Provider>
-      </CSSTransition>
-    );
-  },
-);
+      {children}
+    </Box>
+  );
 
-export default DialogMain;
+  return (
+    <DialogMainContext.Provider
+      value={React.useMemo(() => ({ beforeClose }), [beforeClose])}
+    >
+      <DialogDragContext.Provider value={{ onPointerDown: handlePointerDown }}>
+        {trapFocus && <FocusTrap>{content}</FocusTrap>}
+        {!trapFocus && content}
+      </DialogDragContext.Provider>
+    </DialogMainContext.Provider>
+  );
+}) as PolymorphicForwardRefComponent<'div', DialogMainProps>;
+if (process.env.NODE_ENV === 'development') {
+  DialogMain.displayName = 'Dialog.Main';
+}

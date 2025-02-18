@@ -2,11 +2,15 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { StatusIconMap, useTheme, CommonProps, InputContainer } from '../utils';
-import '@itwin/itwinui-css/css/utils.css';
+import * as React from 'react';
+import cx from 'classnames';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { InputGrid } from '../InputGrid/InputGrid.js';
+import { Label } from '../Label/Label.js';
+import { StatusMessage } from '../StatusMessage/StatusMessage.js';
 
-export type InputGroupProps = {
+type InputGroupProps = {
   /**
    * Label of the group.
    */
@@ -17,6 +21,10 @@ export type InputGroupProps = {
   status?: 'positive' | 'warning' | 'negative';
   /**
    * Message below the group. Does not apply to 'inline' group.
+   *
+   * When `typeof message === "string"`, it is automatically wrapped with {@link StatusMessage}.
+   * If you are passing a non-string message that is not `<StatusMessage>`, you may need to wrap it with
+   * `<StatusMessage>` yourself for proper styling of `message`.
    */
   message?: React.ReactNode;
   /**
@@ -37,12 +45,27 @@ export type InputGroupProps = {
   /**
    * Custom icon. If group has status, default status icon is used instead.
    */
-  svgIcon?: JSX.Element;
+  svgIcon?: React.ComponentPropsWithoutRef<typeof StatusMessage>['startIcon'];
   /**
    * Child inputs inside group.
    */
   children: React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+  /**
+   * Passes properties for label.
+   */
+  labelProps?: React.ComponentProps<'label'>;
+  /**
+   * Passes properties for message.
+   */
+  messageProps?: Pick<
+    React.ComponentProps<typeof StatusMessage>,
+    'iconProps' | 'contentProps'
+  >;
+  /**
+   * Passes properties for inner input group element.
+   */
+  innerProps?: React.ComponentProps<'div'>;
+};
 
 /**
  * Group Checkbox/Radio components together
@@ -59,50 +82,96 @@ export type InputGroupProps = {
  *  <Radio />
  * </InputGroup>
  */
-export const InputGroup = (props: InputGroupProps) => {
+export const InputGroup = React.forwardRef((props, forwardedRef) => {
   const {
+    className,
     children,
     disabled = false,
     displayStyle = 'default',
     label,
-    message,
     status,
-    svgIcon,
-    className,
-    style,
     required = false,
+    labelProps,
+    innerProps,
+    message,
+    svgIcon,
+    messageProps,
     ...rest
   } = props;
-  useTheme();
-
-  const icon = () => {
-    if (svgIcon) {
-      return React.cloneElement(svgIcon, { 'aria-hidden': true });
-    }
-    if (status && message) {
-      return React.cloneElement(StatusIconMap[status](), {
-        'aria-hidden': true,
-      });
-    }
-    return undefined;
-  };
 
   return (
-    <InputContainer
-      label={label}
-      disabled={disabled}
-      required={required}
-      status={status}
-      message={message}
-      icon={icon()}
-      isLabelInline={displayStyle === 'inline'}
-      className={className}
-      style={style}
+    <InputGrid
+      ref={forwardedRef}
+      as='div'
+      labelPlacement={displayStyle}
+      className={cx('iui-input-group-wrapper', className)}
+      data-iui-status={status}
       {...rest}
     >
-      <div className='iui-input-group'>{children}</div>
-    </InputContainer>
+      {label && (
+        <Label
+          as='label'
+          required={required}
+          disabled={disabled}
+          {...labelProps}
+        >
+          {label}
+        </Label>
+      )}
+      <Box
+        as='div'
+        {...innerProps}
+        className={cx('iui-input-group', innerProps?.className)}
+      >
+        {children}
+      </Box>
+      <BottomMessage
+        message={message}
+        status={status}
+        svgIcon={svgIcon}
+        displayStyle={displayStyle}
+        messageProps={messageProps}
+      />
+    </InputGrid>
   );
-};
+}) as PolymorphicForwardRefComponent<'div', InputGroupProps>;
+if (process.env.NODE_ENV === 'development') {
+  InputGroup.displayName = 'InputGroup';
+}
 
-export default InputGroup;
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * @private
+ * - When `typeof message !== 'string'`, `message` is returned as-is (e.g. when `message=<StatusMessage />`).
+ * - Else, it is wrapped in a `<StatusMessage />`.
+ */
+const BottomMessage = (
+  props: Pick<
+    InputGroupProps,
+    'message' | 'status' | 'svgIcon' | 'displayStyle' | 'messageProps'
+  >,
+) => {
+  const { message, status, svgIcon, displayStyle, messageProps } = props;
+
+  if (message && typeof message !== 'string') {
+    return message;
+  }
+
+  if (message || status || svgIcon) {
+    return (
+      <StatusMessage
+        iconProps={{
+          'aria-hidden': true,
+        }}
+        startIcon={svgIcon}
+        status={status}
+        {...messageProps}
+      >
+        {displayStyle !== 'inline' && message}
+      </StatusMessage>
+    );
+  }
+
+  return null;
+};

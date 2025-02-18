@@ -2,16 +2,13 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { useTheme } from '../../../utils';
-import {
-  FilterButtonBar,
-  FilterButtonBarTranslation,
-} from '../FilterButtonBar';
-import { BaseFilter } from '../BaseFilter';
-import { TableFilterProps } from '../types';
-import '@itwin/itwinui-css/css/table.css';
-import { LabeledInput } from '../../../LabeledInput';
+import * as React from 'react';
+import { useGlobals } from '../../../../utils/index.js';
+import { FilterButtonBar } from '../FilterButtonBar.js';
+import type { FilterButtonBarTranslation } from '../FilterButtonBar.js';
+import { BaseFilter } from '../BaseFilter.js';
+import type { TableFilterProps } from '../types.js';
+import { LabeledInput } from '../../../LabeledInput/LabeledInput.js';
 
 export type NumberRangeTranslation = {
   from: string;
@@ -33,9 +30,17 @@ export const NumberRangeFilter = <T extends Record<string, unknown>>(
 ) => {
   const { column, translatedLabels, setFilter, clearFilter } = props;
 
-  useTheme();
+  useGlobals();
 
   const translatedStrings = { ...defaultStrings, ...translatedLabels };
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
 
   const [from, setFrom] = React.useState<string | undefined>(
     column.filterValue?.[0] ?? '',
@@ -48,22 +53,17 @@ export const NumberRangeFilter = <T extends Record<string, unknown>>(
     return !value || isNaN(Number(value)) ? undefined : Number(value);
   };
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter') {
-      setFilter([parseInputValue(from), parseInputValue(to)]);
-    }
-  };
-
   return (
-    <BaseFilter>
+    <BaseFilter
+      onSubmit={() => setFilter([parseInputValue(from), parseInputValue(to)])}
+    >
       <LabeledInput
+        ref={inputRef}
         label={translatedStrings.from}
         value={from}
         onChange={(e) => setFrom(e.target.value)}
-        onKeyDown={onKeyDown}
         type='number'
         displayStyle='inline'
-        setFocus
       />
       <LabeledInput
         label={translatedStrings.to}
@@ -71,12 +71,8 @@ export const NumberRangeFilter = <T extends Record<string, unknown>>(
         onChange={(e) => setTo(e.target.value)}
         type='number'
         displayStyle='inline'
-        onKeyDown={onKeyDown}
       />
       <FilterButtonBar
-        setFilter={() =>
-          setFilter([parseInputValue(from), parseInputValue(to)])
-        }
         clearFilter={clearFilter}
         translatedLabels={translatedLabels}
       />

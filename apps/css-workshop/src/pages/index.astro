@@ -1,0 +1,40 @@
+---
+import fs from 'node:fs';
+import Layout from './_layout.astro';
+import Anchor_ from '../components/Anchor.astro';
+import Code_ from '../components/Code.astro';
+
+const components = await fs.promises.readdir('./src/pages').then((files) => {
+  return files
+    .filter((file) => file.endsWith('.astro') && !file.startsWith('_') && file !== 'index.astro')
+    .map((file) => file.replace('.astro', ''));
+});
+---
+
+<Layout>
+  <style is:global>
+    @import url('@itwin/itwinui-variables/os.css');
+  </style>
+
+  <h1>iTwinUI-CSS</h1>
+  <p>
+    This site is specifically designed for testing the CSS from <Code_>@itwin/itwinui-css</Code_>.
+    To learn more about iTwinUI, please visit the <Anchor_ href='https://iTwinUI.Bentley.com'>
+      iTwinUI documentation site
+    </Anchor_>.
+  </p>
+  <hr />
+  <main>
+    <ul>
+      {
+        components.map((component) => {
+          return (
+            <li>
+              <Anchor_ href={component}>{component.replace(/-/g, ' ')}</Anchor_>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </main>
+</Layout>

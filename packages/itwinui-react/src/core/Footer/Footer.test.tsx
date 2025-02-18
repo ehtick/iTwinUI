@@ -2,17 +2,14 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import { render } from '@testing-library/react';
 
-import {
-  Footer,
-  FooterProps,
-  FooterElement,
-  defaultFooterElements,
-} from './Footer';
+import { Footer, type FooterElement, defaultFooterElements } from './Footer.js';
 
-const renderComponent = (props?: Partial<FooterProps>) => {
+const renderComponent = (
+  props?: Partial<React.ComponentProps<typeof Footer>>,
+) => {
   return render(<Footer {...props} />);
 };
 
@@ -38,7 +35,7 @@ const assertFooterItems = (
     }
 
     const dataIndex = Math.floor(i / 2);
-    expect(element.textContent).toBe(data[dataIndex].title);
+    expect(element).toHaveTextContent(data[dataIndex].title);
     if (data[dataIndex].url) {
       expect((element.firstChild as HTMLAnchorElement).href).toBe(
         data[dataIndex].url,

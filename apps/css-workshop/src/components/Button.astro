@@ -1,0 +1,76 @@
+---
+import type { HTMLTag } from 'astro/types';
+
+type Props = {
+  variant?: 'high-visibility' | 'borderless' | 'cta';
+  size?: 'small' | 'large';
+  isActive?: boolean;
+  dropdown?: boolean;
+  idea?: boolean;
+  as?: HTMLTag;
+  loading?: boolean;
+} & astroHTML.JSX.ButtonHTMLAttributes;
+
+const {
+  as: Element = 'button',
+  class: className,
+  variant,
+  size,
+  isActive,
+  dropdown,
+  idea,
+  loading,
+  disabled,
+  ...props
+} = Astro.props;
+---
+
+<Element
+  class:list={[
+    'iui-button',
+    'iui-button-base',
+    'iui-field',
+    { 'iui-button-dropdown': dropdown },
+    { 'iui-button-idea': idea },
+    className,
+  ]}
+  type={Element === 'button' ? 'button' : undefined}
+  data-iui-size={size}
+  data-iui-variant={idea ? 'high-visibility' : variant}
+  data-iui-active={isActive ? 'true' : undefined}
+  data-iui-loading={loading ? 'true' : undefined}
+  tabindex='0'
+  aria-disabled={disabled || loading}
+  {...props}
+>
+  {
+    Astro.slots.has('start-icon') && (
+      <span class='iui-button-icon' aria-hidden='true'>
+        <slot name='start-icon' />
+      </span>
+    )
+  }
+  {
+    Astro.slots.has('default') && (
+      <span class='iui-button-label'>
+        <slot />
+      </span>
+    )
+  }
+  {
+    Astro.slots.has('end-icon') && (
+      <span class='iui-button-icon' aria-hidden='true'>
+        <slot name='end-icon' />
+      </span>
+    )
+  }
+  {
+    loading && (
+      <div
+        class='iui-progress-indicator-radial iui-button-spinner'
+        data-iui-indeterminate='true'
+        data-iui-size={size === 'small' ? 'x-small' : 'small'}
+      />
+    )
+  }
+</Element>

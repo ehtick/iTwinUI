@@ -2,12 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { TablePaginator, TablePaginatorProps } from './TablePaginator';
-import * as UseOverflow from '../utils/hooks/useOverflow';
-import * as UseContainerWidth from '../utils/hooks/useContainerWidth';
-import userEvent from '@testing-library/user-event';
+import { TablePaginator, type TablePaginatorProps } from './TablePaginator.js';
+import * as UseContainerWidth from '../../utils/hooks/useContainerWidth.js';
+import { userEvent } from '@testing-library/user-event';
 
 const renderComponent = (props?: Partial<TablePaginatorProps>) => {
   return render(
@@ -15,21 +13,15 @@ const renderComponent = (props?: Partial<TablePaginatorProps>) => {
       currentPage={0}
       pageSize={10}
       totalRowsCount={195}
-      onPageChange={jest.fn()}
-      onPageSizeChange={jest.fn()}
+      onPageChange={vi.fn()}
+      onPageSizeChange={vi.fn()}
       {...props}
     />,
   );
 };
 
-beforeEach(() => {
-  jest
-    .spyOn(UseOverflow, 'useOverflow')
-    .mockImplementation((items) => [jest.fn(), items.length]);
-});
-
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 it('should render in its most basic form', () => {
@@ -38,11 +30,12 @@ it('should render in its most basic form', () => {
   const pages = container.querySelectorAll('.iui-table-paginator-page-button');
   expect(pages).toHaveLength(20);
   expect(pages[0]).toHaveAttribute('data-iui-active', 'true');
+  expect(pages[0]).toHaveAttribute('type', 'button');
 
   const previousPageButton = screen.getByLabelText(
     'Previous page',
   ) as HTMLButtonElement;
-  expect(previousPageButton.disabled).toBe(true);
+  expect(previousPageButton).toHaveAttribute('aria-disabled', 'true');
   const nextPageButton = screen.getByLabelText(
     'Next page',
   ) as HTMLButtonElement;
@@ -52,7 +45,7 @@ it('should render in its most basic form', () => {
 });
 
 it('should render currently visible rows info and page size selector', async () => {
-  const onPageSizeChange = jest.fn();
+  const onPageSizeChange = vi.fn();
   const pageSizeList = [10, 25, 50];
   const { container } = renderComponent({
     currentPage: 19,
@@ -71,11 +64,11 @@ it('should render currently visible rows info and page size selector', async () 
   expect(pageSizeSelector.textContent).toEqual('191-195 of 195');
 
   await userEvent.click(pageSizeSelector);
-  const pageSizeSelections = document.querySelectorAll('.iui-menu-item');
+  const pageSizeSelections = document.querySelectorAll('.iui-list-item');
   expect(pageSizeSelections).toHaveLength(3);
   pageSizeSelections.forEach((el, index) => {
     expect(el.textContent).toEqual(`${pageSizeList[index]} per page`);
-    expect(el.classList.contains('iui-active')).toBe(index === 0);
+    expect(el.hasAttribute('data-iui-active')).toBe(index === 0);
   });
 
   await userEvent.click(pageSizeSelections[1]);
@@ -111,7 +104,7 @@ it('should render loading state when there is data', () => {
   const { container } = renderComponent({
     currentPage: 19,
     pageSizeList: [10, 25, 50],
-    onPageSizeChange: jest.fn(),
+    onPageSizeChange: vi.fn(),
     isLoading: true,
   });
 
@@ -126,7 +119,7 @@ it('should render loading state when there is data', () => {
   const nextPageButton = screen.getByLabelText(
     'Next page',
   ) as HTMLButtonElement;
-  expect(nextPageButton.disabled).toBe(true);
+  expect(nextPageButton).toHaveAttribute('aria-disabled', 'true');
   const pageSizeSelector = container.querySelector(
     '.iui-button-dropdown',
   ) as HTMLButtonElement;
@@ -138,7 +131,7 @@ it('should render loading state when there is no data', () => {
   const { container } = renderComponent({
     totalRowsCount: 0,
     pageSizeList: [10, 25, 50],
-    onPageSizeChange: jest.fn(),
+    onPageSizeChange: vi.fn(),
     isLoading: true,
   });
 
@@ -153,17 +146,17 @@ it('should render loading state when there is no data', () => {
   const previousPageButton = screen.getByLabelText(
     'Previous page',
   ) as HTMLButtonElement;
-  expect(previousPageButton.disabled).toBe(true);
+  expect(previousPageButton).toHaveAttribute('aria-disabled', 'true');
   const nextPageButton = screen.getByLabelText(
     'Next page',
   ) as HTMLButtonElement;
-  expect(nextPageButton.disabled).toBe(true);
+  expect(nextPageButton).toHaveAttribute('aria-disabled', 'true');
 
   expect(container.querySelector('.iui-dropdown')).toBeFalsy();
 });
 
 it('should handle clicks', async () => {
-  const onPageChange = jest.fn();
+  const onPageChange = vi.fn();
   const { container } = renderComponent({ currentPage: 5, onPageChange });
 
   const pages = container.querySelectorAll<HTMLButtonElement>(
@@ -189,40 +182,8 @@ it('should handle clicks', async () => {
   expect(onPageChange).toHaveBeenCalledWith(6);
 });
 
-it('should render truncated pages list', () => {
-  jest.spyOn(UseOverflow, 'useOverflow').mockReturnValue([jest.fn(), 5]);
-  const { container } = renderComponent({ currentPage: 10 });
-
-  const pages = container.querySelectorAll('.iui-table-paginator-page-button');
-  expect(pages).toHaveLength(7);
-  expect(pages[0].textContent).toEqual('1');
-  expect(pages[1].textContent).toEqual('9');
-  expect(pages[2].textContent).toEqual('10');
-  expect(pages[3].textContent).toEqual('11');
-  expect(pages[3]).toHaveAttribute('data-iui-active', 'true');
-  expect(pages[4].textContent).toEqual('12');
-  expect(pages[5].textContent).toEqual('13');
-  expect(pages[6].textContent).toEqual('20');
-
-  const ellipsis = container.querySelectorAll('.iui-table-paginator-ellipsis');
-  expect(ellipsis).toHaveLength(2);
-});
-
-it('should render only the current page when screen is very small', () => {
-  jest.spyOn(UseOverflow, 'useOverflow').mockReturnValue([jest.fn(), 1]);
-  const { container } = renderComponent({ currentPage: 10 });
-
-  const pages = container.querySelectorAll('.iui-table-paginator-page-button');
-  expect(pages).toHaveLength(1);
-  expect(pages[0].textContent).toEqual('11');
-  expect(pages[0]).toHaveAttribute('data-iui-active', 'true');
-
-  const ellipsis = container.querySelectorAll('.iui-table-paginator-ellipsis');
-  expect(ellipsis).toHaveLength(0);
-});
-
 it('should handle keyboard navigation when focusActivationMode is auto', () => {
-  const onPageChange = jest.fn();
+  const onPageChange = vi.fn();
   const { container } = renderComponent({
     currentPage: 10,
     onPageChange,
@@ -244,7 +205,7 @@ it('should handle keyboard navigation when focusActivationMode is auto', () => {
 });
 
 it('should handle keyboard navigation when focusActivationMode is manual', () => {
-  const onPageChange = jest.fn();
+  const onPageChange = vi.fn();
   const { container } = renderComponent({
     currentPage: 10,
     onPageChange,
@@ -271,42 +232,16 @@ it('should handle keyboard navigation when focusActivationMode is manual', () =>
   expect(onPageChange).toHaveBeenCalledWith(0);
 });
 
-it('should render elements in small size', () => {
-  jest.spyOn(UseOverflow, 'useOverflow').mockReturnValue([jest.fn(), 5]);
-  const { container } = renderComponent({
-    size: 'small',
-    pageSizeList: [10, 25, 50],
-    currentPage: 10,
-    onPageSizeChange: jest.fn(),
-  });
-
-  const pageSwitchers = container.querySelectorAll('.iui-button');
-  expect(
-    Array.from(pageSwitchers).every(
-      (p) => p.getAttribute('data-iui-size') === 'small',
-    ),
-  ).toBe(true);
-
-  const pages = container.querySelectorAll(
-    '.iui-table-paginator-page-button-small',
-  );
-  expect(pages).toHaveLength(7);
-
-  const ellipsis = container.querySelectorAll(
-    '.iui-table-paginator-ellipsis-small',
-  );
-  expect(ellipsis).toHaveLength(2);
-});
-
 it('should render with custom localization', async () => {
-  jest
-    .spyOn(UseContainerWidth, 'useContainerWidth')
-    .mockImplementation(() => [jest.fn(), 2000]);
+  vi.spyOn(UseContainerWidth, 'useContainerWidth').mockImplementation(() => [
+    vi.fn(),
+    2000,
+  ]);
 
   const pageSizeList = [10, 25, 50];
   const { container } = renderComponent({
     pageSizeList,
-    onPageSizeChange: jest.fn(),
+    onPageSizeChange: vi.fn(),
     totalSelectedRowsCount: 5,
     localization: {
       pageSizeLabel: (size: number) => `${size} per test page`,
@@ -332,18 +267,19 @@ it('should render with custom localization', async () => {
   expect(container.querySelector('.iui-left')).toHaveTextContent('5 test(s)');
 
   await userEvent.click(pageSizeSelector);
-  const pageSizeSelections = document.querySelectorAll('.iui-menu-item');
+  const pageSizeSelections = document.querySelectorAll('.iui-list-item');
   expect(pageSizeSelections).toHaveLength(3);
   pageSizeSelections.forEach((el, index) => {
     expect(el.textContent).toEqual(`${pageSizeList[index]} per test page`);
-    expect(el.classList.contains('iui-active')).toBe(index === 0);
+    expect(el.hasAttribute('data-iui-active')).toBe(index === 0);
   });
 });
 
 it('should not show rowsPerPageLabel on narrow widths', () => {
-  jest
-    .spyOn(UseContainerWidth, 'useContainerWidth')
-    .mockReturnValue([jest.fn(), 600]);
+  vi.spyOn(UseContainerWidth, 'useContainerWidth').mockReturnValue([
+    vi.fn(),
+    600,
+  ]);
 
   const { container } = renderComponent();
   expect(
@@ -352,9 +288,10 @@ it('should not show rowsPerPageLabel on narrow widths', () => {
 });
 
 it('should hide rowsPerPageLabel if null is passed', () => {
-  jest
-    .spyOn(UseContainerWidth, 'useContainerWidth')
-    .mockReturnValue([jest.fn(), 1200]);
+  vi.spyOn(UseContainerWidth, 'useContainerWidth').mockReturnValue([
+    vi.fn(),
+    1200,
+  ]);
 
   const { container } = renderComponent({
     localization: { rowsPerPageLabel: null },

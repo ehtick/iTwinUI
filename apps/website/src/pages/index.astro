@@ -1,6 +1,4 @@
 ---
-import '@itwin/itwinui-css/css/all.css';
-import '@itwin/itwinui-variables';
 import Global from './_global.astro';
 import Header from '~/components/Header.astro';
 import ITwinUILogo from '~/components/iTwinUILogo';
@@ -11,11 +9,13 @@ import ConsistentIcon from '~/icons/ConsistentIcon.astro';
 import RightArrowIcon from '~/icons/RightArrowIcon.astro';
 import NorthernLights from '~/components/NorthernLights.astro';
 import CopyCommandButton from '~/components/CopyCommandButton.astro';
+import Footer from '~/components/utils/Footer.astro';
 import AlertDemo from '~/demos/Alert.demo';
 import DialogDemo from '~/demos/Dialog.demo';
 import ComboBoxDemo from '~/demos/ComboBox.demo';
 import SliderDemo from '~/demos/Slider.demo';
 import FieldsetDemo from '~/demos/Fieldset.demo';
+import HomepageBanner from '~/components/HomepageBanner.astro';
 
 const currentPage = new URL(Astro.request.url).pathname;
 ---
@@ -26,7 +26,14 @@ const currentPage = new URL(Astro.request.url).pathname;
   <main>
     <div class='title-box'>
       <div class='hero-box'>
-        <div class='hero-text'>
+        <div class='hero-text move-on-visible' data-move-on-visible-direction='right'>
+          <HomepageBanner
+            class='banner'
+            href='https://github.com/iTwin/iTwinUI/wiki/iTwinUI-react-v3-migration-guide'
+          >
+            iTwinUI <span class='highlight-text v3'>v3</span> is now available!
+          </HomepageBanner>
+
           <h1>For a <span class='highlight-text'>unified</span> experience</h1>
           <h2 class='subheading'>
             iTwinUI delivers common UI components and UI layouts bundled with accessibility best
@@ -37,52 +44,54 @@ const currentPage = new URL(Astro.request.url).pathname;
             <CopyCommandButton command='npm i @itwin/itwinui-react' />
           </div>
         </div>
-        <div class='animated-logo-wrapper'>
+        <div class='animated-logo-wrapper move-on-visible' data-move-on-visible-direction='left'>
           <ITwinUILogo client:idle />
         </div>
       </div>
 
-      <div class='demo-carousel-list'>
+      <div class='demo-carousel-list move-on-visible' data-move-on-visible-direction='up'>
         <div class='demo-wrapper'>
-          <div class='demo-box'><AlertDemo client:only='react' /></div>
-          <h3>Alert</h3>
+          <div class='demo-box'><AlertDemo client:load /></div>
+          <a href='/docs/alert' class='component-link'>Alert</a>
           <p>A small box to quickly grab user attention and communicate a brief message.</p>
         </div>
 
         <div class='demo-wrapper'>
-          <div class='demo-box'><DialogDemo client:only='react' /></div>
-          <h3>Dialog</h3>
+          <div class='demo-box'><DialogDemo client:load /></div>
+          <a href='/docs/dialog' class='component-link'>Dialog</a>
           <p>Provides the foundation for building modals and modeless dialogs.</p>
         </div>
 
         <div class='demo-wrapper'>
-          <div class='demo-box'><FieldsetDemo client:only='react' /></div>
-          <h3>Fieldset</h3>
+          <div class='demo-box'><FieldsetDemo client:load /></div>
+          <a href='/docs/fieldset' class='component-link'>Fieldset</a>
           <p>A fieldset is a container grouping interactive components together.</p>
         </div>
 
         <div class='demo-wrapper'>
-          <div class='demo-box'><SliderDemo client:only='react' /></div>
-          <h3>Slider</h3>
+          <div class='demo-box'><SliderDemo client:load /></div>
+          <a href='/docs/slider' class='component-link'>Slider</a>
           <p>Sliders let users make selections from a range of values.</p>
         </div>
 
         <div class='demo-wrapper'>
-          <div class='demo-box'><ComboBoxDemo client:only='react' /></div>
-          <h3>ComboBox</h3>
+          <div class='demo-box'><ComboBoxDemo client:load /></div>
+          <a href='/docs/combobox' class='component-link'>ComboBox</a>
           <p>Allows typing a value to filter and choose from the options in dropdown list.</p>
         </div>
         <div class='demo-wrapper'>
           <div class='demo-box demo-box-muted'>
-            <li class='discover-more'>
-              <h3><a href={'/docs/components'}>Discover more components <RightArrowIcon /></a></h3>
-            </li>
+            <div class='discover-more'>
+              <a href={'/docs/components'} class='component-link'
+                >Discover more components <RightArrowIcon />
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class='centered-content'>
+    <div class='centered-content move-on-visible' data-move-on-visible-direction='up'>
       <h2 class='highlight-text'>Why iTwinUI?</h2>
       <div class='column-content'>
         <div class='text-with-icon'>
@@ -128,12 +137,12 @@ const currentPage = new URL(Astro.request.url).pathname;
         </div>
       </div>
     </div>
-    <div class='centered-content'>
+    <div class='centered-content move-on-visible' data-move-on-visible-direction='up'>
       <h2 class='highlight-text'>Our library</h2>
       <ul class='library-list'>
         <li class='library-item'>
           <h3>
-            <a href='/docs'>Components</a>
+            <a href='/docs/components'>Components</a>
           </h3>
           <p>
             See our extensive library of pre-coded components. You can view live demos of how they
@@ -148,7 +157,7 @@ const currentPage = new URL(Astro.request.url).pathname;
         </li>
         <li class='library-item'>
           <h3>
-            <a href='/https://itwin.github.io/iTwinUI-icons/'>Icons</a>
+            <a href='https://itwin.github.io/iTwinUI-icons/'>Icons</a>
           </h3>
           <p>
             Hundreds of flexible, flat-styled icons in SVG format, allowing for infinite scalability
@@ -159,285 +168,313 @@ const currentPage = new URL(Astro.request.url).pathname;
     </div>
   </main>
 
-  <footer>© 2022 Bentley Systems, Inc</footer>
+  <Footer />
 
   <style lang='scss'>
-    body {
-      display: grid;
-      grid-template: 'header' auto 'main' 1fr / 100%;
-    }
-    main > * {
-      max-width: 1200px;
-    }
-    .hero-box {
-      display: grid;
-      grid-template-columns: 1fr 350px;
-      align-items: center;
-      gap: var(--space-6);
-      @media (max-width: 50em) {
-        grid-template-columns: 1fr;
-        gap: var(--space-5);
-      }
-    }
-    .animated-logo-wrapper {
-      place-self: center;
-      width: calc(var(--space-6) * 10);
-      perspective: 1000px;
-      transform-style: preserve-3d;
-      @media (max-width: 50em) {
-        order: 1;
-        width: calc(var(--space-6) * 8);
-      }
-
-      :global(svg) {
-        overflow: visible;
-      }
-    }
-    .hero-text {
-      @media (max-width: 50em) {
-        order: 2;
+    @layer pages {
+      body {
         display: grid;
-        justify-items: center;
+        grid-template: 'header' auto 'main' 1fr / 100%;
+      }
+      main > * {
+        max-width: 1200px;
+      }
+      .hero-box {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        align-items: center;
+        gap: var(--space-6);
+        @media (max-width: 50em) {
+          grid-template-columns: 1fr;
+          gap: var(--space-5);
+        }
 
-        > * {
-          justify-content: center;
+        .banner {
+          margin-block-end: var(--space-4);
+
+          .v3 {
+            font-weight: 600;
+          }
         }
       }
-    }
-    .hexagon-bg {
-      min-height: 40vh;
-      max-height: 85vh;
-      position: absolute;
-      z-index: -2;
-      overflow: hidden;
-    }
-    a {
-      text-decoration: none;
-      color: unset;
-    }
-    .header {
-      grid-area: header;
-    }
-    .demo-carousel-list {
-      display: flex;
-      justify-self: center;
-      gap: var(--space-6);
-      margin-block: calc(var(--space-7) * 4) calc(var(--space-7) * 3);
-      padding-block: var(--space-7);
-      padding-inline: var(--space-2);
-      overflow-x: auto;
-      max-width: 90vw;
+      .animated-logo-wrapper {
+        place-self: center;
+        width: calc(var(--space-6) * 10);
+        perspective: 1000px;
+        transform-style: preserve-3d;
+        @media (max-width: 50em) {
+          order: 1;
+          width: calc(var(--space-6) * 8);
+        }
 
-      :global(> *) {
-        flex: 0;
+        :global(svg) {
+          overflow: visible;
+        }
       }
+      .hero-text {
+        @media (max-width: 50em) {
+          order: 2;
+          display: grid;
+          justify-items: center;
 
-      @media (max-width: 50em) {
-        margin-block: calc(var(--space-7) * 2);
+          > * {
+            justify-content: center;
+          }
+        }
       }
-    }
-
-    .demo-wrapper {
-      min-width: 350px;
-      color: var(--color-text);
-      display: grid;
-      gap: var(--space-4);
-    }
-
-    .demo-box {
-      color-scheme: dark !important;
-      width: 350px;
-      height: 350px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: var(--color-sandbox-gradient);
-      position: relative;
-    }
-    .demo-box-muted {
-      background: transparent;
-      border: 1px solid var(--color-subtext);
-    }
-    .colored-text {
-      color: var(--color-highlight-1);
-    }
-    .title-box {
-      margin-top: calc(var(--space-7) * 4);
-      display: grid;
-      justify-self: center;
-      align-items: center;
-      @media (max-width: 50em) {
-        margin-top: calc(var(--space-7) * 2);
+      .hexagon-bg {
+        min-height: 40vh;
+        max-height: 85vh;
+        position: absolute;
+        z-index: -2;
+        overflow: hidden;
       }
-    }
-    .button-area {
-      display: flex;
-      gap: var(--space-5);
-      flex-wrap: wrap;
-    }
-    .main-button {
-      font-size: var(--type-1);
-      padding: var(--space-2) var(--space-5);
-      border-radius: var(--border-radius-1);
-      text-decoration: none;
-      background: var(--color-highlight-gradient);
-      color: var(--color-background-1);
-      font-weight: 500;
-      transition: box-shadow var(--transition-speed) ease;
-    }
-
-    .main-button:hover,
-    .join-us:hover {
-      box-shadow: 0 0 10px var(--color-highlight-1), 0 0 20px var(--color-highlight-2);
-    }
-    .highlight-text {
-      background: var(--color-highlight-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .glow {
-      box-shadow: 0 0 10px var(--color-highlight-1), 0 0 20px var(--color-highlight-2);
-    }
-    .centered-content {
-      display: flex;
-      flex-direction: column;
-      justify-self: center;
-      align-items: center;
-      margin: calc(var(--space-7)) 0 calc(var(--space-7) * 3) 0;
-    }
-    .column-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-7);
-      @media (max-width: 50em) {
-        grid-template-columns: 1fr;
-      }
-    }
-    .text-with-icon {
-      display: grid;
-      grid-template-columns: 100px 1fr;
-      gap: var(--space-6);
-    }
-    .library-list {
-      max-width: 90vw;
-      display: grid;
-      gap: var(--space-6);
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-    }
-    .library-item {
-      position: relative;
-      display: flex;
-      flex: 1 0 20%;
-      flex-direction: column;
-      padding: var(--space-5);
-      border-radius: var(--border-radius-1);
-      outline: 1px solid var(--color-subtext);
-      gap: var(--space-3);
-      align-items: start;
-      color: var(--color-text);
-      transition: box-shadow var(--transition-speed) ease;
-
-      &:where(:hover, :focus-within) {
-        box-shadow: 0 0 10px var(--color-highlight-1), 0 0 20px var(--color-highlight-2);
-      }
-
       a {
-        color: var(--color-text);
         text-decoration: none;
+        color: unset;
+      }
+      .header {
+        grid-area: header;
+      }
+      .demo-carousel-list {
+        display: flex;
+        justify-self: center;
+        gap: var(--space-6);
+        margin-block: calc(var(--space-7) * 4) calc(var(--space-7) * 3);
+        padding-block: var(--space-7);
+        padding-inline: var(--space-2);
+        overflow-x: auto;
+        max-width: 90vw;
 
-        &:where(:focus) {
-          outline: none;
-          text-decoration: none;
+        :global(> *) {
+          flex: 0;
         }
 
-        &::after {
-          content: '';
-          position: absolute;
-          inset: 0;
+        @media (max-width: 50em) {
+          margin-block: calc(var(--space-7) * 2);
         }
       }
-    }
-    h1 {
-      font-size: calc(var(--type-3) * 1.5);
-      letter-spacing: -0.01em;
-      margin-bottom: var(--space-2);
-    }
-    .subheading {
-      font-size: var(--type-2);
-      font-weight: 400;
-      color: var(--color-subtext);
-      padding-bottom: var(--space-7);
-      max-width: 50ch;
-    }
-    p {
-      font-size: var(--type-0);
-    }
-    h2 {
-      font-size: var(--type-4);
-      padding-bottom: var(--space-7);
-    }
-    h4 {
-      font-size: var(--type-1);
-      text-align: center;
-      padding-bottom: var(--space-4);
-    }
-    h3 {
-      font-size: var(--type-2);
-      text-align: left;
-    }
-    main {
-      grid-area: main;
-      display: grid;
-      padding: var(--space-7);
 
-      @media (max-width: 50em) {
+      .demo-wrapper {
+        min-width: 350px;
+        color: var(--color-text);
+        display: grid;
+        gap: var(--space-4);
+      }
+
+      .demo-box {
+        color-scheme: dark !important;
+        width: 350px;
+        height: 350px;
+        border-radius: var(--border-radius-1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        border: 1px solid var(--color-line-2);
+      }
+      .demo-box-muted {
+        background: transparent;
+        border: 1px solid var(--color-line-2);
+      }
+      .colored-text {
+        color: var(--color-highlight-1);
+      }
+      .title-box {
+        margin-top: calc(var(--space-7) * 4);
+        display: grid;
+        justify-self: center;
+        align-items: center;
+        @media (max-width: 50em) {
+          margin-top: calc(var(--space-7) * 2);
+        }
+      }
+      .button-area {
+        display: flex;
+        gap: var(--space-5);
+        flex-wrap: wrap;
+      }
+      .main-button {
+        font-size: var(--type-1);
+        padding: var(--space-2) var(--space-5);
+        border-radius: var(--border-radius-1);
+        text-decoration: none;
+        background: var(--color-highlight-gradient);
+        color: var(--color-background-1);
+        font-weight: 500;
+        transition: box-shadow var(--transition-speed) ease;
+      }
+
+      .main-button:hover,
+      .join-us:hover {
+        box-shadow:
+          0 0 10px var(--color-highlight-1),
+          0 0 20px var(--color-highlight-2);
+      }
+      .highlight-text {
+        background: var(--color-highlight-gradient);
+        background-clip: text;
+        color: transparent;
+
+        &::selection {
+          color: CanvasText;
+          background-color: Highlight;
+        }
+      }
+      .glow {
+        box-shadow:
+          0 0 10px var(--color-highlight-1),
+          0 0 20px var(--color-highlight-2);
+      }
+      .centered-content {
+        display: flex;
+        flex-direction: column;
+        justify-self: center;
+        align-items: center;
+        margin: calc(var(--space-7)) 0 calc(var(--space-7) * 3) 0;
+      }
+      .column-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-7);
+        @media (max-width: 50em) {
+          grid-template-columns: 1fr;
+        }
+      }
+      .text-with-icon {
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: var(--space-6);
+      }
+      .library-list {
+        max-width: 90vw;
+        display: grid;
+        gap: var(--space-6);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+      }
+      .library-item {
+        position: relative;
+        display: flex;
+        flex: 1 0 20%;
+        flex-direction: column;
         padding: var(--space-5);
+        border-radius: var(--border-radius-1);
+        outline: 1px solid var(--color-subtext);
+        gap: var(--space-3);
+        align-items: start;
+        color: var(--color-text);
+        transition: box-shadow var(--transition-speed) ease;
+
+        &:where(:hover, :focus-within) {
+          box-shadow:
+            0 0 10px var(--color-highlight-1),
+            0 0 20px var(--color-highlight-2);
+        }
+
+        a {
+          color: var(--color-text);
+          text-decoration: none;
+
+          &:where(:focus) {
+            outline: none;
+            text-decoration: none;
+          }
+
+          &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+          }
+        }
       }
-    }
+      h1 {
+        font-size: calc(var(--type-3) * 1.5);
+        letter-spacing: -0.01em;
+        margin-bottom: var(--space-2);
+      }
+      .subheading {
+        font-size: var(--type-2);
+        font-weight: 400;
+        color: var(--color-subtext);
+        padding-bottom: var(--space-7);
+        max-width: 50ch;
+      }
+      p {
+        font-size: var(--type-0);
+      }
+      h2 {
+        font-size: var(--type-4);
+        padding-bottom: var(--space-7);
+      }
+      h4 {
+        font-size: var(--type-1);
+        text-align: center;
+        padding-bottom: var(--space-4);
+      }
+      h3 {
+        font-size: var(--type-2);
+        text-align: left;
+      }
+      main {
+        grid-area: main;
+        display: grid;
+        padding: var(--space-7);
 
-    .icon {
-      align-self: center;
-      fill: var(--color-highlight-1);
-      height: 96px;
-    }
-
-    .discover-more {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      transition: box-shadow var(--transition-speed) ease;
-
-      &:hover {
-        box-shadow: 0 0 5px var(--color-highlight-1), 0 0 10px var(--color-highlight-2);
+        @media (max-width: 50em) {
+          padding: var(--space-5);
+        }
       }
 
-      a {
+      .component-link {
+        font-size: var(--type-2);
+        text-align: left;
+
+        &:hover {
+          text-decoration: underline;
+          text-underline-offset: 0.5ex;
+        }
+      }
+
+      .icon {
+        align-self: center;
+        fill: var(--color-highlight-1);
+        height: 96px;
+      }
+
+      .discover-more {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: var(--type-1);
-        color: var(--color-text);
-        text-decoration: none;
+        width: 100%;
+        height: 100%;
+        transition: box-shadow var(--transition-speed) ease;
 
-        &:where(:focus) {
-          outline: none;
-          text-decoration: none;
+        &:hover {
+          box-shadow:
+            0 0 5px var(--color-highlight-1),
+            0 0 10px var(--color-highlight-2);
         }
 
-        &::after {
-          content: '';
-          position: absolute;
-          inset: 0;
+        a {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: var(--type-1);
+          color: var(--color-text);
+          text-decoration: none;
+
+          &:where(:focus) {
+            outline: none;
+            text-decoration: none;
+          }
+
+          &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+          }
         }
       }
-    }
-
-    footer {
-      color: var(--color-subtext);
-      margin-inline: auto;
-      padding: var(--space-4);
     }
   </style>
 </Global>

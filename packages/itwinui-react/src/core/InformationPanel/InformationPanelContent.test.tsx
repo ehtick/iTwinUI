@@ -2,10 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { InformationPanelContent } from './InformationPanelContent';
+import { InformationPanelContent } from './InformationPanelContent.js';
 
 it('should render in its most basic state', () => {
   const { container } = render(
@@ -51,6 +50,6 @@ it('should propagate misc props', () => {
     '.iui-information-body-content',
   ) as HTMLElement;
   expect(element).toHaveClass('test class');
-  expect(element).toHaveStyle('color: black');
+  expect(element.style.color).toEqual('black');
   expect(element).toHaveTextContent('inner content');
 });

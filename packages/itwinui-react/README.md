@@ -2,10 +2,10 @@
   <picture>
     <source
       media='(prefers-color-scheme: dark)'
-      srcSet='https://itwinplatformcdn.azureedge.net/iTwinUI/iTwinUI-new-dark-logo.png'
+      srcset='https://itwin.github.io/iTwinUI/logo-dark.svg'
     />
     <img
-      src='https://itwinplatformcdn.azureedge.net/iTwinUI/iTwinUI-new-logo.png'
+      src='https://itwin.github.io/iTwinUI/logo.svg'
       alt='iTwinUI logo'
     />
   </picture>
@@ -23,58 +23,62 @@
 ## What is iTwinUI-react?
 
 iTwinUI-react is a React component library for [iTwinUI](https://github.com/iTwin/iTwinUI).
-The goal of this package is to provide React components that make it easier to use the styles from [`@itwin/itwinui-css`](https://github.com/iTwin/iTwinUI/tree/main/packages/itwinui-css). Check out the [demo website](https://itwin.github.io/iTwinUI-react) to see the components in action.
+The goal of this package is to provide React components that make it easier to use the styles from [`@itwin/itwinui-css`](https://github.com/iTwin/iTwinUI/tree/main/packages/itwinui-css). Check out the [documentation website](https://itwinui.bentley.com/) to detailed documentation and examples of all components.
+
+🆕 Check out the [v3 migration guide](https://github.com/iTwin/iTwinUI/wiki/iTwinUI-react-v3-migration-guide) if you're upgrading from an older version.
 
 ---
 
 ## Installation
 
 ```
-npm install @itwin/itwinui-react
+npm add @itwin/itwinui-react
 ```
 
+---
+
+## Setup
+
+Wrap your application entrypoint in `ThemeProvider` and import `styles.css`.
+
+```jsx
+import { ThemeProvider } from '@itwin/itwinui-react';
+import '@itwin/itwinui-react/styles.css';
+
+export default function App() {
+  return (
+    <>
+      <ThemeProvider>
+        {/* Your components go here. */}
+      </ThemeProvider>
+    </>
+  );
+}
 ```
-yarn add @itwin/itwinui-react
-```
+
+ThemeProvider has a `theme` prop which accepts one of the following values:
+  - `"light"`
+  - `"dark"`
+  - `"os"` (respects the color scheme of the operating system)
+  - `"inherit"` (default)
 
 ---
 
 ## Usage
 
-Import the component you want and start using it!
+After setting up ThemeProvider and styles, import the component you want and start using it!
 
 ```jsx
 import { Button } from '@itwin/itwinui-react';
 
-const App = () => (
+const Page = () => (
   <Button>Hello!</Button>
 );
 ```
 
-Yes, that's really all you need as you can see in this live interactive demo:
+Check out this template for a live interactive demo:
 
-[![Edit Button](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/itwinui-react-minimal-example-xq2t3)
-
----
-
-## Theming
-
-By default, all components use the light theme, but we recommend wrapping your root element with `ThemeProvider`. You can pass one of the following values to its `theme` prop:
-  - `light` (default)
-  - `dark`
-  - `os` (which respects the color scheme of the operating system)
-
-```jsx
-import { ThemeProvider } from '@itwin/itwinui-react';
-
-const App = () => (
-  <>
-    <ThemeProvider theme='dark'>
-      {/* Your components go here. */}
-    </ThemeProvider>
-  </>
-);
-```
+[![Edit in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/iTwin/iTwinUI/tree/main/minimal-sandbox?file=src/App.tsx)
 
 ---
 

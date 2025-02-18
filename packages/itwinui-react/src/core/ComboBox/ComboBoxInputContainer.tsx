@@ -2,36 +2,51 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { StatusMessage } from '../StatusMessage';
-import { InputContainer, InputContainerProps, useSafeContext } from '../utils';
-import { ComboBoxStateContext } from './helpers';
+import * as React from 'react';
+import { StatusMessage } from '../StatusMessage/StatusMessage.js';
+import {
+  InputContainer,
+  useSafeContext,
+  InputWithIcon,
+} from '../../utils/index.js';
+import type {
+  InputContainerProps,
+  PolymorphicForwardRefComponent,
+} from '../../utils/index.js';
+import { ComboBoxStateContext } from './helpers.js';
 
-type ComboBoxInputContainerProps = React.ComponentPropsWithoutRef<'div'> &
-  Pick<InputContainerProps, 'status' | 'message' | 'disabled'>;
+type ComboBoxInputContainerProps = Pick<
+  InputContainerProps,
+  'status' | 'message' | 'disabled'
+>;
 
-export const ComboBoxInputContainer = (props: ComboBoxInputContainerProps) => {
-  const { className, status, message, children, ...rest } = props;
+export const ComboBoxInputContainer = React.forwardRef(
+  (props, forwardedRef) => {
+    const { className, status, message, children, ...rest } = props;
 
-  const { id } = useSafeContext(ComboBoxStateContext);
+    const { id } = useSafeContext(ComboBoxStateContext);
 
-  return (
-    <InputContainer
-      className={className}
-      status={status}
-      statusMessage={
-        typeof message === 'string' ? (
-          <StatusMessage status={status}>{message}</StatusMessage>
-        ) : (
-          React.isValidElement(message) &&
-          React.cloneElement(message, { status })
-        )
-      }
-      {...rest}
-      id={id}
-    >
-      <div className='iui-input-with-icon'>{children}</div>
-    </InputContainer>
-  );
-};
-ComboBoxInputContainer.displayName = 'ComboBoxInputContainer';
+    return (
+      <InputContainer
+        className={className}
+        status={status}
+        statusMessage={
+          typeof message === 'string' ? (
+            <StatusMessage status={status}>{message}</StatusMessage>
+          ) : (
+            React.isValidElement(message) &&
+            React.cloneElement(message as React.JSX.Element, { status })
+          )
+        }
+        ref={forwardedRef}
+        {...rest}
+        id={id}
+      >
+        <InputWithIcon>{children}</InputWithIcon>
+      </InputContainer>
+    );
+  },
+) as PolymorphicForwardRefComponent<'div', ComboBoxInputContainerProps>;
+if (process.env.NODE_ENV === 'development') {
+  ComboBoxInputContainer.displayName = 'ComboBoxInputContainer';
+}

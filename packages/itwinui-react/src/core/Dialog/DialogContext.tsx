@@ -2,11 +2,16 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
+import type { PortalProps } from '../../utils/index.js';
 
 export type DialogContextProps = {
   /**
    * Flag whether dialog should be shown.
+   *
+   * It is recommended to directly pass the boolean condition to this prop instead of rendering the `Dialog`
+   * conditionally with `isOpen` hard-coded to `true`. One benefit of this is getting an exit animation.
+   *
    * @default false
    */
   isOpen?: boolean;
@@ -30,13 +35,17 @@ export type DialogContextProps = {
    */
   closeOnEsc?: boolean;
   /**
-   * Traps the focus inside the dialog. This is useful when the dialog is modal.
+   * Prevents focus from leaving the dialog. This is useful when the dialog is modal.
+   *
+   * Setting this prop to `true` will also set `setFocus` to `true`.
+   *
    * @default false
    */
   trapFocus?: boolean;
   /**
    * If true, focuses the dialog.
-   * @default false
+   *
+   * Defaults to `true` if `trapFocus` is set to `true`, otherwise defaults to `false`.
    */
   setFocus?: boolean;
   /**
@@ -67,9 +76,23 @@ export type DialogContextProps = {
    */
   relativeTo?: 'container' | 'viewport';
   /**
+   * If true, the dialog will be portaled into a <div> inside the nearest `ThemeProvider`.
+   * Recommended to set to true when for modal dialogs that use `relativeTo='viewport'`.
+   *
+   * Can be set to an object with a `to` property to portal into a specific element.
+   * If `to`/`to()` === `null`/`undefined`, the default behavior will be used (i.e. as if `portal` is not passed).
+   *
+   * Defaults to false if using `Dialog` and true if using `Modal`.
+   */
+  portal?: PortalProps['portal'];
+  /**
    * Dialog root ref. For internal use.
    */
-  dialogRootRef?: React.RefObject<HTMLDivElement>;
+  dialogRootRef?: React.RefObject<HTMLDivElement | null>;
+  /**
+   * Determines the positioning of Dialog on page.
+   */
+  placement?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 };
 
 export const DialogContext = React.createContext<

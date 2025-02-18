@@ -2,18 +2,18 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { useTheme } from '../utils';
+import * as React from 'react';
+import { FieldsetBase } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
 import cx from 'classnames';
-import '@itwin/itwinui-css/css/fieldset.css';
 
-export type FieldsetProps = {
+type FieldsetProps = {
   /**
    * The caption or title for the fieldset.
    */
   legend?: React.ReactNode;
-} & React.ComponentPropsWithoutRef<'fieldset'>;
+};
 
 /**
  * Fieldset component to group several inputs, controls and labels within a form.
@@ -26,15 +26,14 @@ export type FieldsetProps = {
  *   </InputGroup>
  * </Fieldset>
  */
-export const Fieldset = (props: FieldsetProps) => {
+export const Fieldset = React.forwardRef((props, ref) => {
   const { children, className, disabled, legend, ...rest } = props;
 
-  useTheme();
-
   return (
-    <fieldset
+    <FieldsetBase
       className={cx('iui-fieldset', className)}
       disabled={disabled}
+      ref={ref}
       {...rest}
     >
       {legend && <legend>{legend}</legend>}
@@ -42,12 +41,15 @@ export const Fieldset = (props: FieldsetProps) => {
       {disabled
         ? React.Children.map(children, (child) =>
             React.isValidElement(child)
-              ? React.cloneElement(child, { disabled: true })
+              ? React.cloneElement(child as React.JSX.Element, {
+                  disabled: true,
+                })
               : child,
           )
         : children}
-    </fieldset>
+    </FieldsetBase>
   );
-};
-
-export default Fieldset;
+}) as PolymorphicForwardRefComponent<'fieldset', FieldsetProps>;
+if (process.env.NODE_ENV === 'development') {
+  Fieldset.displayName = 'Fieldset';
+}

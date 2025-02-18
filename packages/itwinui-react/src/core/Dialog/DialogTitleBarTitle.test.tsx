@@ -3,9 +3,8 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import { render } from '@testing-library/react';
-import React from 'react';
 
-import { DialogTitleBarTitle } from './DialogTitleBarTitle';
+import { DialogTitleBarTitle } from './DialogTitleBarTitle.js';
 
 it('should render in its most basic state', () => {
   const { container } = render(
@@ -29,6 +28,6 @@ it('should propagate miscellaneous props', () => {
 
   const title = container.querySelector('.iui-dialog-title') as HTMLElement;
   expect(title).toHaveClass('test-class');
-  expect(title).toHaveStyle('color: red;');
+  expect(title.style.color).toEqual('red');
   expect(title.id).toEqual('test-id');
 });

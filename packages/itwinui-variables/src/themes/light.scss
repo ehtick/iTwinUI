@@ -33,12 +33,12 @@ $bg-positive-1: hsl(118 76% 28%);
 $bg-positive-2: hsl(118 81% 21%);
 
 $bg-warning-0: hsl(35 61% 94%);
-$bg-warning-1: hsl(33 90% 33%);
-$bg-warning-2: hsl(33 94% 25%);
+$bg-warning-1: hsl(42 100% 28%);
+$bg-warning-2: hsl(42 100% 21%);
 
 $bg-negative-0: hsl(0 100% 96%);
-$bg-negative-1: hsl(0 91% 45%);
-$bg-negative-2: hsl(0 94% 34%);
+$bg-negative-1: hsl(2 68% 46%);
+$bg-negative-2: hsl(357 100% 31%);
 // #endregion
 
 // #region Foreground colors
@@ -49,7 +49,9 @@ $fg-200: hsl(0 0% ($fg-lightness-gap * 2));
 $fg-300: hsl(0 0% ($fg-lightness-gap * 3));
 $fg-400: hsl(0 0% ($fg-lightness-gap * 4));
 $fg-500: hsl(0 0% ($fg-lightness-gap * 5));
+$fg-550: hsl(0 0% ($fg-lightness-gap * 5.5));
 $fg-600: hsl(0 0% ($fg-lightness-gap * 6));
+$fg-650: hsl(0 0% ($fg-lightness-gap * 6.5));
 $fg-700: hsl(0 0% ($fg-lightness-gap * 7));
 $fg-800: hsl(0 0% ($fg-lightness-gap * 8));
 $fg-900: hsl(0 0% ($fg-lightness-gap * 9));
@@ -76,7 +78,7 @@ $opacities: (
   2: 0.8,
   3: 0.6,
   4: 0.4,
-  5: 0.2,
+  5: 0.25,
   6: 0.1,
 );
 
@@ -93,8 +95,12 @@ $opacities: (
   --iui-color-background-backdrop-hover: #{hex($bg-300)};
   --iui-color-background-disabled: #{hex($bg-400)};
   --iui-color-background-accent: var(--iui-color-background-informational);
-  --iui-color-background-accent-hover: var(--iui-color-background-informational-hover);
-  --iui-color-background-accent-muted: var(--iui-color-background-informational-muted);
+  --iui-color-background-accent-hover: var(
+    --iui-color-background-informational-hover
+  );
+  --iui-color-background-accent-muted: var(
+    --iui-color-background-informational-muted
+  );
   --iui-color-background-informational: #{hex($bg-informational-1)};
   --iui-color-background-informational-hover: #{hex($bg-informational-2)};
   --iui-color-background-informational-muted: #{hex($bg-informational-0)};
@@ -114,7 +120,7 @@ $opacities: (
   --iui-color-border: #{hex($bg-900)};
   --iui-color-border-foreground: #{hex($fg-800)};
   --iui-color-border-foreground-hover: #{hex($fg-600)};
-  --iui-color-border-disabled: #{hex($bg-700)};
+  --iui-color-border-disabled: #{hex($fg-900)};
   --iui-color-border-accent: var(--iui-color-border-informational);
   --iui-color-border-informational: #{hex($fg-informational-1)};
   --iui-color-border-positive: #{hex($fg-positive-1)};
@@ -126,7 +132,8 @@ $opacities: (
   --iui-color-icon-hover: #{hex($fg-200)};
   --iui-color-icon-muted: #{hex($fg-700)};
   --iui-color-icon-muted-hover: #{hex($fg-600)};
-  --iui-color-icon-disabled: #{hex($fg-800)};
+  --iui-color-icon-disabled: #{hex($fg-900)};
+  --iui-color-icon-disabled-hover: #{hex($fg-650)};
   --iui-color-icon-accent: var(--iui-color-icon-informational);
   --iui-color-icon-informational: #{hex($fg-informational-2)};
   --iui-color-icon-positive: #{hex($fg-positive-2)};
@@ -137,7 +144,9 @@ $opacities: (
   --iui-color-text: #{hex($fg-200)};
   --iui-color-text-hover: #{hex($fg-100)};
   --iui-color-text-muted: #{hex($fg-500)};
-  --iui-color-text-disabled: #{hex($fg-700)};
+  --iui-color-text-placeholder: #{hex($fg-650)};
+  --iui-color-text-disabled: #{hex($fg-900)};
+  --iui-color-text-disabled-hover: #{hex($fg-550)};
   --iui-color-text-accent: var(--iui-color-text-informational);
   --iui-color-text-accent-hover: var(--iui-color-text-informational-hover);
   --iui-color-text-informational: #{hex($fg-informational-1)};
@@ -158,4 +167,6 @@ $opacities: (
   --iui-color-warning-hsl: #{get-hsl($fg-warning-2)};
   --iui-color-negative-hsl: #{get-hsl($fg-negative-2)};
   // #endregion
+
+  --iui-shadow-color: #{hsl(0 0% 0% / var(--iui-opacity-5))};
 }

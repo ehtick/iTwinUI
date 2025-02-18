@@ -1,15 +1,18 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
+@use '../mixins';
 
-@mixin iui-toggle-switch-wrapper {
-  @include iui-reset;
+.iui-toggle-switch-wrapper {
+  --_iui-toggle-switch-handle-size: var(--iui-size-m);
+  --_iui-toggle-switch-handle-offset: var(--iui-size-2xs);
+
+  @include mixins.iui-reset;
   display: grid;
   grid-template-areas: 'toggle';
   align-items: center;
   gap: var(--iui-size-xs);
   font-size: var(--iui-font-size-1);
-  width: fit-content;
+  inline-size: fit-content;
   user-select: none;
   cursor: pointer;
   isolation: isolate;
@@ -33,28 +36,37 @@
   &.iui-label-on-right {
     grid-template-areas: 'toggle label';
   }
+
+  &:where([data-iui-size='small']) {
+    --_iui-toggle-switch-handle-size: var(--iui-size-s);
+    --_iui-toggle-switch-handle-offset: var(--iui-size-3xs);
+  }
 }
 
-@mixin iui-toggle-switch {
-  $iui-toggle-switch-handle-size: var(--iui-size-m);
-  $iui-toggle-switch-handle-offset: var(--iui-size-2xs);
+.iui-toggle-switch {
   $iui-toggle-switch-border-thickness: 1px;
 
-  @include iui-reset;
-  @include iui-focus($thickness: $iui-toggle-switch-border-thickness, $offset: $iui-toggle-switch-border-thickness);
+  @include mixins.iui-reset;
+  @include mixins.iui-focus(
+    $thickness: $iui-toggle-switch-border-thickness,
+    $offset: $iui-toggle-switch-border-thickness
+  );
   grid-area: toggle;
   display: flex;
   position: relative;
   cursor: pointer;
   appearance: none;
-  width: calc(calc($iui-toggle-switch-handle-size + $iui-toggle-switch-handle-offset * 2) * 2);
-  height: calc(
-    $iui-toggle-switch-handle-size + ($iui-toggle-switch-handle-offset * 2) + ($iui-toggle-switch-border-thickness * 2)
+  inline-size: calc((var(--_iui-toggle-switch-handle-size) + var(--_iui-toggle-switch-handle-offset) * 2) * 2);
+  block-size: calc(
+    var(--_iui-toggle-switch-handle-size) + (var(--_iui-toggle-switch-handle-offset) * 2) +
+      ($iui-toggle-switch-border-thickness * 2)
   );
   border-radius: var(--iui-border-radius-round);
-  transition: background-color var(--iui-duration-1) ease-out, border-color var(--iui-duration-1) ease-out;
+  transition:
+    background-color var(--iui-duration-1) ease-out,
+    border-color var(--iui-duration-1) ease-out;
   background-color: var(--iui-color-background);
-  border: $iui-toggle-switch-border-thickness solid var(--iui-color-border-foreground);
+  border: $iui-toggle-switch-border-thickness solid;
 
   &-label {
     grid-area: label;
@@ -62,15 +74,17 @@
 
   &::after {
     content: '';
-    height: $iui-toggle-switch-handle-size;
-    width: $iui-toggle-switch-handle-size;
-    margin: $iui-toggle-switch-handle-offset;
+    block-size: var(--_iui-toggle-switch-handle-size);
+    inline-size: var(--_iui-toggle-switch-handle-size);
+    margin: var(--_iui-toggle-switch-handle-offset);
     aspect-ratio: 1 / 1;
-    border-radius: 50%;
+    border-radius: var(--iui-border-radius-round);
     transition: background-color var(--iui-duration-1) ease-out;
     z-index: 2;
     @media (prefers-reduced-motion: no-preference) {
-      transition: transform var(--iui-duration-1) ease-out, background-color var(--iui-duration-1) ease-out;
+      transition:
+        transform var(--iui-duration-1) ease-out,
+        background-color var(--iui-duration-1) ease-out;
     }
   }
 
@@ -88,7 +102,7 @@
     }
   }
 
-  &:hover {
+  &:is(:hover, :focus-visible) {
     border-color: var(--iui-color-border-foreground-hover);
     @media (forced-colors: active) {
       border-color: CanvasText;
@@ -97,16 +111,6 @@
     &::after {
       background-color: var(--iui-color-icon-hover);
     }
-
-    @include focus-visible {
-      &::after {
-        background-color: var(--iui-color-icon-hover);
-      }
-    }
-  }
-
-  @include focus-visible {
-    border-color: var(--iui-color-border-foreground-hover);
   }
   // #endregion Unchecked toggle switch
 
@@ -120,7 +124,7 @@
     }
 
     &::after {
-      transform: translateX(calc($iui-toggle-switch-handle-size + $iui-toggle-switch-handle-offset));
+      transform: translateX(calc(var(--_iui-toggle-switch-handle-size) + var(--_iui-toggle-switch-handle-offset)));
       background-color: var(--iui-color-white);
       @media (forced-colors: active) {
         background-color: HighlightText;
@@ -153,7 +157,10 @@
 
     ~ .iui-toggle-switch-icon {
       opacity: 0;
-      fill: var(--iui-color-icon);
+
+      svg {
+        fill: var(--iui-color-icon);
+      }
     }
 
     &:checked {
@@ -169,9 +176,14 @@
 
       ~ .iui-toggle-switch-icon {
         opacity: var(--iui-opacity-5);
+
         @media (forced-colors: active) {
-          fill: Canvas;
           opacity: 0.75;
+
+          /* stylelint-disable-next-line max-nesting-depth */
+          svg {
+            fill: Canvas;
+          }
         }
       }
     }
@@ -181,17 +193,24 @@
   &-icon {
     opacity: 0;
     grid-area: toggle;
-    width: $iui-toggle-switch-handle-size;
-    height: $iui-toggle-switch-handle-size;
-    padding: calc($iui-toggle-switch-handle-size * 0.125);
-    margin: calc($iui-toggle-switch-handle-offset + $iui-toggle-switch-border-thickness);
-    display: flex;
+    margin: calc(var(--_iui-toggle-switch-handle-offset) + $iui-toggle-switch-border-thickness);
     z-index: 1;
     transition: opacity var(--iui-duration-1) ease-out;
     pointer-events: none;
-    fill: var(--iui-color-white);
-    @media (forced-colors: active) {
-      fill: HighlightText;
+
+    &,
+    svg {
+      display: flex;
+      inline-size: var(--_iui-toggle-switch-handle-size);
+      block-size: var(--_iui-toggle-switch-handle-size);
+    }
+
+    svg {
+      padding: calc(var(--_iui-toggle-switch-handle-size) * 0.125);
+      fill: var(--iui-color-white);
+      @media (forced-colors: active) {
+        fill: HighlightText;
+      }
     }
   }
 }

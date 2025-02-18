@@ -14,36 +14,38 @@
   "html.format.wrapLineLength": 120,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit"
   },
   "[html]": {
     "editor.defaultFormatter": "vscode.html-language-features"
   },
-  "[css]": {
-    "editor.formatOnSave": false
-  },
-  "[scss]": {
-    "editor.formatOnSave": false
-  },
   "[markdown]": {
     "editor.defaultFormatter": "vscode.markdown-language-features"
   },
-  "[astro]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
   "javascript.format.semicolons": "insert",
   "javascript.preferences.quoteStyle": "single",
-  "stylelint.validate": ["scss"],
-  "prettier.documentSelectors": ["**/*.astro"],
+  "stylelint.validate": [
+    "scss"
+  ],
+  "prettier.documentSelectors": [
+    "**/*.astro"
+  ],
   "typescript.tsdk": "node_modules/typescript/lib",
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
-    "*.astro": "${capture}.tsx, ${capture).css",
-    "*.tsx": "${capture}.ts, ${capture}.css",
-    "*.stories.tsx": "${capture}.test.ts"
-  }
+    "package.json": "pnpm-workspace.yaml, pnpm-lock.yaml, .npmrc, .pnpmfile.cjs",
+    "*.astro": "${capture}.tsx, ${capture).css, ${capture}.scss",
+    "*.ts": "${capture}.test.ts",
+    "*.tsx": "${capture}.ts, ${capture}.css, ${capture}.test.tsx",
+    "*.jsx": "${capture}.css",
+    "*.stories.tsx": "${capture}.test.ts",
+    ".env": ".env.*"
+  },
+  "javascript.preferences.importModuleSpecifierEnding": "js",
+  "typescript.preferences.importModuleSpecifierEnding": "js",
+  "css.validate": false,
+  "scss.validate": false,
+  "npm.packageManager": "pnpm"
 }

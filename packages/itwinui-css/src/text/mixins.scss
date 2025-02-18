@@ -1,14 +1,15 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
+@use 'sass:map';
+@use '../mixins';
 
 @mixin iui-text-block-spacing {
   padding: 0;
-  margin: 0 0 var(--iui-size-l);
+  margin-block-end: var(--iui-size-l);
 }
 
 @mixin iui-text($type: body) {
-  @include iui-reset;
+  @include mixins.iui-reset;
 
   $sizes: (
     headline: var(--iui-font-size-5),
@@ -27,16 +28,10 @@
     body: var(--iui-font-weight-normal),
     small: var(--iui-font-weight-normal),
   );
-  $line-heights: (
-    headline: calc(2 * var(--iui-size-l)),
-    title: calc(1.5 * var(--iui-size-l)),
-    subheading: calc(1.5 * var(--iui-size-l)),
-    leading: var(--iui-size-l),
-    body: var(--iui-size-l),
-    small: var(--iui-size-l),
-  );
-  $type: if(map-has-key($sizes, $type), $type, body);
-  font-size: map-get($sizes, $type);
-  font-weight: map-get($weights, $type);
-  line-height: map-get($line-heights, $type);
+  $type: if(map.has-key($sizes, $type), $type, body);
+  font-size: map.get($sizes, $type);
+  font-weight: map.get($weights, $type);
+
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }

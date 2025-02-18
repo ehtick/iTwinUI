@@ -2,12 +2,11 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { Header } from './Header';
-import { MenuItem } from '../Menu';
-import userEvent from '@testing-library/user-event';
+import { Header } from './Header.js';
+import { MenuItem } from '../Menu/MenuItem.js';
+import { userEvent } from '@testing-library/user-event';
 
 it('should render in its most basic state', () => {
   const { container } = render(
@@ -105,7 +104,7 @@ it('renders avatar alone correctly', () => {
 });
 it('renders moreMenu alone correctly', async () => {
   // Summarized, as this is partly based on DropdownMenu, which is tested independently.
-  const itemOneOnClick = jest.fn();
+  const itemOneOnClick = vi.fn();
 
   const { container } = render(
     <Header
@@ -135,24 +134,20 @@ it('renders moreMenu alone correctly', async () => {
   expect(button).toBeTruthy();
   expect(button.getAttribute('aria-label')).toEqual('More options');
 
-  let menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  let menu = document.querySelector('.iui-menu') as HTMLElement;
   expect(menu).toBeFalsy();
 
   await userEvent.click(button);
+  menu = document.querySelector('.iui-menu') as HTMLElement;
+  expect(menu).toBeVisible();
 
-  const tippy = document.querySelector('[data-tippy-root]') as HTMLElement;
-  expect(tippy.style.visibility).toEqual('visible');
+  expect(document.querySelectorAll('[role=menuitem]')).toHaveLength(3);
 
-  menu = document.querySelector('.iui-menu') as HTMLUListElement;
-  expect(menu).toBeTruthy();
-
-  expect(document.querySelectorAll('li')).toHaveLength(3);
-
-  const menuItem = menu.querySelector('li') as HTMLLIElement;
+  const menuItem = menu.querySelector('[role=menuitem]') as HTMLElement;
   expect(menuItem).toBeTruthy();
   await userEvent.click(menuItem);
 
-  expect(tippy).not.toBeVisible();
+  expect(menu).not.toBeVisible();
 
   expect(itemOneOnClick).toHaveBeenCalled();
 });

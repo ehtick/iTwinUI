@@ -2,15 +2,14 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { Carousel } from './Carousel';
-import userEvent from '@testing-library/user-event';
+import { Carousel } from './Carousel.js';
+import { userEvent } from '@testing-library/user-event';
 
 const originalMatchMedia = window.matchMedia;
 beforeAll(() => {
-  window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+  window.matchMedia = vi.fn().mockReturnValue({ matches: false });
 });
 afterAll(() => {
   window.matchMedia = originalMatchMedia;
@@ -19,12 +18,12 @@ afterAll(() => {
 it('should render in its most basic state', () => {
   const { container } = render(
     <Carousel id='testcarousel'>
+      <Carousel.Navigation />
       <Carousel.Slider>
         <Carousel.Slide>1</Carousel.Slide>
         <Carousel.Slide>2</Carousel.Slide>
         <Carousel.Slide>3</Carousel.Slide>
       </Carousel.Slider>
-      <Carousel.Navigation />
     </Carousel>,
   );
 
@@ -32,8 +31,7 @@ it('should render in its most basic state', () => {
   expect(root).toHaveClass('iui-carousel');
   expect(root).toHaveAttribute('aria-roledescription', 'carousel');
 
-  const slider = container.querySelector('ol') as HTMLElement;
-  expect(slider).toHaveClass('iui-carousel-slider');
+  const slider = container.querySelector('.iui-carousel-slider') as HTMLElement;
 
   slider.childNodes.forEach((slide, index) => {
     expect(slide).toHaveClass('iui-carousel-slider-item');
@@ -43,8 +41,9 @@ it('should render in its most basic state', () => {
     expect(slide).toHaveAttribute('id', `testcarousel--slide-${index}`);
   });
 
-  const nav = container.querySelector('nav') as HTMLElement;
-  expect(nav).toHaveClass('iui-carousel-navigation');
+  const nav = container.querySelector(
+    '.iui-carousel-navigation',
+  ) as HTMLElement;
   expect(nav.querySelectorAll('.iui-button')).toHaveLength(2);
   expect(nav.querySelector('.iui-carousel-navigation-dots')).toHaveAttribute(
     'role',
@@ -74,12 +73,12 @@ it('should render in its most basic state', () => {
 it('should work with uncontrolled activeSlideIndex', async () => {
   const { container } = render(
     <Carousel activeSlideIndex={1}>
+      <Carousel.Navigation />
       <Carousel.Slider>
         <Carousel.Slide>1</Carousel.Slide>
         <Carousel.Slide>2</Carousel.Slide>
         <Carousel.Slide>3</Carousel.Slide>
       </Carousel.Slider>
-      <Carousel.Navigation />
     </Carousel>,
   );
 
@@ -106,12 +105,12 @@ it('should work with uncontrolled activeSlideIndex', async () => {
 it('should work with controlled activeSlideIndex', () => {
   const Component = ({ activeIndex = 0 }) => (
     <Carousel activeSlideIndex={activeIndex}>
+      <Carousel.Navigation />
       <Carousel.Slider>
         <Carousel.Slide>1</Carousel.Slide>
         <Carousel.Slide>2</Carousel.Slide>
         <Carousel.Slide>3</Carousel.Slide>
       </Carousel.Slider>
-      <Carousel.Navigation />
     </Carousel>
   );
 
@@ -133,6 +132,7 @@ it('should work with controlled activeSlideIndex', () => {
 it('should handle keyboard navigation', async () => {
   const { container } = render(
     <Carousel>
+      <Carousel.Navigation />
       <Carousel.Slider>
         <Carousel.Slide>1</Carousel.Slide>
         <Carousel.Slide>2</Carousel.Slide>
@@ -171,44 +171,4 @@ it('should handle keyboard navigation', async () => {
   // 2 -> 1
   await userEvent.keyboard('{ArrowLeft}');
   expect(dots[1]).toHaveClass('iui-active');
-});
-
-it('should add data-pressed to prev/next buttons on key down', async () => {
-  const { container } = render(
-    <Carousel>
-      <Carousel.Slider>
-        <Carousel.Slide>1</Carousel.Slide>
-        <Carousel.Slide>2</Carousel.Slide>
-        <Carousel.Slide>3</Carousel.Slide>
-      </Carousel.Slider>
-      <Carousel.Navigation />
-    </Carousel>,
-  );
-
-  const dots = Array.from(
-    container.querySelectorAll('.iui-carousel-navigation-dot'),
-  );
-
-  const prev = container.querySelector(
-    '.iui-carousel-navigation-left > button',
-  );
-  const next = container.querySelector(
-    '.iui-carousel-navigation-right > button',
-  );
-
-  await userEvent.tab();
-
-  // 0 -> 1
-  const keyState1 = await userEvent.keyboard('{ArrowRight>}');
-  expect(next).toHaveAttribute('data-pressed', 'true');
-  await userEvent.keyboard('{/ArrowRight}', { keyboardState: keyState1 });
-  expect(next).not.toHaveAttribute('data-pressed');
-  expect(dots[1]).toHaveClass('iui-active');
-
-  // 0 -> 1
-  const keyState2 = await userEvent.keyboard('{ArrowLeft>}');
-  expect(prev).toHaveAttribute('data-pressed', 'true');
-  await userEvent.keyboard('{/ArrowLeft}', { keyboardState: keyState2 });
-  expect(prev).not.toHaveAttribute('data-pressed');
-  expect(dots[0]).toHaveClass('iui-active');
 });

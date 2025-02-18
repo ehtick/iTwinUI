@@ -3,9 +3,8 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import { render } from '@testing-library/react';
-import React from 'react';
 
-import { Input } from './Input';
+import { Input } from './Input.js';
 
 const assertBaseElement = (container: HTMLElement) => {
   expect(container.querySelector('.iui-input')).toBeTruthy();
@@ -24,15 +23,10 @@ it('should render disabled component', () => {
   );
 });
 
-it('should set focus', () => {
-  let element: HTMLInputElement | null = null;
-  const onRef = (ref: HTMLInputElement) => {
-    element = ref;
-  };
-  const { container } = render(<Input ref={onRef} setFocus />);
+it('should render with size prop using htmlSize', () => {
+  const { container } = render(<Input htmlSize={10} />);
   assertBaseElement(container);
-  expect(element).toBeTruthy();
-  expect(document.activeElement).toEqual(element);
+  expect((container.querySelector('input') as HTMLInputElement).size).toBe(10);
 });
 
 it('should take class and style', () => {

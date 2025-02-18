@@ -2,10 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import { fireEvent, render } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import React from 'react';
-import { DatePicker } from './DatePicker';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { DatePicker } from './DatePicker.js';
 
 const selectedDaySelector = '.iui-calendar-day-selected';
 const outsideDayClassName = 'iui-calendar-day-outside-month';
@@ -42,7 +41,7 @@ const assertMonthYear = (
 
 it('should display passed date', () => {
   const { container } = render(
-    <DatePicker date={new Date(2020, 0, 5)} onChange={jest.fn()} />,
+    <DatePicker date={new Date(2020, 0, 5)} onChange={vi.fn()} />,
   );
   assertMonthYear(container, 'January', '2020');
   const day = container.querySelector(selectedDaySelector) as HTMLElement;
@@ -53,7 +52,7 @@ it('should display passed date', () => {
 
 it('should display today', () => {
   const today = new Date();
-  const { container } = render(<DatePicker onChange={jest.fn()} />);
+  const { container } = render(<DatePicker onChange={vi.fn()} />);
   assertMonthYear(
     container,
     `${defaultMonths[today.getMonth()]}`,
@@ -64,8 +63,36 @@ it('should display today', () => {
   expect(day.textContent).toBe(today.getDate().toString());
 });
 
+it('should apply all custom props', () => {
+  const { container } = render(
+    <DatePicker
+      date={new Date(2020, 0, 5)}
+      onChange={vi.fn()}
+      monthYearProps={{ className: 'some-calendar' }}
+      monthProps={{ className: 'some-month' }}
+      weekDayProps={{ className: 'some-day-of-week' }}
+      weekProps={{ className: 'some-week' }}
+      calendarProps={{ className: 'some-listbox' }}
+      dayProps={{ className: 'some-day' }}
+    />,
+  );
+  assertMonthYear(container, 'January', '2020');
+  expect(
+    container.querySelector('.iui-calendar-month-year.some-calendar'),
+  ).toBeTruthy();
+  expect(
+    container.querySelector('.iui-calendar-month.some-month'),
+  ).toBeTruthy();
+  expect(
+    container.querySelector('.iui-calendar-weekdays.some-day-of-week'),
+  ).toBeTruthy();
+  expect(container.querySelector('.iui-calendar-week.some-week')).toBeTruthy();
+  expect(container.querySelector('.some-listbox')).toBeTruthy();
+  expect(container.querySelector('.some-day')).toBeTruthy();
+});
+
 it('should return selected date', async () => {
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container, getByText } = render(
     <DatePicker date={new Date(2020, 5, 5)} onChange={onClick} />,
   );
@@ -81,7 +108,7 @@ it('should return selected date', async () => {
 
 it('should navigate between months', () => {
   const date = new Date(2020, 1, 10);
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container } = render(
     <DatePicker date={new Date(2020, 1, 10)} onChange={onClick} />,
   );
@@ -195,15 +222,15 @@ it('should apply custom class and style', () => {
   picker.style.width = '300px';
 });
 
-it('should navigate with keyboard', () => {
-  const onClick = jest.fn();
+it('should navigate with keyboard', async () => {
+  const onClick = vi.fn();
   const { container, getAllByText, getByRole } = render(
     <DatePicker date={new Date(2020, 1, 1)} onChange={onClick} setFocus />,
   );
   assertMonthYear(container, 'February', '2020');
   let day = container.querySelector(selectedDaySelector) as HTMLElement;
   expect(day.textContent).toBe('1');
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
 
   // go left
   const calendar = getByRole('listbox') as HTMLElement;
@@ -213,14 +240,14 @@ it('should navigate with keyboard', () => {
     (el) => !el.className.includes(outsideDayClassName),
   ) as HTMLDivElement;
   expect(day).toBeTruthy();
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
 
   // go right
   fireEvent.keyDown(calendar, { key: 'ArrowRight' });
   assertMonthYear(container, 'February', '2020');
   day = container.querySelector(selectedDaySelector) as HTMLElement;
   expect(day.textContent).toBe('1');
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
 
   // go up
   fireEvent.keyDown(calendar, { key: 'ArrowUp' });
@@ -229,14 +256,14 @@ it('should navigate with keyboard', () => {
     (el) => !el.className.includes(outsideDayClassName),
   ) as HTMLDivElement;
   expect(day).toBeTruthy();
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
 
   // go down
   fireEvent.keyDown(calendar, { key: 'ArrowDown' });
   assertMonthYear(container, 'February', '2020');
   day = container.querySelector(selectedDaySelector) as HTMLElement;
   expect(day.textContent).toBe('1');
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
 
   // go right and select with enter
   fireEvent.keyDown(calendar, { key: 'ArrowRight' });
@@ -245,7 +272,7 @@ it('should navigate with keyboard', () => {
     (el) => !el.className.includes(outsideDayClassName),
   ) as HTMLDivElement;
   expect(day).toBeTruthy();
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
   fireEvent.keyDown(calendar, { key: 'Enter' });
   day = container.querySelector(selectedDaySelector) as HTMLElement;
   expect(day.textContent).toBe('2');
@@ -258,7 +285,7 @@ it('should navigate with keyboard', () => {
     (el) => !el.className.includes(outsideDayClassName),
   ) as HTMLDivElement;
   expect(day).toBeTruthy();
-  expect(document.activeElement).toEqual(day);
+  await waitFor(() => expect(document.activeElement).toEqual(day));
   fireEvent.keyDown(calendar, { key: ' ' });
   day = container.querySelector(selectedDaySelector) as HTMLElement;
   expect(day.textContent).toBe('3');
@@ -275,7 +302,7 @@ it('should show time selection', () => {
 
 it('should navigate between years', () => {
   const date = new Date(2020, 1, 10);
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container } = render(
     <DatePicker
       date={new Date(2020, 1, 10)}
@@ -309,7 +336,7 @@ it('should navigate between years', () => {
 });
 
 it('should return selected date range', () => {
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container, getByText } = render(
     <DatePicker
       startDate={new Date(2021, 7, 10)}
@@ -356,7 +383,7 @@ it('should return selected date range', () => {
 });
 
 it('should update start/end date when selecting a start/end date value that is in the range', () => {
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container, getByText } = render(
     <DatePicker
       startDate={new Date(2021, 7, 5)}
@@ -383,7 +410,7 @@ it('should update start/end date when selecting a start/end date value that is i
 });
 
 it('should update startDate when selecting an endDate value that is before startDate', () => {
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container, getByText } = render(
     <DatePicker
       startDate={new Date(2021, 7, 5)}
@@ -409,7 +436,7 @@ it('should update startDate when selecting an endDate value that is before start
 });
 
 it('should update endDate when selecting a startDate value that is after endDate', () => {
-  const onClick = jest.fn();
+  const onClick = vi.fn();
   const { container, getByText } = render(
     <DatePicker
       startDate={new Date(2021, 7, 5)}
@@ -441,4 +468,102 @@ it('should update endDate when selecting a startDate value that is after endDate
   expect(selectedStartDay).toBeNull();
   expect(selectedRange).toHaveLength(0);
   expect(selectedEndDay).toBeNull();
+});
+
+it('should prevent selecting disabled dates', async () => {
+  const onClick = vi.fn();
+  const { container, getByText } = render(
+    <DatePicker
+      date={new Date(2020, 5, 5)}
+      onChange={onClick}
+      showYearSelection
+      isDateDisabled={(date) => {
+        // disable June 12th onwards
+        if (
+          date.getFullYear() > 2020 ||
+          (date.getFullYear() === 2020 &&
+            (date.getMonth() > 5 ||
+              (date.getMonth() === 5 && date.getDate() >= 12)))
+        ) {
+          return true;
+        }
+        return false;
+      }}
+    />,
+  );
+
+  // click 12
+  const day12 = getByText('12');
+  await userEvent.click(day12);
+  expect(onClick).not.toHaveBeenCalled();
+
+  // click 13
+  const day13 = getByText('13');
+  await userEvent.click(day13);
+  expect(onClick).not.toHaveBeenCalled();
+
+  expect(container.querySelector(selectedDaySelector)).toHaveTextContent('5');
+
+  // navigate to 12, then press Enter
+  await userEvent.keyboard('{ArrowDown}');
+  expect(document.activeElement).toEqual(day12);
+  expect(day12).toHaveAttribute('aria-disabled', 'true');
+  await userEvent.keyboard('{Enter}');
+  expect(onClick).not.toHaveBeenCalled();
+
+  // navigate to 13, then press Enter
+  await userEvent.keyboard('{ArrowRight}');
+  expect(document.activeElement).toEqual(day13);
+  expect(day13).toHaveAttribute('aria-disabled', 'true');
+  await userEvent.keyboard('{Enter}');
+  expect(onClick).not.toHaveBeenCalled();
+
+  // next month/year button should be enabled, but should not allow to choose the day
+  const nextYearButton = screen.getByLabelText('Next year');
+  expect(nextYearButton).toBeEnabled();
+  await userEvent.click(nextYearButton);
+  assertMonthYear(container, 'June', '2021');
+  await userEvent.click(getByText('22'));
+  expect(onClick).not.toHaveBeenCalled();
+
+  const nextMonthButton = screen.getByLabelText('Next month');
+  expect(nextMonthButton).toBeEnabled();
+  await userEvent.click(nextMonthButton);
+  assertMonthYear(container, 'July', '2021');
+  await userEvent.click(getByText('11'));
+  expect(onClick).not.toHaveBeenCalled();
+
+  const previousYearButton = screen.getByLabelText('Previous year');
+  expect(previousYearButton).toBeEnabled();
+  await userEvent.click(previousYearButton);
+  assertMonthYear(container, 'July', '2020');
+  await userEvent.click(getByText('10'));
+  expect(onClick).not.toHaveBeenCalled();
+
+  const previousMonthButton = screen.getByLabelText('Previous month');
+  expect(previousMonthButton).toBeEnabled();
+  await userEvent.click(previousMonthButton);
+  assertMonthYear(container, 'June', '2020');
+  await userEvent.click(getByText('24'));
+  expect(onClick).not.toHaveBeenCalled();
+});
+
+it.each([true, false])('should respect `applyBackground`', (value) => {
+  const { container } = render(<DatePicker applyBackground={value} />);
+  if (value) {
+    expect(container.querySelector('div')).toHaveClass('iui-popover-surface');
+  } else {
+    expect(container.querySelector('div')).not.toHaveClass(
+      'iui-popover-surface',
+    );
+  }
+});
+
+it('should support the showDatesOutsideMonth prop', () => {
+  const { container } = render(
+    <DatePicker date={new Date(2020, 0, 5)} showDatesOutsideMonth={false} />,
+  );
+  expect(
+    container.querySelector(`.${outsideDayClassName}`),
+  ).toBeEmptyDOMElement();
 });

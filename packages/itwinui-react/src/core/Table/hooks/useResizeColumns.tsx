@@ -33,23 +33,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React from 'react';
-import {
-  actions,
+import type * as React from 'react';
+import { actions, makePropGetter, useGetLatest } from 'react-table';
+import type {
   ActionType,
   ColumnInstance,
   HeaderGroup,
   Hooks,
-  makePropGetter,
   TableInstance,
   TableKeyedProps,
   TableState,
-  useGetLatest,
-} from 'react-table';
+} from '../../../react-table/react-table.js';
 
 export const useResizeColumns =
   <T extends Record<string, unknown>>(
-    ownerDocument: React.RefObject<Document | undefined>,
+    ownerDocument: React.RefObject<Document | undefined | null>,
   ) =>
   (hooks: Hooks<T>) => {
     hooks.getResizerProps = [defaultGetResizerProps(ownerDocument)];
@@ -64,7 +62,7 @@ const isTouchEvent = (
 };
 
 const defaultGetResizerProps =
-  (ownerDocument: React.RefObject<Document | undefined>) =>
+  (ownerDocument: React.RefObject<Document | undefined | null>) =>
   (
     props: TableKeyedProps,
     {
@@ -496,7 +494,16 @@ function getLeafHeaders(header: HeaderGroup) {
 const getHeaderWidth = <T extends Record<string, unknown>>(
   header: ColumnInstance<T>,
 ) => {
-  return Number(header.width || header.resizeWidth || 0);
+  if (!header) {
+    return 0;
+  }
+
+  // `header.width` can be a string if the user specifies it in the column definition,
+  // but then becomes a number (pixels) when the user resizes the column, or when the table is resized, etc.
+  // So if `header.width` is ever a string that cannot be converted to a number, we shouldn't use `header.width`.
+  return typeof header.width === 'string' && Number.isNaN(Number(header.width))
+    ? Number(header.resizeWidth || 0)
+    : Number(header.width || header.resizeWidth || 0);
 };
 
 const calculateTableWidth = <T extends Record<string, unknown>>(

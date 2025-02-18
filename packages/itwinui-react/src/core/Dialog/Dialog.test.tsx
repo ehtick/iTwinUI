@@ -2,16 +2,20 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { render } from '@testing-library/react';
-import { Dialog } from './Dialog';
-import { Button } from '../Buttons';
-import userEvent from '@testing-library/user-event';
+import { render, act } from '@testing-library/react';
+import { Dialog } from './Dialog.js';
+import { Button } from '../Buttons/Button.js';
+import { userEvent } from '@testing-library/user-event';
 
 it('should pass down the props through DialogContext', async () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   const { container } = render(
-    <Dialog isOpen={true} onClose={onClose} closeOnExternalClick>
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      closeOnExternalClick
+      placement={'top-left'}
+    >
       <Dialog.Backdrop />
       <Dialog.Main>
         <Dialog.TitleBar titleText='Test title' />
@@ -55,14 +59,14 @@ it('should have position correctly dependant on viewport', async () => {
   );
 
   const containerViewport = render(
-    <Dialog relativeTo='viewport'>
+    <Dialog relativeTo='viewport' isOpen>
       <Dialog.Backdrop />
       {dialogContent}
     </Dialog>,
   );
 
   const containerContainer = render(
-    <Dialog relativeTo='container'>
+    <Dialog relativeTo='container' isOpen>
       <Dialog.Backdrop />
       {dialogContent}
     </Dialog>,
@@ -88,8 +92,30 @@ it('should have position correctly dependant on viewport', async () => {
   expect(backdropContainer).not.toHaveClass('iui-backdrop-fixed');
 });
 
+it.each(['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const)(
+  'should position dialog to corners of page',
+  async (placement) => {
+    const { container } = render(
+      <Dialog isOpen={true} placement={placement}>
+        <Dialog.Backdrop />
+        <Dialog.Main>
+          <Dialog.TitleBar titleText='Test title' />
+          <Dialog.Content>Here is my dialog content</Dialog.Content>
+          <Dialog.ButtonBar>
+            <Button styleType='high-visibility'>Confirm</Button>
+            <Button>Close</Button>
+          </Dialog.ButtonBar>
+        </Dialog.Main>
+      </Dialog>,
+    );
+
+    const dialog = container.querySelector('.iui-dialog') as HTMLElement;
+    expect(dialog).toHaveAttribute('data-iui-placement', placement);
+  },
+);
+
 it('should not allow to close the dialog when isDismissible false', async () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   const { container } = render(
     <Dialog isOpen={true} onClose={onClose} isDismissible={false}>
       <Dialog.Backdrop />
@@ -118,4 +144,39 @@ it('should not allow to close the dialog when isDismissible false', async () => 
     '.iui-dialog-title-bar button',
   ) as HTMLElement;
   expect(closeIcon).toBeFalsy();
+});
+
+it('should not stay in the DOM when isOpen=false', () => {
+  vi.useFakeTimers();
+
+  const Component = ({ isOpen = false }) => (
+    <Dialog isOpen={isOpen}>
+      <Dialog.Backdrop />
+      <Dialog.Main>
+        <Dialog.TitleBar titleText='Test title' />
+        <Dialog.Content>Here is my dialog content</Dialog.Content>
+        <Dialog.ButtonBar>
+          <Button styleType='high-visibility'>Confirm</Button>
+          <Button>Close</Button>
+        </Dialog.ButtonBar>
+      </Dialog.Main>
+    </Dialog>
+  );
+
+  const { container, rerender } = render(<Component isOpen={false} />);
+
+  let dialogWrapper = container.querySelector(
+    '.iui-dialog-wrapper',
+  ) as HTMLElement;
+  expect(dialogWrapper).toBeFalsy();
+
+  rerender(<Component isOpen={true} />);
+
+  dialogWrapper = container.querySelector('.iui-dialog-wrapper') as HTMLElement;
+  expect(dialogWrapper).toBeTruthy();
+
+  rerender(<Component isOpen={false} />);
+
+  dialogWrapper = container.querySelector('.iui-dialog-wrapper') as HTMLElement;
+  expect(dialogWrapper).toBeFalsy();
 });

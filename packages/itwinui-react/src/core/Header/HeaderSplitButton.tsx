@@ -3,87 +3,71 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { DropdownMenu } from '../DropdownMenu';
+import * as React from 'react';
+import { DropdownMenu } from '../DropdownMenu/DropdownMenu.js';
 import {
-  PolymorphicForwardRefComponent,
-  useTheme,
   SvgCaretDownSmall,
   SvgCaretUpSmall,
-} from '../utils';
-import { SplitButtonProps } from '../Buttons';
-import { HeaderBasicButton } from './HeaderBasicButton';
+  Box,
+  ButtonBase,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import type { SplitButtonProps } from '../Buttons/SplitButton.js';
+import { HeaderBasicButton } from './HeaderBasicButton.js';
 
-export type HeaderSplitButtonProps = SplitButtonProps;
+export const HeaderSplitButton = React.forwardRef((props, forwardedRef) => {
+  const {
+    menuItems,
+    className,
+    menuPlacement = 'bottom-end',
+    children,
+    disabled,
+    ...rest
+  } = props;
 
-type HeaderSplitButtonComponent = PolymorphicForwardRefComponent<
-  'button',
-  HeaderSplitButtonProps
->;
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
-export const HeaderSplitButton: HeaderSplitButtonComponent = React.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      menuItems,
-      className,
-      menuPlacement = 'bottom-end',
-      children,
-      style,
-      title,
-      disabled,
-      ...rest
-    } = props;
+  const [menuWidth, setMenuWidth] = React.useState(0);
+  const ref = React.useRef<HTMLDivElement>(null);
 
-    useTheme();
+  React.useEffect(() => {
+    if (ref.current) {
+      setMenuWidth(ref.current.offsetWidth);
+    }
+  }, [children]);
 
-    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-
-    const [menuWidth, setMenuWidth] = React.useState(0);
-    const ref = React.useRef<HTMLLIElement>(null);
-
-    React.useEffect(() => {
-      if (ref.current) {
-        setMenuWidth(ref.current.offsetWidth);
-      }
-    }, [children]);
-
-    return (
-      <span
-        className={cx('iui-header-breadcrumb-button-wrapper', className)}
-        style={style}
-        title={title}
-        ref={ref}
+  return (
+    <Box
+      className={cx('iui-header-breadcrumb-button-wrapper', className)}
+      ref={ref}
+    >
+      <HeaderBasicButton ref={forwardedRef} disabled={disabled} {...rest}>
+        {children}
+      </HeaderBasicButton>
+      <DropdownMenu
+        placement={menuPlacement}
+        menuItems={menuItems}
+        style={{ minInlineSize: menuWidth }}
+        onVisibleChange={(open) => setIsMenuOpen(open)}
       >
-        <HeaderBasicButton ref={forwardedRef} disabled={disabled} {...rest}>
-          {children}
-        </HeaderBasicButton>
-        <DropdownMenu
-          placement={menuPlacement}
-          menuItems={menuItems}
-          style={{ minWidth: menuWidth }}
-          onShow={React.useCallback(() => setIsMenuOpen(true), [])}
-          onHide={React.useCallback(() => setIsMenuOpen(false), [])}
+        <ButtonBase
+          aria-label='More'
+          className='iui-header-breadcrumb-button iui-header-breadcrumb-button-split'
+          disabled={disabled}
         >
-          <button
-            className='iui-header-breadcrumb-button iui-header-breadcrumb-button-split'
-            disabled={disabled}
-          >
-            {isMenuOpen ? (
-              <SvgCaretUpSmall
-                className='iui-header-breadcrumb-button-dropdown-icon'
-                aria-hidden
-              />
-            ) : (
-              <SvgCaretDownSmall
-                className='iui-header-breadcrumb-button-dropdown-icon'
-                aria-hidden
-              />
-            )}
-          </button>
-        </DropdownMenu>
-      </span>
-    );
-  },
-);
-
-export default HeaderSplitButton;
+          {isMenuOpen ? (
+            <SvgCaretUpSmall
+              className='iui-header-breadcrumb-button-dropdown-icon'
+              aria-hidden
+            />
+          ) : (
+            <SvgCaretDownSmall
+              className='iui-header-breadcrumb-button-dropdown-icon'
+              aria-hidden
+            />
+          )}
+        </ButtonBase>
+      </DropdownMenu>
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'button', SplitButtonProps>;

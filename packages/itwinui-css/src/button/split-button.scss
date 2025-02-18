@@ -9,22 +9,20 @@
   isolation: isolate;
 
   :where(.iui-button:first-child) {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
 
     &[data-iui-variant='high-visibility'],
     &[data-iui-variant='cta'] {
-      border-right-color: $iui-button-split-divider-color;
+      border-inline-end-color: $iui-button-split-divider-color;
     }
 
     &:hover {
       z-index: 1;
     }
 
-    &[disabled],
-    &:disabled,
-    &[aria-disabled='true'] {
-      border-right-color: var(--iui-color-border-subtle);
+    &:is([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']) {
+      border-inline-end-color: var(--iui-color-border-subtle);
       z-index: -1;
     }
   }
@@ -32,20 +30,18 @@
   :where(.iui-button:last-child) {
     --_iui-button-padding-inline: var(--iui-size-2xs);
 
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    margin-left: -1px;
-    min-width: unset;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+    margin-inline-start: -1px;
+    min-inline-size: unset;
 
     &[data-iui-variant='high-visibility'],
     &[data-iui-variant='cta'] {
-      border-left-color: $iui-button-split-divider-color;
+      border-inline-start-color: $iui-button-split-divider-color;
     }
 
-    &[disabled],
-    &:disabled,
-    &[aria-disabled='true'] {
-      border-left-color: var(--iui-color-border-subtle);
+    &:where([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']) {
+      border-inline-start-color: var(--iui-color-border-subtle);
       z-index: -1;
     }
 

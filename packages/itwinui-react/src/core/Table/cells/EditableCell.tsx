@@ -2,9 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { CellRendererProps } from 'react-table';
-import { getRandomValue } from '../../utils';
+import * as React from 'react';
+import type { CellRendererProps } from '../../../react-table/react-table.js';
+import { Box, getRandomValue } from '../../../utils/index.js';
+import cx from 'classnames';
 
 export type EditableCellProps<T extends Record<string, unknown>> =
   CellRendererProps<T> & {
@@ -42,11 +43,17 @@ export const EditableCell = <T extends Record<string, unknown>>(
   props: EditableCellProps<T>,
 ) => {
   const {
-    cellElementProps,
+    cellElementProps: {
+      className: cellElementClassName,
+      style: cellElementStyle,
+      ...cellElementProps
+    },
     cellProps,
     onCellEdit,
     children,
     isDisabled,
+    className,
+    style,
     ...rest
   } = props;
   isDisabled; // To omit and prevent eslint error.
@@ -67,12 +74,14 @@ export const EditableCell = <T extends Record<string, unknown>>(
   const [isDirty, setIsDirty] = React.useState(false);
 
   return (
-    <div
+    <Box
       {...cellElementProps}
       contentEditable
       suppressContentEditableWarning
       key={key}
       {...rest}
+      className={cx(cellElementClassName, className)}
+      style={{ ...cellElementStyle, ...style }}
       onInput={(e) => {
         setValue(sanitizeString((e.target as HTMLElement).innerText));
         setIsDirty(true);
@@ -114,8 +123,9 @@ export const EditableCell = <T extends Record<string, unknown>>(
       }}
     >
       {children}
-    </div>
+    </Box>
   );
 };
-
-export default EditableCell;
+if (process.env.NODE_ENV === 'development') {
+  EditableCell.displayName = 'EditableCell';
+}

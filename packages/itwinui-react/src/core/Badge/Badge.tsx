@@ -2,15 +2,13 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import {
-  CommonProps,
-  useTheme,
-  isSoftBackground,
-  SoftBackgrounds,
-} from '../utils';
-import '@itwin/itwinui-css/css/badge.css';
+import { isSoftBackground, SoftBackgrounds, Box } from '../../utils/index.js';
+import type {
+  AnyString,
+  PolymorphicForwardRefComponent,
+} from '../../utils/index.js';
 
 /**
  * Helper function that returns one of the preset badge color values.
@@ -20,21 +18,19 @@ const getBadgeColorValue = (color: BadgeProps['backgroundColor']) => {
     return '';
   }
 
-  switch (color) {
-    case 'primary':
-      return '#A5D7F5';
-    case 'positive':
-      return '#C3E1AF';
-    case 'negative':
-      return '#EFA9A9';
-    case 'warning':
-      return '#F9D7AB';
-    default:
-      return isSoftBackground(color) ? SoftBackgrounds[color] : color;
-  }
+  return isSoftBackground(color) ? SoftBackgrounds[color] : color;
 };
 
-export type BadgeProps = {
+/**
+ * Helper function that returns one of the preset badge status values.
+ */
+const getStatusValue = (color: BadgeProps['backgroundColor']) => {
+  const statuses = ['positive', 'negative', 'warning', 'informational'];
+
+  return color && statuses.includes(color) ? color : undefined;
+};
+
+type BadgeProps = {
   /**
    * Background color of the badge.
    *
@@ -44,18 +40,18 @@ export type BadgeProps = {
    */
   backgroundColor?:
     | 'primary'
+    | 'informational'
     | 'positive'
     | 'negative'
     | 'warning'
     | keyof typeof SoftBackgrounds
-    // eslint-disable-next-line @typescript-eslint/ban-types -- This allows custom strings and keeps intellisense. See https://github.com/Microsoft/TypeScript/issues/29729
-    | (string & {});
+    | AnyString;
   /**
    * Badge label.
    * Always gets converted to uppercase, and truncated if too long.
    */
   children: string;
-} & CommonProps;
+};
 
 /**
  * A colorful visual indicator for categorizing items.
@@ -64,23 +60,38 @@ export type BadgeProps = {
  * <Badge backgroundColor="sunglow">Label</Badge>
  * <Badge backgroundColor="positive">Label</Badge>
  */
-export const Badge = (props: BadgeProps) => {
+export const Badge = React.forwardRef((props, forwardedRef) => {
   const { backgroundColor, style, className, children, ...rest } = props;
 
-  useTheme();
+  // choosing 'primary' status should result in data-iui-status equaling 'informational'
+  const reducedBackgroundColor =
+    backgroundColor === 'primary' ? 'informational' : backgroundColor;
 
-  const _style = backgroundColor
-    ? {
-        '--iui-badge-background-color': getBadgeColorValue(backgroundColor),
-        ...style,
-      }
-    : { ...style };
+  const statusValue = getStatusValue(reducedBackgroundColor);
+
+  const _style =
+    reducedBackgroundColor && !statusValue
+      ? {
+          '--iui-badge-background-color': getBadgeColorValue(
+            reducedBackgroundColor,
+          ),
+          ...style,
+        }
+      : { ...style };
 
   return (
-    <span className={cx('iui-badge', className)} style={_style} {...rest}>
+    <Box
+      as='span'
+      className={cx('iui-badge', className)}
+      style={_style}
+      data-iui-status={statusValue}
+      ref={forwardedRef}
+      {...rest}
+    >
       {children}
-    </span>
+    </Box>
   );
-};
-
-export default Badge;
+}) as PolymorphicForwardRefComponent<'span', BadgeProps>;
+if (process.env.NODE_ENV === 'development') {
+  Badge.displayName = 'Badge';
+}

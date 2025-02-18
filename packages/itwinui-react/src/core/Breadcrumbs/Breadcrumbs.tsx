@@ -2,18 +2,19 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
 import {
-  useTheme,
-  CommonProps,
-  useMergedRefs,
-  useOverflow,
   SvgChevronRight,
-} from '../utils';
-import '@itwin/itwinui-css/css/breadcrumbs.css';
+  Box,
+  OverflowContainer,
+  useWarningLogger,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { Button } from '../Buttons/Button.js';
+import { Anchor } from '../Typography/Anchor.js';
 
-export type BreadcrumbsProps = {
+type BreadcrumbsProps = {
   /**
    * Index of the currently active breadcrumb.
    * Defaults to the index of the last breadcrumb item.
@@ -86,7 +87,7 @@ export type BreadcrumbsProps = {
    *  </Breadcrumbs>
    */
   overflowButton?: (visibleCount: number) => React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * A breadcrumb trail is used as a navigational aid to help users keep track
@@ -110,76 +111,102 @@ export type BreadcrumbsProps = {
  *   <span>Current level</span>
  * </Breadcrumbs>
  */
-export const Breadcrumbs = React.forwardRef(
-  (props: BreadcrumbsProps, ref: React.RefObject<HTMLElement>) => {
-    const {
-      children: items,
-      currentIndex = items.length - 1,
-      separator,
-      overflowButton,
-      className,
-      ...rest
-    } = props;
+const BreadcrumbsComponent = React.forwardRef((props, forwardedRef) => {
+  const {
+    children: childrenProp,
+    currentIndex = React.Children.count(childrenProp) - 1,
+    separator,
+    overflowButton,
+    className,
+    ...rest
+  } = props;
 
-    useTheme();
+  const items = React.useMemo(
+    () => React.Children.toArray(childrenProp),
+    [childrenProp],
+  );
 
-    const [overflowRef, visibleCount] = useOverflow(items);
-    const refs = useMergedRefs(overflowRef, ref);
-
-    return (
-      <nav
-        className={cx('iui-breadcrumbs', className)}
-        ref={refs}
-        aria-label='Breadcrumb'
-        {...rest}
+  return (
+    <Box
+      as='nav'
+      className={cx('iui-breadcrumbs', className)}
+      ref={forwardedRef}
+      aria-label='Breadcrumb'
+      {...rest}
+    >
+      <OverflowContainer
+        as='ol'
+        itemsCount={items.length}
+        className='iui-breadcrumbs-list'
       >
-        <ol className='iui-breadcrumbs-list'>
-          {visibleCount > 1 && (
-            <>
-              <ListItem item={items[0]} isActive={currentIndex === 0} />
-              <Separator separator={separator} />
-            </>
-          )}
-          {items.length - visibleCount > 0 && (
-            <>
-              <li className='iui-breadcrumbs-item iui-breadcrumbs-item-overrides'>
-                {overflowButton ? (
-                  overflowButton(visibleCount)
-                ) : (
-                  <span className='iui-breadcrumbs-text'>…</span>
-                )}
-              </li>
-              <Separator separator={separator} />
-            </>
-          )}
-          {items
-            .slice(
-              visibleCount > 1
-                ? items.length - visibleCount + 1
-                : items.length - 1,
-            )
-            .map((_, _index) => {
-              const index =
-                visibleCount > 1
-                  ? 1 + (items.length - visibleCount) + _index
-                  : items.length - 1;
-              return (
-                <React.Fragment key={index}>
-                  <ListItem
-                    item={items[index]}
-                    isActive={currentIndex === index}
-                  />
-                  {index < items.length - 1 && (
-                    <Separator separator={separator} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-        </ol>
-      </nav>
-    );
-  },
-);
+        <BreadcrumbContent
+          currentIndex={currentIndex}
+          overflowButton={overflowButton}
+          separator={separator}
+        >
+          {items}
+        </BreadcrumbContent>
+      </OverflowContainer>
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'nav', BreadcrumbsProps>;
+if (process.env.NODE_ENV === 'development') {
+  BreadcrumbsComponent.displayName = 'Breadcrumbs';
+}
+
+// ----------------------------------------------------------------------------
+
+type BreadcrumbContentProps = Omit<BreadcrumbsProps, 'currentIndex'> & {
+  currentIndex: NonNullable<BreadcrumbsProps['currentIndex']>;
+};
+
+const BreadcrumbContent = (props: BreadcrumbContentProps) => {
+  const { children: items, currentIndex, overflowButton, separator } = props;
+  const { visibleCount } = OverflowContainer.useContext();
+
+  return (
+    <>
+      {visibleCount > 1 && (
+        <>
+          <ListItem item={items[0]} isActive={currentIndex === 0} />
+          <Separator separator={separator} />
+        </>
+      )}
+      {items.length - visibleCount > 0 && (
+        <>
+          <Box as='li' className='iui-breadcrumbs-item'>
+            {overflowButton ? (
+              overflowButton(visibleCount)
+            ) : (
+              <Box as='span' className='iui-breadcrumbs-content'>
+                …
+              </Box>
+            )}
+          </Box>
+          <Separator separator={separator} />
+        </>
+      )}
+      {items
+        .slice(
+          visibleCount > 1 ? items.length - visibleCount + 1 : items.length - 1,
+        )
+        .map((_, _index) => {
+          const index =
+            visibleCount > 1
+              ? 1 + (items.length - visibleCount) + _index
+              : items.length - 1;
+          return (
+            <React.Fragment key={index}>
+              <ListItem item={items[index]} isActive={currentIndex === index} />
+              {index < items.length - 1 && <Separator separator={separator} />}
+            </React.Fragment>
+          );
+        })}
+    </>
+  );
+};
+
+// ----------------------------------------------------------------------------
 
 const ListItem = ({
   item,
@@ -188,22 +215,90 @@ const ListItem = ({
   item: React.ReactNode;
   isActive: boolean;
 }) => {
+  let children = item as any;
+
+  const logWarning = useWarningLogger();
+
+  if (
+    children?.type === 'span' ||
+    children?.type === 'a' ||
+    children?.type === Button
+  ) {
+    if (process.env.NODE_ENV === 'development') {
+      logWarning(
+        'Directly using Button/a/span as Breadcrumbs children is deprecated, please use `Breadcrumbs.Item` instead.',
+      );
+    }
+    children = <BreadcrumbsItem {...children.props} />;
+  }
+
   return (
-    <li className={'iui-breadcrumbs-item iui-breadcrumbs-item-overrides'}>
-      {React.isValidElement(item)
-        ? React.cloneElement(item, {
-            'aria-current':
-              item.props['aria-current'] ?? isActive ? 'location' : undefined,
-          })
-        : item}
-    </li>
+    <Box as='li' className={'iui-breadcrumbs-item'}>
+      {children &&
+        React.cloneElement(children, {
+          'aria-current':
+            children.props['aria-current'] ?? isActive ? 'location' : undefined,
+        })}
+    </Box>
   );
 };
 
+// ----------------------------------------------------------------------------
+
 const Separator = ({ separator }: Pick<BreadcrumbsProps, 'separator'>) => (
-  <li className='iui-breadcrumbs-separator' aria-hidden>
+  <Box as='li' className='iui-breadcrumbs-separator' aria-hidden>
     {separator ?? <SvgChevronRight />}
-  </li>
+  </Box>
 );
 
-export default Breadcrumbs;
+// ----------------------------------------------------------------------------
+
+const BreadcrumbsItem = React.forwardRef((props, forwardedRef) => {
+  const { as: asProp, ...rest } = props;
+
+  const commonProps = {
+    ...rest,
+    className: cx('iui-breadcrumbs-content', props.className),
+    ref: forwardedRef,
+  };
+
+  if (
+    String(asProp) === 'span' ||
+    (props.href == null && props.onClick == null && asProp == null)
+  ) {
+    return <Box as='span' {...commonProps} />;
+  }
+
+  return (
+    <Button
+      as={
+        (asProp === 'a' || (asProp == null && !!props.href)
+          ? Anchor
+          : asProp) as any
+      }
+      styleType='borderless'
+      {...commonProps}
+    />
+  );
+}) as PolymorphicForwardRefComponent<'a'>;
+if (process.env.NODE_ENV === 'development') {
+  BreadcrumbsItem.displayName = 'Breadcrumbs.Item';
+}
+
+// ----------------------------------------------------------------------------
+
+export const Breadcrumbs = Object.assign(BreadcrumbsComponent, {
+  /**
+   * Breadcrumbs item subcomponent
+   *
+   * @example
+   * <Breadcrumbs.Item>Breadcrumb Item Title</Breadcrumbs.Item>
+   *
+   * @example
+   * <Breadcrumbs.Item href='https://www.example.com/'>Breadcrumb Anchor Title</Breadcrumbs.Item>
+   *
+   * @example
+   * <Breadcrumbs.Item onClick={() => {}}><SvgCalendar /></Breadcrumbs.Item>
+   */
+  Item: BreadcrumbsItem,
+});

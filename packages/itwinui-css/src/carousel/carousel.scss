@@ -1,15 +1,26 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
-@import '../button/button';
+@use '../mixins';
 
-@mixin iui-carousel {
+@mixin hide-scrollbar {
+  overflow-x: auto;
+
+  // hide scrollbar
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+}
+
+.iui-carousel {
+  display: grid;
   overflow: hidden;
-  @include iui-focus($offset: 4px);
+  @include mixins.iui-focus($offset: 4px);
   border-radius: var(--iui-border-radius-1);
 }
 
-@mixin iui-carousel-slider {
+.iui-carousel-slider {
+  order: -1; // slides need to be visually before the dots
   display: flex;
   gap: var(--iui-size-xs);
   list-style: none;
@@ -19,54 +30,62 @@
   @include hide-scrollbar;
 
   &-item {
-    width: 100%;
+    inline-size: 100%;
     flex-shrink: 0;
     scroll-snap-align: center;
+
+    &:focus-visible {
+      outline-offset: -2px;
+    }
   }
 }
 
-@mixin iui-carousel-navigation {
+.iui-carousel-navigation {
   display: flex;
   align-items: center;
-  height: calc(var(--iui-size-s) * 3);
-  border-top: var(--iui-size-3xs) solid var(--iui-color-border);
+  block-size: calc(var(--iui-size-s) * 3);
+  border-block-start: var(--iui-size-3xs) solid var(--iui-color-border);
 
   &-left,
   &-right {
     display: flex;
     align-items: center;
     flex: 1;
-
-    button[data-pressed='true'] {
-      outline-offset: -1px;
-      outline: 1px solid var(--iui-color-border-accent);
-    }
   }
 
   &-dots {
-    @include iui-reset;
-    @include iui-focus;
-    max-width: calc(var(--iui-size-2xl) * 4);
+    @include mixins.iui-reset;
+    max-inline-size: calc(var(--iui-size-2xl) * 4);
     border-radius: var(--iui-border-radius-1);
     white-space: nowrap;
     @include hide-scrollbar;
+
+    &:has(:focus-visible) {
+      outline: 2px solid var(--iui-color-border-accent);
+      outline-offset: -1px;
+    }
+
+    @supports not selector(:has(+ *)) {
+      &:focus-within {
+        outline: 2px solid var(--iui-color-border-accent);
+        outline-offset: -1px;
+      }
+    }
   }
 
   &-dot {
-    @include iui-button-size($size: small);
     background-color: transparent;
     border: none;
     cursor: pointer;
-    height: var(--_iui-button-height);
-    padding-left: var(--_iui-button-padding-inline);
-    padding-right: var(--_iui-button-padding-inline);
+    block-size: var(--iui-component-height-small);
+    padding-inline: var(--iui-size-xs);
 
     &:hover::after {
       background-color: var(--iui-color-icon-muted-hover);
     }
 
     &::after {
-      @include iui-icon-style('s');
+      @include mixins.iui-icon-style('s');
       content: '';
       border-radius: 50%;
       border: 1px solid transparent;
@@ -90,20 +109,13 @@
         border-width: var(--iui-size-xs);
       }
     }
+
+    &:focus {
+      outline-color: transparent; // parent already has focus outline
+    }
   }
 
   &-right {
     justify-content: flex-end;
   }
-}
-
-@mixin hide-scrollbar {
-  overflow-x: auto;
-  overflow-x: overlay;
-
-  // hide scrollbar
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  scrollbar-width: none;
 }

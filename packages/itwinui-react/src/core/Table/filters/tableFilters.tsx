@@ -2,19 +2,17 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import {
-  DateRangeFilter,
-  DateRangeTranslation,
-} from './DateRangeFilter/DateRangeFilter';
-import { FilterButtonBarTranslation } from './FilterButtonBar';
-import {
+import * as React from 'react';
+import { DateRangeFilter } from './DateRangeFilter/DateRangeFilter.js';
+import type { DateRangeTranslation } from './DateRangeFilter/DateRangeFilter.js';
+import type { FilterButtonBarTranslation } from './FilterButtonBar.js';
+import { NumberRangeFilter } from './NumberRangeFilter/NumberRangeFilter.js';
+import type {
   NumberRangeTranslation,
   NumberRangeFilterProps,
-  NumberRangeFilter,
-} from './NumberRangeFilter/NumberRangeFilter';
-import { TextFilter } from './TextFilter/TextFilter';
-import { TableFilterProps } from './types';
+} from './NumberRangeFilter/NumberRangeFilter.js';
+import { TextFilter } from './TextFilter/TextFilter.js';
+import type { TableFilterProps } from './types.js';
 
 export type DateRangeFilterOptions = {
   /**
@@ -35,7 +33,7 @@ export type DateRangeFilterOptions = {
    * Translated filter labels.
    */
   translatedLabels?: DateRangeTranslation & FilterButtonBarTranslation;
-};
+} & Pick<React.ComponentProps<typeof DateRangeFilter>, 'showYearSelection'>;
 
 export const tableFilters = {
   /**
@@ -44,8 +42,9 @@ export const tableFilters = {
    */
   TextFilter:
     (translatedLabels?: FilterButtonBarTranslation) =>
-    <T extends Record<string, unknown>>(props: TableFilterProps<T>) =>
-      <TextFilter {...props} translatedLabels={translatedLabels} />,
+    <T extends Record<string, unknown>>(props: TableFilterProps<T>) => (
+      <TextFilter {...props} translatedLabels={translatedLabels} />
+    ),
   /**
    * Date range filter.
    *
@@ -58,8 +57,9 @@ export const tableFilters = {
    */
   DateRangeFilter:
     (options?: DateRangeFilterOptions) =>
-    <T extends Record<string, unknown>>(props: TableFilterProps<T>) =>
-      <DateRangeFilter {...props} {...options} />,
+    <T extends Record<string, unknown>>(props: TableFilterProps<T>) => (
+      <DateRangeFilter {...props} {...options} />
+    ),
   /**
    * Number range filter.
    *
@@ -70,6 +70,7 @@ export const tableFilters = {
    */
   NumberRangeFilter:
     (translatedLabels?: NumberRangeTranslation & FilterButtonBarTranslation) =>
-    <T extends Record<string, unknown>>(props: NumberRangeFilterProps<T>) =>
-      <NumberRangeFilter {...props} translatedLabels={translatedLabels} />,
+    <T extends Record<string, unknown>>(props: NumberRangeFilterProps<T>) => (
+      <NumberRangeFilter {...props} translatedLabels={translatedLabels} />
+    ),
 };

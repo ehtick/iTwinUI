@@ -2,9 +2,8 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Row } from 'react-table';
-import { customFilterFunctions } from './customFilterFunctions';
+import type { Row } from '../../../react-table/react-table.js';
+import { customFilterFunctions } from './customFilterFunctions.js';
 
 const mockRows = (values: any[]) => {
   return values.map((v) => ({

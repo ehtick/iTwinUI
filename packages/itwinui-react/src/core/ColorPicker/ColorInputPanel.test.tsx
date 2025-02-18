@@ -2,12 +2,97 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
-import { ColorPicker } from './ColorPicker';
-import { ColorInputPanel } from './ColorInputPanel';
-import { ColorValue } from '../utils';
-import userEvent from '@testing-library/user-event';
+import { ColorPicker } from './ColorPicker.js';
+import { ColorInputPanel } from './ColorInputPanel.js';
+import { ColorValue } from '../../utils/index.js';
+import { userEvent } from '@testing-library/user-event';
+
+it('should pass custom label with props', async () => {
+  const { container } = render(
+    <ColorPicker>
+      <ColorInputPanel
+        defaultColorFormat='hex'
+        panelLabelProps={{
+          className: 'test-panel-label',
+          style: { color: 'red' },
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const inputPanelLabel = container.querySelector(
+    '.iui-color-picker-section-label.test-panel-label',
+  ) as HTMLElement;
+  expect(inputPanelLabel).toBeTruthy();
+  expect(inputPanelLabel.style.color).toBe('red');
+});
+
+it('should render input field with custom container props', async () => {
+  const { container } = render(
+    <ColorPicker>
+      <ColorInputPanel
+        defaultColorFormat='hex'
+        colorInputContainerProps={{
+          className: 'test-input-panel',
+          style: { padding: '10px' },
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const inputPanel = container.querySelector(
+    '.iui-color-input.test-input-panel',
+  ) as HTMLElement;
+  expect(inputPanel).toBeTruthy();
+  expect(inputPanel.style.padding).toBe('10px');
+});
+
+it('should render swap color format button with custom props', async () => {
+  const { container } = render(
+    <ColorPicker>
+      <ColorInputPanel
+        defaultColorFormat='hex'
+        swapColorFormatButtonProps={{
+          className: 'test-swap-color-button',
+          styleType: 'high-visibility',
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const swapColorButton = container.querySelector(
+    '.iui-button[data-iui-variant="high-visibility"]',
+  ) as HTMLElement;
+  expect(swapColorButton).toBeTruthy();
+  expect(swapColorButton).toHaveClass('test-swap-color-button');
+});
+
+it('should render input field with custom input field props', async () => {
+  const logSpy = vitest.spyOn(console, 'log');
+  const { container } = render(
+    <ColorPicker>
+      <ColorInputPanel
+        defaultColorFormat='hex'
+        inputFieldsGroupProps={{
+          className: 'test-input-field',
+          style: {
+            borderRadius: '10px',
+          },
+          onClick: () => console.log('clicked'),
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const inputPanel = container.querySelector(
+    '.iui-color-input-fields.test-input-field',
+  ) as HTMLElement;
+  expect(inputPanel).toBeTruthy();
+  expect(inputPanel.style.borderRadius).toBe('10px');
+  await userEvent.click(inputPanel);
+  expect(logSpy).toHaveBeenCalledWith('clicked');
+});
 
 it('should render ColorInputPanel with input fields', async () => {
   const { container } = render(
@@ -27,7 +112,7 @@ it('should render ColorInputPanel with input fields', async () => {
 
   expect(container.querySelector('.iui-color-input')).toBeTruthy();
   expect(container.querySelector('.iui-color-input-fields')).toBeTruthy();
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(1);
+  expect(container.querySelectorAll('.iui-input').length).toBe(1);
 
   const swapButton = container.querySelector(
     '.iui-button[data-iui-variant="borderless"]',
@@ -36,15 +121,15 @@ it('should render ColorInputPanel with input fields', async () => {
 
   await userEvent.click(swapButton);
   expect(element.textContent).toBe('HSL');
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(3);
+  expect(container.querySelectorAll('.iui-input').length).toBe(3);
 
   await userEvent.click(swapButton);
   expect(element.textContent).toBe('RGB');
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(3);
+  expect(container.querySelectorAll('.iui-input').length).toBe(3);
 
   await userEvent.click(swapButton);
   expect(element.textContent).toBe('HEX');
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(1);
+  expect(container.querySelectorAll('.iui-input').length).toBe(1);
 });
 
 it('should render ColorInputPanel with input fields with alpha', async () => {
@@ -65,7 +150,7 @@ it('should render ColorInputPanel with input fields with alpha', async () => {
 
   expect(container.querySelector('.iui-color-input')).toBeTruthy();
   expect(container.querySelector('.iui-color-input-fields')).toBeTruthy();
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(1);
+  expect(container.querySelectorAll('.iui-input').length).toBe(1);
 
   const swapButton = container.querySelector(
     '.iui-button[data-iui-variant="borderless"]',
@@ -74,15 +159,15 @@ it('should render ColorInputPanel with input fields with alpha', async () => {
 
   await userEvent.click(swapButton);
   expect(element.textContent).toBe('HSLA');
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(4);
+  expect(container.querySelectorAll('.iui-input').length).toBe(4);
 
   await userEvent.click(swapButton);
   expect(element.textContent).toBe('RGBA');
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(4);
+  expect(container.querySelectorAll('.iui-input').length).toBe(4);
 
   await userEvent.click(swapButton);
   expect(element.textContent).toBe('HEX');
-  expect(container.querySelectorAll('.iui-input-container').length).toBe(1);
+  expect(container.querySelectorAll('.iui-input').length).toBe(1);
 });
 
 it('should only show allowed color formats on input panel', async () => {
@@ -139,7 +224,7 @@ it('should not show swap button if only 1 color format allowed on input panel', 
 });
 
 it('should handle hex input change', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker onChangeComplete={handleOnChange} showAlpha={true}>
@@ -180,7 +265,7 @@ it('should handle hex input change', () => {
 });
 
 it('should handle hsl input change', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker onChangeComplete={handleOnChange} showAlpha={true}>
@@ -260,7 +345,7 @@ it('should handle hsl input change', () => {
 });
 
 it('should handle rgb input change', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker onChangeComplete={handleOnChange} showAlpha={true}>
@@ -340,7 +425,7 @@ it('should handle rgb input change', () => {
 });
 
 it('should handle hex input change with lose focus', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker onChangeComplete={handleOnChange}>
@@ -359,7 +444,7 @@ it('should handle hex input change with lose focus', () => {
 });
 
 it('should NOT handle hsl input change with lose focus', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker onChangeComplete={handleOnChange} showAlpha={true}>
@@ -393,7 +478,7 @@ it('should NOT handle hsl input change with lose focus', () => {
 });
 
 it('should NOT handle rgb input change with lose focus', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker onChangeComplete={handleOnChange} showAlpha={true}>
@@ -425,7 +510,7 @@ it('should NOT handle rgb input change with lose focus', () => {
 });
 
 it('should handle hex input when alpha is false', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
   const selectedColor = ColorValue.create({ h: 0, s: 100, l: 50 });
   const { container } = render(
     <ColorPicker
@@ -450,7 +535,7 @@ it('should handle hex input when alpha is false', () => {
 });
 
 it('should handle hsl input when alpha is false', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
   const selectedColor = ColorValue.create({ h: 0, s: 100, l: 50 });
   const { container } = render(
     <ColorPicker
@@ -476,7 +561,7 @@ it('should handle hsl input when alpha is false', () => {
 });
 
 it('should handle rgb input when alpha is false', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
   const selectedColor = ColorValue.create({ h: 0, s: 100, l: 50 });
   const { container } = render(
     <ColorPicker
@@ -501,7 +586,7 @@ it('should handle rgb input when alpha is false', () => {
 });
 
 it('should handle rgb input without any side effects', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
   const selectedColor = ColorValue.create({ r: 0, g: 100, b: 50 });
   const { container } = render(
     <ColorPicker

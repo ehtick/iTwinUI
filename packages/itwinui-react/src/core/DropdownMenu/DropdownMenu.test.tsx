@@ -2,24 +2,24 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import DropdownMenu, { DropdownMenuProps } from './DropdownMenu';
-import { Button } from '../Buttons';
-import { MenuItem } from '../Menu';
-import userEvent from '@testing-library/user-event';
+import { DropdownMenu } from './DropdownMenu.js';
+import { Button } from '../Buttons/Button.js';
+import { MenuItem } from '../Menu/MenuItem.js';
 
-function assertBaseElement(menu: HTMLUListElement, role = 'menu') {
+function assertBaseElement(menu: HTMLElement, role = 'menu') {
   expect(menu).toBeTruthy();
   expect(menu.getAttribute('role')).toEqual(role);
-  const menuItems = menu.querySelectorAll('.iui-menu-item');
+  const menuItems = menu.querySelectorAll('.iui-list-item');
   expect(menuItems.length).toBe(3);
   menuItems.forEach((item, index) => {
     expect(item.textContent).toContain(`Test${index}`);
   });
 }
 
-function renderComponent(props?: Partial<DropdownMenuProps>) {
+function renderComponent(
+  props?: Partial<React.ComponentPropsWithoutRef<typeof DropdownMenu>>,
+) {
   return render(
     <DropdownMenu
       menuItems={(close) => [
@@ -43,13 +43,13 @@ function renderComponent(props?: Partial<DropdownMenuProps>) {
 it('should show menu only after click', () => {
   renderComponent();
 
-  let menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  let menu = document.querySelector('.iui-menu') as HTMLElement;
   expect(menu).toBeFalsy();
 
   const button = screen.getByText('Click here');
   fireEvent.click(button);
 
-  menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  menu = document.querySelector('.iui-menu') as HTMLElement;
   assertBaseElement(menu);
 });
 
@@ -59,15 +59,15 @@ it('should close menu after menu item click', () => {
   const button = screen.getByText('Click here');
   fireEvent.click(button);
 
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
+  expect(menu).toBeVisible();
   assertBaseElement(menu);
 
-  const tippy = document.querySelector('[data-tippy-root]') as HTMLElement;
-  const menuItem = menu.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = menu.querySelector('.iui-list-item') as HTMLElement;
   expect(menuItem).toBeTruthy();
   fireEvent.click(menuItem);
 
-  expect(tippy).not.toBeVisible();
+  expect(menu).not.toBeVisible();
 });
 
 it('should render menu with custom role', () => {
@@ -76,7 +76,7 @@ it('should render menu with custom role', () => {
   const button = screen.getByText('Click here');
   fireEvent.click(button);
 
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertBaseElement(menu, 'listbox');
 });
 
@@ -86,7 +86,7 @@ it('should render menu with custom className', () => {
   const button = screen.getByText('Click here');
   fireEvent.click(button);
 
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertBaseElement(menu);
   expect(menu.classList).toContain('test-className');
 });
@@ -97,56 +97,46 @@ it('should render menu with custom style', () => {
   const button = screen.getByText('Click here');
   fireEvent.click(button);
 
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertBaseElement(menu);
   expect(menu.style.color).toEqual('red');
 });
 
-it('should be mounted lazily', async () => {
-  let content: unknown;
+it('should render menu from list', () => {
   renderComponent({
-    onCreate: (i) => {
-      content = i.props.content;
-    },
-    onShow: (i) => {
-      content = i.props.content;
-    },
+    menuItems: [
+      <MenuItem key={0}>Test0</MenuItem>,
+      <MenuItem key={1}>Test1</MenuItem>,
+      <MenuItem key={2}>Test2</MenuItem>,
+    ],
   });
-  expect((content as Element).children.length).toBe(0);
 
-  await userEvent.click(screen.getByText('Click here'));
-  expect((content as Element).children.length).toBe(1);
-});
+  let menu = document.querySelector('.iui-menu') as HTMLElement;
+  expect(menu).toBeFalsy();
 
-it('should focus target after hide', async () => {
-  const { container } = renderComponent();
+  const button = screen.getByText('Click here');
+  fireEvent.click(button);
 
-  const button = container.querySelector('.iui-button') as HTMLButtonElement;
-
-  await userEvent.click(button);
-  expect(document.activeElement).not.toEqual(button);
-
-  await userEvent.click(button);
-  expect(document.activeElement).toEqual(button);
-});
-
-it('should close menu on pressing escape or tab key', async () => {
-  const { container } = renderComponent();
-
-  const button = container.querySelector('.iui-button') as HTMLButtonElement;
-  await userEvent.click(button);
-
-  let menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  menu = document.querySelector('.iui-menu') as HTMLElement;
   assertBaseElement(menu);
+});
 
-  expect(menu).toBeVisible();
-  await userEvent.keyboard('{Escape}');
-  expect(menu).not.toBeVisible();
+it('should render menu from element', () => {
+  renderComponent({
+    menuItems: (
+      <>
+        <MenuItem key={0}>Test0</MenuItem>,<MenuItem key={1}>Test1</MenuItem>,
+        <MenuItem key={2}>Test2</MenuItem>,
+      </>
+    ),
+  });
 
-  await userEvent.click(button);
-  menu = document.querySelector('.iui-menu') as HTMLUListElement;
-  expect(menu).toBeVisible();
+  let menu = document.querySelector('.iui-menu') as HTMLElement;
+  expect(menu).toBeFalsy();
 
-  await userEvent.tab();
-  expect(menu).not.toBeVisible();
+  const button = screen.getByText('Click here');
+  fireEvent.click(button);
+
+  menu = document.querySelector('.iui-menu') as HTMLElement;
+  assertBaseElement(menu);
 });

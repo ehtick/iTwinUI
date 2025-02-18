@@ -2,10 +2,15 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { CellProps, CellRendererProps, HeaderProps } from 'react-table';
-import { Checkbox } from '../../Checkbox';
-import { DefaultCell } from '../cells';
+import * as React from 'react';
+import type {
+  CellProps,
+  CellRendererProps,
+  HeaderProps,
+} from '../../../react-table/react-table.js';
+import { Checkbox } from '../../Checkbox/Checkbox.js';
+import { DefaultCell } from '../cells/index.js';
+import { iuiId } from '../Table.js';
 
 export const SELECTION_CELL_ID = 'iui-table-checkbox-selector';
 
@@ -25,28 +30,33 @@ export const SelectionColumn = <T extends Record<string, unknown>>(
   props: {
     /** Function that returns whether row checkbox should be disabled. */
     isDisabled?: (rowData: T) => boolean;
+    density?: 'default' | 'condensed' | 'extra-condensed';
   } = {},
 ) => {
-  const { isDisabled } = props;
+  const { isDisabled, density } = props;
+  const densityWidth =
+    density === 'condensed' ? 42 : density === 'extra-condensed' ? 34 : 48;
   return {
     id: SELECTION_CELL_ID,
     disableResizing: true,
     disableGroupBy: true,
     disableReordering: true,
-    minWidth: 48,
-    width: 48,
-    maxWidth: 48,
+    minWidth: densityWidth,
+    width: densityWidth,
+    maxWidth: densityWidth,
     columnClassName: 'iui-slot',
     cellClassName: 'iui-slot',
     Header: ({
       getToggleAllRowsSelectedProps,
       toggleAllRowsSelected,
       rows,
-      initialRows,
+      preFilteredFlatRows,
       state,
     }: HeaderProps<T>) => {
-      const disabled = rows.every((row) => isDisabled?.(row.original));
-      const checked = initialRows.every(
+      const disabled = preFilteredFlatRows.every(
+        (row) => isDisabled?.(row.original),
+      );
+      const checked = preFilteredFlatRows.every(
         (row) => state.selectedRowIds[row.id] || isDisabled?.(row.original),
       );
       const indeterminate =
@@ -65,13 +75,31 @@ export const SelectionColumn = <T extends Record<string, unknown>>(
         />
       );
     },
-    Cell: ({ row }: CellProps<T>) => (
+    Cell: ({ row, selectSubRows = true }: CellProps<T>) => (
       <Checkbox
         {...row.getToggleRowSelectedProps()}
         style={{}} // Removes pointer cursor as we have it in CSS and it is also showing pointer when disabled
         title='' // Removes default title that comes from react-table
         disabled={isDisabled?.(row.original)}
         onClick={(e) => e.stopPropagation()} // Prevents triggering on row click
+        onChange={() => {
+          // Only goes through sub-rows if they are available and not sub-components
+          if (
+            row.subRows.length > 0 &&
+            selectSubRows &&
+            row.initialSubRows[0].original[iuiId as any] === undefined
+          ) {
+            //This code ignores any sub-rows that are not currently available(i.e disabled or filtered out).
+            //If all available sub-rows are selected, then it deselects them all, otherwise it selects them all.
+            row.toggleRowSelected(
+              !row.subRows.every(
+                (subRow) => subRow.isSelected || isDisabled?.(subRow.original),
+              ),
+            );
+          } else {
+            row.toggleRowSelected(!row.isSelected);
+          }
+        }}
       />
     ),
     cellRenderer: (props: CellRendererProps<T>) => (

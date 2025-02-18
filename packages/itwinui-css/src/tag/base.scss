@@ -1,0 +1,76 @@
+// Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+// See LICENSE.md in the project root for license terms and full copyright notice.
+@use '../mixins';
+@use '../text/mixins' as text-mixins;
+
+@mixin iui-tag-basic {
+  &:not(a) {
+    color: var(--iui-color-text-muted);
+  }
+}
+
+@mixin iui-tag {
+  display: inline-flex;
+  block-size: calc(var(--iui-size-s) * 3);
+  margin-block: var(--iui-size-2xs);
+  border-radius: var(--iui-border-radius-round);
+  padding-inline: var(--iui-size-3xs);
+  align-items: center;
+  transition: border-color var(--iui-duration-1) ease-out;
+  border: 1px solid var(--iui-color-border-foreground);
+  background-color: var(--iui-color-background);
+  color: var(--iui-color-text);
+
+  &:hover {
+    border-color: var(--iui-color-border-foreground-hover);
+  }
+}
+
+@mixin iui-tag-label {
+  @include text-mixins.iui-text;
+  line-height: var(--iui-size-l);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-inline: var(--iui-size-xs) var(--iui-size-2xs);
+
+  &:only-child {
+    margin-inline: var(--iui-size-xs);
+  }
+}
+
+@mixin iui-tag-button {
+  border-radius: var(--iui-border-radius-round);
+}
+
+@mixin iui-tag-container {
+  color: var(--iui-color-text-muted);
+
+  > a.iui-tag-basic {
+    margin: var(--iui-size-3xs);
+  }
+
+  > *:not(last-child) {
+    margin-inline-end: var(--iui-size-2xs);
+  }
+
+  > .iui-tag-basic:not(:last-child)::after {
+    content: ',';
+  }
+
+  &.iui-truncate {
+    @include mixins.iui-line-clamp(1);
+  }
+
+  &.iui-scroll {
+    white-space: nowrap;
+    overflow-x: scroll;
+  }
+
+  &.iui-visible {
+    border-radius: var(--iui-border-radius-1);
+    padding-block: var(--iui-size-2xs);
+    padding-inline: var(--iui-size-s);
+    background-color: var(--iui-color-background);
+  }
+}

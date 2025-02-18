@@ -2,10 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { Label } from './Label';
+import { Label } from './Label.js';
 
 it('should render in its most basic state', () => {
   const { container } = render(<Label>test label</Label>);
@@ -49,7 +48,7 @@ it('should propagate misc props', () => {
 
   const label = container.querySelector('.iui-input-label') as HTMLLabelElement;
   expect(label).toHaveClass('test-label-class');
-  expect(label).toHaveStyle({ color: 'rebeccapurple' });
+  expect(label.style.color).toEqual('rebeccapurple');
   expect(label).toHaveAttribute('id', 'test-label-id');
   expect(label).toHaveAttribute('for', 'test-input-id');
   expect(label).toHaveTextContent('test label text');

@@ -1,54 +1,29 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
+@use '../mixins';
 
 @mixin iui-input {
-  --_iui-input-background-color: var(--iui-color-background);
-  --_iui-input-border-color: var(--iui-color-border-foreground);
-  --_iui-input-text-color: var(--iui-color-text);
-
-  @include iui-reset;
-  @include iui-focus($offset: -2px, $thickness: 2px);
-  width: 100%;
-  font-family: inherit;
-  font-size: var(--iui-font-size-1);
-  font-weight: var(--iui-font-weight-normal);
-  line-height: var(--iui-size-l);
-  border-radius: var(--iui-border-radius-1);
+  inline-size: 100%;
+  line-height: var(--_iui-input-line-height, var(--iui-size-l));
   appearance: none;
-  min-height: var(--_iui-input-min-height);
   padding-block: var(--_iui-input-padding-block);
   padding-inline: var(--iui-size-s);
-  color: var(--_iui-input-text-color);
-  background-color: var(--_iui-input-background-color);
-  border: 1px solid var(--_iui-input-border-color);
-  transition: border-color var(--iui-duration-1) ease-out;
   @include iui-input-size;
 
   &::placeholder {
-    --_iui-input-text-color: var(--iui-color-text-disabled);
+    color: var(--iui-color-text-placeholder);
+    font-weight: var(--iui-font-weight-light);
+    opacity: 1;
     user-select: none;
-    color: var(--_iui-input-text-color);
   }
 
   &:autofill {
-    --_iui-input-background-color: var(--iui-color-background-accent-muted);
-    --_iui-input-border-color: var(--iui-color-border-accent);
-    --_iui-input-text-color: var(--iui-color-text-accent);
+    background-color: var(--iui-color-background-accent-muted);
+    border-color: var(--iui-color-border-accent);
+    color: var(--iui-color-text-accent);
   }
 
-  &:hover {
-    --_iui-input-border-color: var(--iui-color-border-foreground-hover);
-  }
-
-  &[disabled] {
-    --_iui-input-background-color: var(--iui-color-background-disabled);
-    --_iui-input-border-color: var(--iui-color-border-disabled);
-    --_iui-input-with-icon-hover-border-color: var(--iui-color-border-disabled);
-    cursor: not-allowed;
-  }
-
-  @at-root :where(textarea#{&}) {
+  &:where(textarea) {
     @include textarea;
   }
 }
@@ -58,26 +33,88 @@
 @mixin iui-input-size($size: medium) {
   @if $size == small {
     --_iui-input-padding-block: 0;
-    --_iui-input-min-height: var(--iui-component-height-small);
+    --_iui-input-line-height: var(--iui-size-m);
   }
 
   @if $size == medium {
     --_iui-input-padding-block: var(--iui-size-2xs);
-    --_iui-input-min-height: var(--iui-component-height);
   }
 
   @if $size == large {
     --_iui-input-padding-block: var(--iui-size-xs);
-    --_iui-input-min-height: var(--iui-component-height-large);
     font-size: var(--iui-font-size-2);
   }
 }
 
 @mixin textarea {
+  line-height: inherit;
   resize: vertical;
 
   &[disabled],
   &[readonly] {
     resize: none;
+  }
+}
+
+// ----------------------------------------------------------------------------
+
+.iui-input {
+  @include iui-input;
+
+  &[data-iui-size='small'] {
+    @include iui-input-size(small);
+  }
+
+  &[data-iui-size='large'] {
+    @include iui-input-size(large);
+  }
+}
+
+// Class to have inputs combined with icon (eg. select with arrow icon)
+.iui-input-with-icon {
+  display: grid;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+
+  > :first-child {
+    grid-area: 1 / -1;
+
+    // Selects the first-child but only when there is an end-icon button
+    &:has(+ .iui-end-icon) {
+      padding-inline-end: var(--iui-component-height);
+    }
+
+    @supports not selector(:has(+ *)) {
+      &:not(:only-child) {
+        padding-inline-end: var(--iui-component-height); // Width of the end-icon button
+      }
+    }
+  }
+
+  > .iui-select-tag-container {
+    max-inline-size: 70%;
+    inset-inline-end: unset;
+  }
+}
+
+.iui-end-icon {
+  grid-area: 1 / -1;
+
+  justify-self: end;
+  margin-inline-end: calc(var(--iui-size-xs) + 1px);
+  position: relative; // Needed to show it on top of the input
+  pointer-events: none;
+
+  --_iui-svg-fill: var(--iui-color-icon);
+  transition: transform var(--iui-duration-1) ease-out;
+
+  &.iui-disabled {
+    cursor: not-allowed;
+    --_iui-svg-fill: var(--iui-color-icon-disabled);
+  }
+
+  &.iui-open {
+    transform: rotate(180deg); // transform for arrow icon (e.g. svg-caret-down), used in combobox
   }
 }

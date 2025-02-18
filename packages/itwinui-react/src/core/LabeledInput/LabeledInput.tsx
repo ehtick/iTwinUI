@@ -2,10 +2,15 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { Input, InputProps } from '../Input/Input';
-import { StatusIconMap, useTheme, InputContainer } from '../utils';
-import '@itwin/itwinui-css/css/input.css';
+import * as React from 'react';
+import { Input } from '../Input/Input.js';
+import { InputWithIcon, StatusIconMap } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { InputGrid } from '../InputGrid/InputGrid.js';
+import { StatusMessage } from '../StatusMessage/StatusMessage.js';
+import { Label } from '../Label/Label.js';
+import { Icon } from '../Icon/Icon.js';
+import cx from 'classnames';
 
 export type LabeledInputProps = {
   /**
@@ -23,15 +28,11 @@ export type LabeledInputProps = {
   /**
    * Custom svg icon. Will override status icon if specified.
    */
-  svgIcon?: JSX.Element;
+  svgIcon?: React.JSX.Element | null;
   /**
-   * Custom CSS class name for the input element.
+   * Pass props to wrapper element.
    */
-  inputClassName?: string;
-  /**
-   * Custom CSS Style for the input element.
-   */
-  inputStyle?: React.CSSProperties;
+  wrapperProps?: React.ComponentProps<typeof InputGrid>;
   /**
    * Set display style of label.
    * Supported values:
@@ -41,15 +42,22 @@ export type LabeledInputProps = {
    */
   displayStyle?: 'default' | 'inline';
   /**
-   * Set display style of icon.
-   * Supported values:
-   * - 'block' - icon appears below input.
-   * - 'inline' - icon appears inside input (at the end).
-   *
-   * Defaults to 'block' if `displayStyle` is `default`, else 'inline'.
+   * Passes properties for message content.
    */
-  iconDisplayStyle?: 'block' | 'inline';
-} & InputProps;
+  messageContentProps?: React.ComponentPropsWithRef<'div'>;
+  /**
+   * Passes properties for icon.
+   */
+  iconProps?: React.ComponentProps<typeof Icon>;
+  /**
+   * Passes properties for label.
+   */
+  labelProps?: React.ComponentProps<'label'>;
+  /**
+   *  Passes properties for input wrapper.
+   */
+  inputWrapperProps?: React.ComponentPropsWithRef<'div'>;
+} & React.ComponentProps<typeof Input>;
 
 /**
  * Basic labeled input component
@@ -57,55 +65,71 @@ export type LabeledInputProps = {
  * <LabeledInput label='My label' />
  * <LabeledInput disabled label='My label' />
  * <LabeledInput status='positive' label='Positive' />
- * <LabeledInput status='negative' label='Negative' setFocus />
+ * <LabeledInput status='negative' label='Negative' />
  */
-export const LabeledInput = React.forwardRef(
-  (props: LabeledInputProps, ref: React.RefObject<HTMLInputElement>) => {
-    const {
-      className,
-      disabled = false,
-      label,
-      message,
-      status,
-      svgIcon,
-      style,
-      inputClassName,
-      inputStyle,
-      displayStyle = 'default',
-      iconDisplayStyle = displayStyle === 'default' ? 'block' : 'inline',
-      required = false,
-      ...rest
-    } = props;
+export const LabeledInput = React.forwardRef((props, ref) => {
+  const {
+    disabled = false,
+    label,
+    message,
+    status,
+    svgIcon,
+    wrapperProps,
+    labelProps,
+    messageContentProps,
+    iconProps,
+    inputWrapperProps,
+    displayStyle = 'default',
+    required = false,
+    ...rest
+  } = props;
 
-    useTheme();
+  const icon = svgIcon ?? (status && StatusIconMap[status]());
+  const shouldShowIcon = svgIcon !== null && (svgIcon || (status && !message));
 
-    const icon = svgIcon ?? (status && StatusIconMap[status]());
-
-    return (
-      <InputContainer
-        as='label'
-        label={label}
-        disabled={disabled}
-        required={required}
-        status={status}
-        message={message}
-        icon={icon}
-        isLabelInline={displayStyle === 'inline'}
-        isIconInline={iconDisplayStyle === 'inline'}
-        className={className}
-        style={style}
-      >
-        <Input
-          disabled={disabled}
-          className={inputClassName}
-          style={inputStyle}
+  return (
+    <InputGrid
+      labelPlacement={displayStyle}
+      data-iui-status={status}
+      {...wrapperProps}
+    >
+      {label && (
+        <Label
+          as='label'
           required={required}
-          ref={ref}
-          {...rest}
-        />
-      </InputContainer>
-    );
-  },
-);
+          disabled={disabled}
+          {...labelProps}
+        >
+          {label}
+        </Label>
+      )}
 
-export default LabeledInput;
+      <InputWithIcon {...inputWrapperProps}>
+        <Input disabled={disabled} required={required} ref={ref} {...rest} />
+        {shouldShowIcon && (
+          <Icon
+            fill={status}
+            {...iconProps}
+            className={cx('iui-end-icon', iconProps?.className)}
+          >
+            {icon}
+          </Icon>
+        )}
+      </InputWithIcon>
+      {typeof message === 'string' ? (
+        <StatusMessage
+          status={status}
+          iconProps={iconProps}
+          contentProps={messageContentProps}
+        >
+          {message}
+        </StatusMessage>
+      ) : (
+        message
+      )}
+    </InputGrid>
+  );
+}) as PolymorphicForwardRefComponent<'input', LabeledInputProps>;
+if (process.env.NODE_ENV === 'development') {
+  LabeledInput.displayName = 'LabeledInput';
+}

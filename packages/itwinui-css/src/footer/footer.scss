@@ -1,20 +1,20 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../anchor/index';
-@import '../utils/index';
+@use '../mixins';
 
-@mixin iui-legal-footer {
-  @include iui-reset;
+.iui-legal-footer {
+  @include mixins.iui-reset;
 
   text-align: center;
-  width: 100%;
-  padding: var(--iui-size-s) 0;
+  inline-size: 100%;
+  padding-block: var(--iui-size-s);
   font-size: var(--iui-font-size-0);
 }
 
-@mixin iui-legal-footer-list {
+.iui-legal-footer-list {
   list-style-type: none;
-  margin: 0 auto;
+  margin-block: 0;
+  margin-inline: auto;
   padding: 0;
   display: flex;
   justify-content: center;
@@ -22,7 +22,7 @@
   flex-wrap: wrap;
 }
 
-@mixin iui-legal-footer-item {
+.iui-legal-footer-item {
   display: flex;
   align-items: center;
   user-select: none;
@@ -31,22 +31,37 @@
   color: var(--iui-color-text-muted);
 
   > a {
-    @include iui-anchor;
-
     &,
     &:hover {
       color: var(--iui-color-text-muted);
     }
+
+    &:not(:hover) {
+      text-decoration: none;
+    }
+
+    @media (prefers-contrast: more) {
+      &:not(:hover) {
+        text-decoration: underline;
+      }
+    }
+
+    &[data-iui-underline='true'],
+    :is([data-iui-contrast='high'] &) {
+      &:not(:hover) {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
-@mixin iui-legal-footer-separator {
-  margin: 0 var(--iui-size-xs);
-  width: 1px;
-  height: var(--iui-size-s);
+.iui-legal-footer-separator {
+  margin-inline: var(--iui-size-xs);
+  inline-size: 1px;
+  block-size: var(--iui-size-s);
   background-color: var(--iui-color-border);
 }
 
-@mixin iui-legal-footer-developer {
+.iui-legal-footer-developer {
   color: var(--iui-color-text-muted);
 }

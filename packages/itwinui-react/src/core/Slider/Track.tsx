@@ -2,8 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { SliderProps, TrackDisplayMode } from './Slider';
+import * as React from 'react';
+import cx from 'classnames';
+import { Box } from '../../utils/index.js';
+import type { SliderProps, TrackDisplayMode } from './Slider.js';
 
 function shouldDisplaySegment(segmentIndex: number, mode: TrackDisplayMode) {
   if ('odd-segments' === mode && 0 === (segmentIndex + 1) % 2) {
@@ -47,14 +49,21 @@ export type TrackProps = {
   sliderMax: number;
   values: number[];
   orientation: SliderProps['orientation'];
-};
+} & React.HTMLAttributes<HTMLDivElement>;
 
 /**
  * Track displays color segments above Rail. Which, if any, segments that are
  * colorized is based on `trackDisplayMode`.
  */
 export const Track = (props: TrackProps) => {
-  const { trackDisplayMode, sliderMin, sliderMax, values, orientation } = props;
+  const {
+    className,
+    trackDisplayMode,
+    sliderMin,
+    sliderMax,
+    values,
+    orientation,
+  } = props;
   const [segments, setSegments] = React.useState(() =>
     generateSegments(values, sliderMin, sliderMax),
   );
@@ -79,17 +88,17 @@ export const Track = (props: TrackProps) => {
           return (
             <React.Fragment key={index}>
               {shouldDisplaySegment(index, trackDisplayMode) ? (
-                <div
-                  className='iui-slider-track'
+                <Box
+                  className={cx('iui-slider-track', className)}
                   style={{
                     ...(orientation === 'horizontal'
                       ? {
-                          left: `${lowPercent}%`,
-                          right: `${highPercent}%`,
+                          insetInlineStart: `${lowPercent}%`,
+                          insetInlineEnd: `${highPercent}%`,
                         }
                       : {
-                          top: `${highPercent}%`,
-                          bottom: `${lowPercent}%`,
+                          insetBlockStart: `${highPercent}%`,
+                          insetBlockEnd: `${lowPercent}%`,
                         }),
                   }}
                 />

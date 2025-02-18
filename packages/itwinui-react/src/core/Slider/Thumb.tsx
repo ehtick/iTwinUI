@@ -2,12 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { Tooltip, TooltipProps } from '../Tooltip';
-import { SliderProps } from './Slider';
+import { Tooltip } from '../Tooltip/Tooltip.js';
+import { Box, useMergedRefs } from '../../utils/index.js';
 
-export type ThumbProps = {
+type ThumbProps = {
   /**
    * Thumb value.
    */
@@ -59,12 +59,12 @@ export type ThumbProps = {
   /**
    * Additional tooltip props.
    */
-  tooltipProps: Omit<TooltipProps, 'children'>;
+  tooltipProps: Omit<React.ComponentProps<typeof Tooltip>, 'children'>;
   /**
    * Additional props for Thumb.
    */
-  thumbProps?: React.HTMLAttributes<HTMLDivElement>;
-} & Pick<SliderProps, 'orientation'>;
+  thumbProps?: React.ComponentPropsWithRef<'div'>;
+};
 
 /**
  * Thumb is a local component used to show and modify the values maintained by the Slider.
@@ -86,7 +86,6 @@ export const Thumb = (props: ThumbProps) => {
     tooltipProps,
     thumbProps,
     disabled,
-    orientation,
   } = props;
   const thumbRef = React.useRef<HTMLDivElement>(null);
   const handleOnKeyboardEvent = React.useCallback(
@@ -129,8 +128,6 @@ export const Thumb = (props: ThumbProps) => {
     !disabled && onThumbActivated(index);
   }, [disabled, index, onThumbActivated]);
 
-  const [hasFocus, setHasFocus] = React.useState(false);
-  const [isHovered, setIsHovered] = React.useState(false);
   const adjustedValue = React.useMemo(() => {
     if (value < sliderMin) {
       return sliderMin;
@@ -150,20 +147,20 @@ export const Thumb = (props: ThumbProps) => {
 
   return (
     <Tooltip
-      visible={isActive || hasFocus || isHovered}
       placement='top'
+      autoUpdateOptions={{ animationFrame: true }}
+      ariaStrategy='none'
       {...tooltipProps}
     >
-      <div
+      <Box
         {...rest}
-        data-index={index}
-        ref={thumbRef}
-        style={{
-          ...style,
-          ...(orientation === 'horizontal'
-            ? { left: `${lowPercent}%` }
-            : { bottom: `${lowPercent}%` }),
-        }}
+        ref={useMergedRefs(thumbRef, thumbProps?.ref)}
+        style={
+          {
+            ...style,
+            '--iui-slider-thumb-position': `${lowPercent}%`,
+          } as React.CSSProperties
+        }
         className={cx(
           'iui-slider-thumb',
           { 'iui-active': isActive },
@@ -178,10 +175,6 @@ export const Thumb = (props: ThumbProps) => {
         onPointerDown={handlePointerDownOnThumb}
         onKeyDown={(event) => handleOnKeyboardEvent(event, false)}
         onKeyUp={(event) => handleOnKeyboardEvent(event, true)}
-        onFocus={() => setHasFocus(true)}
-        onBlur={() => setHasFocus(false)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       />
     </Tooltip>
   );

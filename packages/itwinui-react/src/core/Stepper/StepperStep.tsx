@@ -3,9 +3,10 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { Tooltip } from '../Tooltip';
-import { StylingProps } from '../utils';
+import * as React from 'react';
+import { Tooltip } from '../Tooltip/Tooltip.js';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
 export type StepperStepProps = {
   /**
@@ -36,9 +37,29 @@ export type StepperStepProps = {
    * A tooltip giving detailed description to this step.
    */
   description?: string;
-} & StylingProps;
+  /**
+   * Custom content displayed in the step's circle.
+   */
+  stepContent?: () => React.ReactNode;
+  /**
+   * Allows props to be passed for stepper step.
+   */
+  stepProps?: React.ComponentProps<'li'>;
+  /**
+   * Allows props to be passed for track content.
+   */
+  trackContentProps?: React.ComponentProps<'div'>;
+  /**
+   * Allows props to be passed for stepper-step circle.
+   */
+  circleProps?: React.ComponentProps<'span'>;
+  /**
+   * Allows props to be passed for stepper name.
+   */
+  nameProps?: React.ComponentProps<'span'>;
+};
 
-export const StepperStep = (props: StepperStepProps) => {
+export const StepperStep = React.forwardRef((props, forwardedRef) => {
   const {
     title,
     index,
@@ -49,6 +70,11 @@ export const StepperStep = (props: StepperStepProps) => {
     description,
     className,
     style,
+    stepProps,
+    trackContentProps,
+    circleProps,
+    nameProps,
+    stepContent,
     ...rest
   } = props;
 
@@ -63,6 +89,10 @@ export const StepperStep = (props: StepperStepProps) => {
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.altKey) {
+      return;
+    }
+
     if (!isClickable) {
       return;
     }
@@ -73,33 +103,54 @@ export const StepperStep = (props: StepperStepProps) => {
   };
 
   const stepShape = (
-    <li
+    <Box
+      as='li'
+      {...stepProps}
       className={cx(
         'iui-stepper-step',
-        {
-          'iui-current': isActive,
-          'iui-clickable': isClickable,
-        },
+        { 'iui-current': isActive, 'iui-clickable': isClickable },
         className,
+        stepProps?.className,
       )}
       style={{
-        width: type === 'default' ? `${100 / totalSteps}%` : undefined,
+        inlineSize: type === 'default' ? `${100 / totalSteps}%` : undefined,
         ...style,
+        ...stepProps?.style,
       }}
       onClick={onCompletedClick}
       onKeyDown={onKeyDown}
       aria-current={isActive ? 'step' : undefined}
       tabIndex={isClickable ? 0 : undefined}
+      ref={forwardedRef}
       {...rest}
     >
-      <div className='iui-stepper-track-content'>
-        <span className='iui-stepper-circle'>{index + 1}</span>
-      </div>
+      <Box
+        as='div'
+        {...trackContentProps}
+        className={cx(
+          'iui-stepper-track-content',
+          trackContentProps?.className,
+        )}
+      >
+        <Box
+          as='span'
+          {...circleProps}
+          className={cx('iui-stepper-circle', circleProps?.className)}
+        >
+          {stepContent ? stepContent() : index + 1}
+        </Box>
+      </Box>
 
       {type === 'default' && (
-        <span className='iui-stepper-step-name'>{title}</span>
+        <Box
+          as='span'
+          {...nameProps}
+          className={cx('iui-stepper-step-name', nameProps?.className)}
+        >
+          {title}
+        </Box>
       )}
-    </li>
+    </Box>
   );
 
   return description ? (
@@ -107,4 +158,4 @@ export const StepperStep = (props: StepperStepProps) => {
   ) : (
     stepShape
   );
-};
+}) as PolymorphicForwardRefComponent<'li', StepperStepProps>;

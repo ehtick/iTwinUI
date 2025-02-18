@@ -1,17 +1,19 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
-@import '../text/mixins';
+@use 'sass:map';
+@use 'sass:string';
+@use '../mixins';
+@use '../text/mixins' as text-mixins;
 
 $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
 
-@mixin iui-side-navigation {
+.iui-side-navigation {
   display: inline-flex;
   flex: 0 0 auto;
   flex-direction: column;
-  height: 100%;
+  block-size: 100%;
   background-color: var(--iui-color-background);
-  border-right: 2px solid var(--iui-color-border);
+  border-inline-end: 2px solid var(--iui-color-border);
   @media (prefers-reduced-motion: no-preference) {
     transition: max-width var(--iui-duration-1) ease-out;
   }
@@ -20,7 +22,7 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    width: 100%;
+    inline-size: 100%;
 
     > .iui-top,
     > .iui-bottom {
@@ -31,11 +33,11 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
 
     > .iui-top {
       .iui-sidenav-button:first-of-type {
-        border-top: none;
+        border-block-start: none;
       }
 
       .iui-sidenav-button:not(:last-of-type) {
-        border-bottom: none;
+        border-block-end: none;
       }
     }
 
@@ -43,38 +45,28 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
       justify-content: flex-end;
 
       .iui-sidenav-button {
-        border-bottom: none;
+        border-block-end: none;
       }
     }
 
     + .iui-sidenav-button.iui-expand {
       border: none;
-      border-top: 1px solid var(--iui-color-border);
+      border-block-start: 1px solid var(--iui-color-border);
     }
   }
 
   &.iui-collapsed {
-    box-sizing: content-box;
+    box-sizing: content-box !important;
 
-    $icon-large: map-get($iui-icon-sizes, l);
+    $icon-large: map.get(mixins.$iui-icon-sizes, l);
 
-    min-width: calc($icon-large + $iui-side-navigation-icon-margins * 2);
-    max-width: calc($icon-large + $iui-side-navigation-icon-margins * 2);
-
-    // iPhone notch support
-    @supports (min-width: unquote('max(0px)')) {
-      min-width: unquote(
-        'max(#{$icon-large} + #{$iui-side-navigation-icon-margins} * 2, #{$icon-large} + #{$iui-side-navigation-icon-margins} * 2 + env(safe-area-inset-left))'
-      );
-      max-width: unquote(
-        'max(#{$icon-large} + #{$iui-side-navigation-icon-margins} * 2, #{$icon-large} + #{$iui-side-navigation-icon-margins} * 2 + env(safe-area-inset-left))'
-      );
-    }
+    min-inline-size: calc($icon-large + $iui-side-navigation-icon-margins * 2);
+    max-inline-size: calc($icon-large + $iui-side-navigation-icon-margins * 2);
   }
 
   &.iui-expanded,
   > .iui-sidenav-content {
-    max-width: calc(var(--iui-size-3xl) * 3);
+    max-inline-size: calc(var(--iui-size-3xl) * 3);
 
     > .iui-sidenav-button.iui-expand > .iui-button-icon {
       transform: scaleX(-1);
@@ -84,19 +76,20 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
   .iui-sidenav-button {
     gap: $iui-side-navigation-icon-margins;
     border-radius: 0;
-    border-left: none;
-    border-right: none;
+    border-inline-start: none;
+    border-inline-end: none;
     isolation: isolate;
     justify-content: flex-start;
 
     // Adds stripe to the right of active button
-    --_iui-button-active-stripe-inset: 0 -2px 0 100%;
+    --_iui-button-active-stripe-inset-block: 0;
+    --_iui-button-active-stripe-inset-inline: 100% -2px;
 
     &:not(.iui-expand) {
-      height: calc(var(--iui-size-s) * 5);
+      block-size: calc(var(--iui-size-s) * 5);
       // iPhone notch support
-      @supports (padding: unquote('max(0px)')) {
-        padding-left: unquote(
+      @supports (padding: string.unquote('max(0px)')) {
+        padding-inline-start: string.unquote(
           'max(#{$iui-side-navigation-icon-margins}, #{$iui-side-navigation-icon-margins} + env(safe-area-inset-left))'
         );
       }
@@ -110,12 +103,12 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
 
     &,
     &:hover,
-    &[disabled] {
+    &:is([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']) {
       border-color: var(--iui-color-border);
     }
 
     .iui-button-icon:not(.iui-avatar) svg {
-      @include iui-icon-style('l');
+      @include mixins.iui-icon-style('l');
     }
 
     &.iui-submenu-open {
@@ -130,14 +123,14 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
       &::before {
         content: '';
         position: absolute;
-        inset: 0 -2px 0 0;
+        inset-block: 0;
+        inset-inline: 0 -2px;
         z-index: -1;
         background-color: inherit;
       }
     }
 
-    &[disabled],
-    &:disabled {
+    &:where([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']) {
       background-color: var(--iui-color-background-backdrop);
     }
 
@@ -146,11 +139,11 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
       --_iui-button-min-height: var(--iui-size-l);
       justify-content: center;
       border: none;
-      border-bottom: 1px solid var(--iui-color-border);
+      border-block-end: 1px solid var(--iui-color-border);
 
       > .iui-button-icon svg {
-        @include iui-icon-style('s');
-        @include iui-icon-color;
+        @include mixins.iui-icon-style('s');
+        @include mixins.iui-icon-color;
         @media (prefers-reduced-motion: no-preference) {
           transition: transform var(--iui-duration-2) ease-out;
         }
@@ -159,37 +152,30 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
   }
 }
 
-@mixin iui-side-navigation-submenu {
-  min-width: calc(var(--iui-size-3xl) * 2);
-  max-width: 50vw;
-  height: 100%;
+.iui-side-navigation-submenu {
+  min-inline-size: calc(var(--iui-size-3xl) * 2);
+  max-inline-size: 50vw;
+  block-size: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  overflow-y: overlay;
   resize: horizontal;
   background-color: var(--iui-color-background);
-  border-right: 1px solid var(--iui-color-border);
-
-  @include iui-transition-group;
-
-  &.iui-enter-active,
-  &.iui-exit-active {
-    display: flex;
-  }
+  border-inline-end: 1px solid var(--iui-color-border);
 
   &-content {
-    padding: 0 var(--iui-size-s) var(--iui-size-s);
+    padding-block: 0 var(--iui-size-s);
+    padding-inline: var(--iui-size-s);
     flex-shrink: 0;
   }
 
   &-header {
-    height: calc(var(--iui-size-s) * 5);
+    block-size: calc(var(--iui-size-s) * 5);
     display: flex;
     align-items: center;
     justify-content: space-between;
 
     &-label {
-      @include iui-text(title);
+      @include text-mixins.iui-text(title);
       display: flex;
       align-items: center;
       overflow: hidden;
@@ -207,13 +193,13 @@ $iui-side-navigation-icon-margins: calc(1.5 * var(--iui-size-m));
 
     &-actions {
       flex-shrink: 0;
-      margin-left: var(--iui-size-xs);
+      margin-inline-start: var(--iui-size-xs);
     }
   }
 }
 
-@mixin iui-side-navigation-wrapper {
+.iui-side-navigation-wrapper {
   display: flex;
   position: relative;
-  height: 100%;
+  block-size: 100%;
 }

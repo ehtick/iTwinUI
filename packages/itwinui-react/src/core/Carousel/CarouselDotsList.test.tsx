@@ -3,14 +3,13 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import { render, screen, act } from '@testing-library/react';
-import React from 'react';
-import { CarouselDotsList } from './CarouselDotsList';
-import * as UseResizeObserver from '../utils/hooks/useResizeObserver';
-import userEvent from '@testing-library/user-event';
+import { CarouselDotsList } from './CarouselDotsList.js';
+import * as UseResizeObserver from '../../utils/hooks/useResizeObserver.js';
+import { userEvent } from '@testing-library/user-event';
 
 const originalMatchMedia = window.matchMedia;
 beforeAll(() => {
-  window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+  window.matchMedia = vi.fn().mockReturnValue({ matches: false });
 });
 afterAll(() => {
   window.matchMedia = originalMatchMedia;
@@ -38,9 +37,8 @@ it('should render in its most basic state without Carousel', () => {
   dots.forEach((dot, index) => {
     expect(dot).toHaveClass('iui-carousel-navigation-dot');
     expect(dot).toHaveAttribute('role', 'tab');
-    expect(dot).toHaveAttribute('tabindex', '-1');
+    expect(dot).toHaveAttribute('tabindex', index === 3 ? '0' : '-1');
     expect(dot).toHaveAttribute('id', `testid--dot-${index}`);
-    expect(dot).toHaveAttribute('aria-controls', `testid--slide-${index}`);
 
     if (index === 3) {
       expect(dot).toHaveAttribute('aria-selected', 'true');
@@ -53,7 +51,7 @@ it('should render in its most basic state without Carousel', () => {
 });
 
 it('should call onSlideChange correctly', async () => {
-  const mockOnSlideChange = jest.fn();
+  const mockOnSlideChange = vi.fn();
   const { container } = render(
     <CarouselDotsList
       id='testid'
@@ -81,18 +79,15 @@ it('should call onSlideChange correctly', async () => {
 it('should truncate dots correctly', () => {
   const DOT_WIDTH = 28;
 
-  let triggerResize: (size: DOMRectReadOnly) => void = jest.fn();
-  jest
-    .spyOn(UseResizeObserver, 'useResizeObserver')
-    .mockImplementation((onResize) => {
+  let triggerResize: (size: DOMRectReadOnly) => void = vi.fn();
+  vi.spyOn(UseResizeObserver, 'useResizeObserver').mockImplementation(
+    (onResize) => {
       triggerResize = onResize;
-      return [
-        jest.fn(),
-        { disconnect: jest.fn() } as unknown as ResizeObserver,
-      ];
-    });
+      return [vi.fn(), { disconnect: vi.fn() } as unknown as ResizeObserver];
+    },
+  );
 
-  const dotWidthMock = jest
+  const dotWidthMock = vi
     .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
     .mockReturnValue(DOT_WIDTH);
 

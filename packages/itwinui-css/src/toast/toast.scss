@@ -1,19 +1,123 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../anchor/index';
-@import '../utils/index';
+@use '../mixins';
 
-@mixin iui-toast {
-  @include iui-reset;
+/// category must be one of: informational, positive, warning, negative
+@mixin iui-toast-category($category) {
+  border-color: var(--iui-color-border-#{$category});
+
+  > .iui-message {
+    @include mixins.iui-text-selection($category);
+  }
+
+  > .iui-status-area {
+    background-image: linear-gradient(
+      to right,
+      var(--iui-color-background-#{$category}-muted),
+      var(--iui-color-background)
+    );
+
+    > .iui-icon {
+      &,
+      > svg {
+        fill: var(--iui-color-icon-#{$category});
+      }
+    }
+  }
+
+  > button {
+    outline-color: var(--iui-color-text-#{$category});
+  }
+}
+
+@mixin iui-bottom-placement {
+  inset-block-end: 0;
+
+  .iui-toast {
+    margin-block: var(--iui-size-s) 0;
+    margin-inline: var(--iui-size-m);
+  }
+}
+
+// ----------------------------------------------------------------------------
+
+.iui-toast-wrapper {
+  pointer-events: none !important; // Ensuring that toast-wrapper doesn't block clicks
+  position: fixed;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 99999;
+
+  @media screen and (max-width: 400px) {
+    inline-size: calc(100vw - 36px);
+    margin-block-start: var(--iui-size-s);
+  }
+
+  @media screen and (min-width: 401px) {
+    min-inline-size: 400px;
+    max-inline-size: 640px;
+    margin-block: var(--iui-size-l);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .iui-toast-all {
+      transition: all 240ms cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+
+  &.iui-placement-top {
+    margin-inline: auto;
+    inset-inline: 0;
+    inset-block-start: 0;
+  }
+
+  &.iui-placement-top-start {
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    align-items: flex-start;
+  }
+
+  &.iui-placement-top-end {
+    inset-inline-end: 0;
+    inset-block-start: 0;
+    align-items: flex-end;
+  }
+
+  &.iui-placement-bottom {
+    @include iui-bottom-placement;
+    margin-inline: auto;
+    inset-inline: 0;
+  }
+
+  &.iui-placement-bottom-start {
+    @include iui-bottom-placement;
+    inset-inline-start: 0;
+    align-items: flex-start;
+  }
+
+  &.iui-placement-bottom-end {
+    @include iui-bottom-placement;
+    inset-inline-end: 0;
+    align-items: flex-end;
+  }
+}
+
+.iui-toast {
+  @include mixins.iui-reset;
   display: inline-flex;
   align-items: center;
   pointer-events: all;
-  margin: 0 var(--iui-size-m) var(--iui-size-s) var(--iui-size-m);
-  min-height: calc(var(--iui-size-s) * 4);
+  margin-block: 0 var(--iui-size-s);
+  margin-inline: var(--iui-size-m);
+  min-block-size: calc(var(--iui-size-s) * 4);
   border-radius: var(--iui-border-radius-1);
   background-color: var(--iui-color-background);
   border: 1px solid var(--iui-color-border);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, var(--iui-opacity-4)), var(--iui-shadow-5);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, var(--iui-opacity-4)),
+    var(--iui-shadow-5);
   overflow: hidden;
 
   > .iui-status-area {
@@ -21,48 +125,74 @@
     align-self: stretch;
     justify-content: center;
     align-items: center;
-    width: calc(var(--iui-size-l) * 2);
+    inline-size: calc(var(--iui-size-l) * 2);
     flex-shrink: 0;
 
     > .iui-icon {
-      @include iui-icon-style('m');
-      fill: var(--iui-color-icon-muted);
+      @include mixins.iui-icon-style('m');
+
+      &,
+      > svg {
+        fill: var(--iui-color-icon-muted);
+      }
     }
   }
 
   > .iui-message {
     flex-grow: 1;
     font-size: var(--iui-font-size-1);
-    margin-top: calc(var(--iui-size-s) * 0.5);
-    margin-bottom: calc(var(--iui-size-s) * 0.5);
-    margin-right: var(--iui-size-l);
-    margin-left: var(--iui-size-m);
-    line-height: var(--iui-size-l);
+    margin-block-start: calc(var(--iui-size-s) * 0.5);
+    margin-block-end: calc(var(--iui-size-s) * 0.5);
+    margin-inline-end: var(--iui-size-l);
+    margin-inline-start: var(--iui-size-m);
     font-weight: var(--iui-font-weight-normal);
     font-style: normal;
     color: var(--iui-color-text);
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
 
   &-anchor {
-    @include iui-anchor-underline('on-initial');
+    &:where(button) {
+      font-family: inherit;
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
     border-radius: var(--iui-border-radius-1);
     cursor: pointer;
     font-size: var(--iui-font-size-0);
-    margin-right: var(--iui-size-m);
+    margin-inline-end: var(--iui-size-m);
     user-select: none;
     white-space: nowrap;
   }
 
   > .iui-button {
-    margin-right: var(--iui-size-xs);
+    margin-inline-end: var(--iui-size-xs);
   }
 
   @media screen and (max-width: 400px) {
-    width: calc(100vw - 36px);
+    inline-size: calc(100vw - 36px);
   }
 
   @media screen and (min-width: 401px) {
-    min-width: 400px;
-    max-width: 640px;
+    min-inline-size: 400px;
+    max-inline-size: 640px;
+  }
+
+  &.iui-informational {
+    @include iui-toast-category($category: informational);
+  }
+
+  &.iui-positive {
+    @include iui-toast-category($category: positive);
+  }
+
+  &.iui-warning {
+    @include iui-toast-category($category: warning);
+  }
+
+  &.iui-negative {
+    @include iui-toast-category($category: negative);
   }
 }
