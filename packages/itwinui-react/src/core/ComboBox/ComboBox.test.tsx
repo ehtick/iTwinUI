@@ -2,19 +2,23 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import { fireEvent, render, screen, act } from '@testing-library/react';
-import { ComboBox, ComboboxMultipleTypeProps, ComboBoxProps } from './ComboBox';
-import { SvgCaretDownSmall } from '../utils';
-import { MenuItem } from '../Menu';
-import { StatusMessage } from '../StatusMessage';
-import userEvent from '@testing-library/user-event';
+import {
+  ComboBox,
+  type ComboboxMultipleTypeProps,
+  type ComboBoxProps,
+} from './ComboBox.js';
+import { SvgCaretDownSmall } from '../../utils/index.js';
+import { MenuItem } from '../Menu/MenuItem.js';
+import { StatusMessage } from '../StatusMessage/StatusMessage.js';
+import { userEvent } from '@testing-library/user-event';
 
 const renderComponent = (
   props?: Partial<ComboBoxProps<number>> & ComboboxMultipleTypeProps<number>,
 ) => {
   return render(
-    <ComboBox<number>
+    <ComboBox
       options={[
         { label: 'Item 0', value: 0 },
         { label: 'Item 1', value: 1 },
@@ -27,7 +31,7 @@ const renderComponent = (
 
 const assertBaseElement = (container: HTMLElement) => {
   const rootElement = container.querySelector(
-    '.iui-input-container',
+    '.iui-input-grid',
   ) as HTMLDivElement;
 
   const input = rootElement.querySelector('.iui-input') as HTMLInputElement;
@@ -41,7 +45,7 @@ const assertBaseElement = (container: HTMLElement) => {
 
 it('should render in its most basic state', () => {
   const { container } = renderComponent();
-  const id = container.querySelector('.iui-input-container')?.id;
+  const id = container.querySelector('.iui-input-grid')?.id;
   const input = assertBaseElement(container);
 
   fireEvent.focus(input);
@@ -49,12 +53,12 @@ it('should render in its most basic state', () => {
   expect(input).toHaveAttribute('aria-controls', `${id}-list`);
   expect(input).toHaveAttribute('aria-autocomplete', 'list');
 
-  const list = document.querySelector('.iui-menu') as HTMLUListElement;
+  const list = document.querySelector('.iui-menu') as HTMLElement;
   expect(list).toBeVisible();
   expect(list.id).toEqual(`${id}-list`);
   expect(list).toHaveAttribute('role', 'listbox');
   expect(list.children).toHaveLength(3);
-  list.querySelectorAll('.iui-menu-item').forEach((item, index) => {
+  list.querySelectorAll('.iui-list-item').forEach((item, index) => {
     expect(item).toHaveTextContent(`Item ${index}`);
     expect(item).toHaveAttribute('aria-selected', 'false');
     expect(item.id).toEqual(`${id}-option-Item-${index}`);
@@ -67,18 +71,22 @@ it('should render with selected value', () => {
   expect(input.value).toEqual('Item 2');
 
   fireEvent.focus(input);
-  document.querySelectorAll('.iui-menu-item').forEach((item, index) => {
+  document.querySelectorAll('.iui-list-item').forEach((item, index) => {
     expect(item).toHaveTextContent(`Item ${index}`);
     if (index === 2) {
-      expect(item).toHaveClass('iui-active');
+      expect(item).toHaveAttribute('data-iui-active', 'true');
       expect(item).toHaveAttribute('aria-selected', 'true');
     }
   });
 });
 
-it('should render caret icon correctly', () => {
+it('should render caret icon correctly', async () => {
   const { container } = renderComponent();
-  let icon = container.querySelector('.iui-end-icon svg') as HTMLElement;
+  let icon = container.querySelector(
+    '.iui-end-icon.iui-svg-icon > svg',
+  ) as HTMLElement;
+
+  const input = container.querySelector('input') as HTMLElement;
 
   const {
     container: { firstChild: caretDown },
@@ -88,16 +96,19 @@ it('should render caret icon correctly', () => {
   expect(document.querySelector('.iui-menu')).toBeFalsy();
 
   // open
-  fireEvent.click(icon);
-  icon = container.querySelector('.iui-end-icon svg') as HTMLElement;
+  await userEvent.click(input);
+  icon = container.querySelector('.iui-end-icon.iui-open > svg') as HTMLElement;
   expect(icon).toEqual(caretDown);
   expect(document.querySelector('.iui-menu')).toBeVisible();
+  const menuItem = document.querySelector('.iui-list-item') as HTMLElement;
 
   // close
-  fireEvent.click(icon);
-  icon = container.querySelector('.iui-end-icon svg') as HTMLElement;
+  await userEvent.click(menuItem);
+  icon = container.querySelector(
+    '.iui-end-icon.iui-svg-icon > svg',
+  ) as HTMLElement;
   expect(icon).toEqual(caretDown);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 });
 
 it('should filter list according to text input', () => {
@@ -188,26 +199,26 @@ it('should accept custom filter function', () => {
 });
 
 it('should select value on click', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const { container, getByText } = renderComponent({ onChange: mockOnChange });
   const input = assertBaseElement(container);
 
   await userEvent.tab();
   await userEvent.click(getByText('Item 1'));
   expect(mockOnChange).toHaveBeenCalledWith(1);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
   expect(input.value).toEqual('Item 1');
 
   await userEvent.tab({ shift: true });
   await userEvent.tab();
   expect(
-    document.querySelector('.iui-menu-item.iui-active.iui-focused'),
+    document.querySelector(`.iui-list-item[data-iui-focused='true']`),
   ).toHaveTextContent('Item 1');
 });
 
 it('should handle keyboard navigation when virtualization is disabled', async () => {
   const id = 'test-component';
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const { container } = renderComponent({ id, onChange: mockOnChange });
 
   await userEvent.tab();
@@ -215,62 +226,63 @@ it('should handle keyboard navigation when virtualization is disabled', async ()
   const input = assertBaseElement(container);
   expect(input).toHaveAttribute('aria-controls', `${id}-list`);
 
-  let items = document.querySelectorAll('.iui-menu-item');
+  let items = document.querySelectorAll('.iui-list-item');
 
   // focus index 0
   await userEvent.keyboard('{ArrowDown}');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(items[0]).toHaveClass('iui-focused');
+  items = document.querySelectorAll('.iui-list-item');
+  expect(items[0]).toHaveAttribute('data-iui-focused', 'true');
 
   // 0 -> 1
   await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-1`);
-  expect(items[1]).toHaveClass('iui-focused');
-  expect(items[0]).not.toHaveClass('iui-focused');
+  expect(items[1]).toHaveAttribute('data-iui-focused', 'true');
+  expect(items[0]).not.toHaveAttribute('data-iui-focused', 'true');
 
   // 1 -> 2
   await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-2`);
-  expect(items[2]).toHaveClass('iui-focused');
+  expect(items[2]).toHaveAttribute('data-iui-focused', 'true');
 
   // 2 -> 0
   await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  expect(items[0]).toHaveClass('iui-focused');
+  expect(items[0]).toHaveAttribute('data-iui-focused', 'true');
 
   // 0 -> 2
   await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-2`);
-  expect(items[2]).toHaveClass('iui-focused');
+  expect(items[2]).toHaveAttribute('data-iui-focused', 'true');
 
   // 2 -> 1
   await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-1`);
-  expect(items[1]).toHaveClass('iui-focused');
-  expect(items[2]).not.toHaveClass('iui-focused');
+  expect(items[1]).toHaveAttribute('data-iui-focused', 'true');
+  expect(items[2]).not.toHaveAttribute('data-iui-focused', 'true');
 
   // 1 -> 0
   await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  expect(items[0]).toHaveClass('iui-focused');
+  expect(items[0]).toHaveAttribute('data-iui-focused', 'true');
 
   // select 0
   await userEvent.keyboard('{Enter}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(mockOnChange).toHaveBeenCalledWith(0);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 
   // reopen menu
   await userEvent.keyboard('{Enter}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(items[0]).toHaveClass('iui-active iui-focused');
+  items = document.querySelectorAll('.iui-list-item');
+  expect(items[0]).toHaveAttribute('data-iui-focused', 'true');
+  expect(items[0]).toHaveAttribute('data-iui-active', 'true');
 
   // filter and focus item 2
   await act(async () => {
@@ -279,177 +291,33 @@ it('should handle keyboard navigation when virtualization is disabled', async ()
   });
 
   await act(async () => void (await userEvent.keyboard('{ArrowDown}')));
-  expect(screen.getByText('Item 2').closest('.iui-menu-item')).toHaveClass(
-    'iui-focused',
+  expect(screen.getByText('Item 2').closest('.iui-list-item')).toHaveAttribute(
+    'data-iui-focused',
+    'true',
   );
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-2`);
 
   // select 2
   await userEvent.keyboard('{Enter}');
   expect(mockOnChange).toHaveBeenCalledWith(2);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 
   // reopen
   await act(async () => void (await userEvent.keyboard('{ArrowDown}')));
-  expect(screen.getByText('Item 2').closest('.iui-menu-item')).toHaveClass(
-    'iui-active',
+  expect(screen.getByText('Item 2').closest('.iui-list-item')).toHaveAttribute(
+    'data-iui-active',
+    'true',
   );
 
   // close
   await act(async () => void (await userEvent.keyboard('{Esc}')));
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 
   // reopen and close
   await act(async () => void (await userEvent.keyboard('X')));
   expect(document.querySelector('.iui-menu')).toBeVisible();
   await userEvent.tab();
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
-});
-
-it('should handle keyboard navigation when virtualization is enabled', async () => {
-  const id = 'test-component';
-  const mockOnChange = jest.fn();
-  const { container } = renderComponent({
-    id,
-    onChange: mockOnChange,
-    enableVirtualization: true,
-    options: [
-      { label: 'Item 0', value: 0 },
-      { label: 'Item 1', value: 1 },
-      { label: 'Item 2', value: 2 },
-      { label: 'Item 3', value: 3 },
-      { label: 'Item 4', value: 4 },
-      { label: 'Item 5', value: 5 },
-      { label: 'Item 6', value: 6 },
-      { label: 'Item 7', value: 7 },
-      { label: 'Item 8', value: 8 },
-      { label: 'Item 9', value: 9 },
-      { label: 'Item 10', value: 10 },
-      { label: 'Item 11', value: 11 },
-    ],
-  });
-
-  await userEvent.tab();
-
-  const input = assertBaseElement(container);
-  expect(input).toHaveAttribute('aria-controls', `${id}-list`);
-
-  let items = document.querySelectorAll('.iui-menu-item');
-
-  // focus index 0
-  await userEvent.keyboard('{ArrowDown}');
-  expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(items[0]).toHaveClass('iui-focused');
-
-  // 0 stay
-  await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  expect(items[0]).toHaveClass('iui-focused');
-
-  // 0 -> 1
-  await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-1`);
-  expect(items[1]).toHaveClass('iui-focused');
-  expect(items[0]).not.toHaveClass('iui-focused');
-
-  // 1 -> 11
-  for (let i = 0; i <= 11; ++i) {
-    await userEvent.keyboard('{ArrowDown}');
-  }
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute(
-    'aria-activedescendant',
-    `${id}-option-Item-11`,
-  );
-  expect(items[11]).toHaveClass('iui-focused');
-
-  // 11 stay
-  await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute(
-    'aria-activedescendant',
-    `${id}-option-Item-11`,
-  );
-  expect(items[11]).toHaveClass('iui-focused');
-
-  // select 11
-  await userEvent.keyboard('{Enter}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(mockOnChange).toHaveBeenCalledWith(11);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
-
-  // reopen menu
-  await userEvent.keyboard('{Enter}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(items[11]).toHaveClass('iui-active iui-focused');
-
-  // filter and focus item 1
-  await act(async () => {
-    input.select();
-    await userEvent.keyboard('1');
-  });
-  expect(document.querySelectorAll('.iui-menu-item').length).toBe(3),
-    await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-1`);
-  expect(items[0]).toHaveClass('iui-focused');
-
-  // 1 stay
-  await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-1`);
-  expect(items[0]).toHaveClass('iui-focused');
-
-  // 1 -> 10
-  await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute(
-    'aria-activedescendant',
-    `${id}-option-Item-10`,
-  );
-  expect(items[1]).toHaveClass('iui-focused');
-
-  // 1 -> 11
-  await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute(
-    'aria-activedescendant',
-    `${id}-option-Item-11`,
-  );
-  expect(items[2]).toHaveClass('iui-focused');
-
-  // 11 stay
-  await userEvent.keyboard('{ArrowDown}');
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(input).toHaveAttribute(
-    'aria-activedescendant',
-    `${id}-option-Item-11`,
-  );
-  expect(items[2]).toHaveClass('iui-focused');
-
-  // select 11
-  await userEvent.keyboard('{Enter}');
-  expect(mockOnChange).toHaveBeenCalledWith(11);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
-
-  // reopen
-  await act(async () => void (await userEvent.keyboard('{ArrowDown}')));
-  expect(screen.getByText('Item 11').closest('.iui-menu-item')).toHaveClass(
-    'iui-active',
-  );
-
-  // close
-  await act(async () => void (await userEvent.keyboard('{Esc}')));
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
-
-  // reopen and close
-  await act(async () => void (await userEvent.keyboard('X')));
-  expect(document.querySelector('.iui-menu')).toBeVisible();
-  await userEvent.tab();
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 });
 
 it('should accept inputProps', () => {
@@ -464,14 +332,22 @@ it('should accept inputProps', () => {
   expect(input.id).toBe(inputId);
 
   fireEvent.focus(input);
-  expect(container.querySelector('.iui-input-container')?.id).toBe(
-    `${inputId}-cb`,
+  expect(container.querySelector('.iui-input-grid')?.id).toBe(
+    `iui-${inputId}-cb`,
   );
-  expect(document.querySelector('.iui-menu')?.id).toBe(`${inputId}-cb-list`);
+  expect(document.querySelector('.iui-menu')?.id).toBe(
+    `iui-${inputId}-cb-list`,
+  );
+});
+
+it('should use the defaultValue when passed', () => {
+  const { container } = renderComponent({ defaultValue: 1 });
+  const input = assertBaseElement(container);
+  expect(input).toHaveValue('Item 1');
 });
 
 it('should work with custom itemRenderer', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const { container, getByText } = renderComponent({
     itemRenderer: ({ value, label }, { isSelected, id }) => (
       <MenuItem
@@ -491,21 +367,23 @@ it('should work with custom itemRenderer', async () => {
   await userEvent.tab();
   await userEvent.click(getByText('CUSTOM Item 1'));
   expect(mockOnChange).toHaveBeenCalledWith(1);
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
   expect(input).toHaveValue('Item 1'); // the actual value of input doesn't change
 
-  await userEvent.tab({ shift: true }); // reopen menu
+  await userEvent.keyboard('{Enter}'); // reopen menu
 
   expect(
     document.querySelector(
-      '.iui-menu-item.iui-active.iui-focused.my-custom-item',
+      `.iui-list-item.my-custom-item[data-iui-active='true']`,
     ),
   ).toHaveTextContent('CUSTOM Item 1');
 
   await act(async () => void (await userEvent.keyboard('{ArrowDown}')));
 
   expect(
-    document.querySelector('.iui-menu-item.iui-focused.my-custom-item'),
+    document.querySelector(
+      `.iui-list-item.my-custom-item[data-iui-focused='true']`,
+    ),
   ).toHaveTextContent('CUSTOM Item 2');
 
   await act(async () => void (await userEvent.keyboard('{Enter}')));
@@ -515,8 +393,9 @@ it('should work with custom itemRenderer', async () => {
 it('should accept status prop', () => {
   const { container } = renderComponent({ status: 'negative' });
 
-  expect(container.querySelector('.iui-input-container')).toHaveClass(
-    'iui-negative',
+  expect(container.querySelector('.iui-input-grid')).toHaveAttribute(
+    'data-iui-status',
+    'negative',
   );
 });
 
@@ -529,9 +408,7 @@ it('should render with message', () => {
     ),
   });
   assertBaseElement(container);
-  const message = container.querySelector(
-    '.iui-message > .my-message',
-  ) as HTMLElement;
+  const message = container.querySelector('.my-message') as HTMLElement;
   expect(message).toBeTruthy();
   expect(message.textContent).toBe('Message');
 });
@@ -541,7 +418,7 @@ it('should render with message as string', () => {
     message: 'My message as string',
   });
   assertBaseElement(container);
-  const message = container.querySelector('.iui-message') as HTMLElement;
+  const message = container.querySelector('.iui-status-message') as HTMLElement;
   expect(message).toBeTruthy();
   expect(message.textContent).toBe('My message as string');
 });
@@ -552,15 +429,15 @@ it('should render with message as string and status', () => {
     status: 'warning',
   });
   assertBaseElement(container);
-  const message = container.querySelector('.iui-message') as HTMLElement;
+  const message = container.querySelector('.iui-status-message') as HTMLElement;
   expect(message).toBeTruthy();
   expect(message.textContent).toBe('My message as string');
   const inputContainer = container.querySelector(
-    '.iui-input-container',
+    '.iui-input-grid',
   ) as HTMLElement;
   assertBaseElement(container);
-  expect(inputContainer).toHaveClass('iui-warning');
-  expect(inputContainer.querySelector('.iui-input-icon')).toBeTruthy();
+  expect(inputContainer).toHaveAttribute('data-iui-status', 'warning');
+  expect(inputContainer.querySelector('.iui-svg-icon')).toBeTruthy();
 });
 
 it('should render with custom icon', () => {
@@ -573,10 +450,10 @@ it('should render with custom icon', () => {
   });
 
   const inputContainer = container.querySelector(
-    '.iui-input-container',
+    '.iui-input-grid',
   ) as HTMLElement;
   assertBaseElement(container);
-  expect(inputContainer.querySelector('.iui-input-icon.my-icon')).toBeTruthy();
+  expect(inputContainer.querySelector('.iui-svg-icon .my-icon')).toBeTruthy();
 });
 
 it('should render with message and status', () => {
@@ -586,17 +463,17 @@ it('should render with message and status', () => {
   });
 
   const inputContainer = container.querySelector(
-    '.iui-input-container',
+    '.iui-input-grid',
   ) as HTMLElement;
   assertBaseElement(container);
-  expect(inputContainer).toHaveClass('iui-positive');
-  expect(inputContainer.querySelector('.iui-input-icon')).toBeTruthy();
-  const message = container.querySelector('.iui-message') as HTMLElement;
+  expect(inputContainer).toHaveAttribute('data-iui-status', 'positive');
+  expect(inputContainer.querySelector('.iui-svg-icon')).toBeTruthy();
+  const message = container.querySelector('.iui-status-message') as HTMLElement;
   expect(message.textContent).toBe('Text here');
 });
 
 it('should merge inputProps.onChange correctly', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const { container } = renderComponent({
     inputProps: { onChange: ({ target: { value } }) => mockOnChange(value) },
   });
@@ -611,8 +488,8 @@ it('should merge inputProps.onChange correctly', async () => {
 });
 
 it('should use the latest onChange prop', async () => {
-  const mockOnChange1 = jest.fn();
-  const mockOnChange2 = jest.fn();
+  const mockOnChange1 = vi.fn();
+  const mockOnChange2 = vi.fn();
   const options = [0, 1, 2].map((value) => ({ value, label: `Item ${value}` }));
 
   const { rerender } = render(
@@ -624,28 +501,29 @@ it('should use the latest onChange prop', async () => {
   expect(mockOnChange1).toHaveBeenNthCalledWith(1, 1);
 
   rerender(<ComboBox options={options} onChange={mockOnChange2} />);
-  await userEvent.tab({ shift: true }); // reopen menu
+  await userEvent.keyboard('{Enter}'); // reopen menu
   await userEvent.click(screen.getByText('Item 2'));
   expect(mockOnChange2).toHaveBeenNthCalledWith(1, 2);
   expect(mockOnChange1).toHaveBeenCalledTimes(1);
 });
 
 it('should call onExpand and onCollapse when dropdown is opened and closed', async () => {
-  const onExpand = jest.fn();
-  const onCollapse = jest.fn();
+  const onExpand = vi.fn();
+  const onCollapse = vi.fn();
   const { container } = renderComponent({
     onShow: onExpand,
     onHide: onCollapse,
   });
 
-  const icon = container.querySelector('.iui-end-icon svg') as HTMLElement;
-  await userEvent.click(icon);
-  const list = document.querySelector('.iui-menu') as HTMLUListElement;
-  expect(list).toBeVisible();
+  const input = container.querySelector('input') as HTMLElement;
+  await userEvent.click(input);
+  expect(document.querySelector('.iui-menu')).toBeVisible();
   expect(onExpand).toHaveBeenCalled();
 
-  await userEvent.click(icon);
-  expect(list).not.toBeVisible();
+  const menuItem = document.querySelector('.iui-list-item') as HTMLElement;
+
+  await userEvent.click(menuItem);
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
   expect(onCollapse).toHaveBeenCalled();
 });
 
@@ -668,10 +546,39 @@ it('should accept ReactNode in emptyStateMessage', async () => {
 });
 
 it('should programmatically clear value', async () => {
-  const mockOnChange = jest.fn();
   const options = [0, 1, 2].map((value) => ({ value, label: `Item ${value}` }));
 
   const { container, rerender } = render(
+    <ComboBox options={options} value={1} />,
+  );
+
+  const input = container.querySelector('.iui-input') as HTMLInputElement;
+  expect(input).toHaveValue('Item 1');
+
+  rerender(<ComboBox options={options} value={undefined} />);
+
+  // value={undefined} = reset value + uncontrolled state.
+  expect(input).toHaveValue(''); // should be reset
+
+  await userEvent.tab();
+  await userEvent.click(screen.getByText('Item 2'));
+  expect(input).toHaveValue('Item 2'); // uncontrolled state should work
+
+  rerender(<ComboBox options={options} value={null} />);
+
+  // value={null} = reset value + controlled state.
+  expect(input).toHaveValue(''); // should be reset
+
+  await userEvent.click(input);
+  await userEvent.click(screen.getByText('Item 0'));
+  expect(input).toHaveValue(''); // should not change since controlled state
+});
+
+it('should respect controlled state', async () => {
+  const mockOnChange = vi.fn();
+  const options = [0, 1, 2].map((value) => ({ value, label: `Item ${value}` }));
+
+  const { container } = render(
     <ComboBox options={options} onChange={mockOnChange} value={1} />,
   );
 
@@ -679,17 +586,13 @@ it('should programmatically clear value', async () => {
   await userEvent.click(screen.getByText('Item 2'));
   const input = container.querySelector('.iui-input') as HTMLInputElement;
   expect(mockOnChange).toHaveBeenCalledWith(2);
-  expect(input).toHaveValue('Item 2');
 
-  rerender(
-    <ComboBox options={options} onChange={mockOnChange} value={undefined} />,
-  );
-  expect(mockOnChange).not.toHaveBeenCalledTimes(2);
-  expect(input).toHaveValue('');
+  // In controlled state, passed value should take priority
+  expect(input).toHaveValue('Item 1');
 });
 
 it('should update options (have selected option in new options list)', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const options = [0, 1, 2].map((value) => ({ value, label: `Item ${value}` }));
 
   const { container, rerender } = render(
@@ -709,7 +612,7 @@ it('should update options (have selected option in new options list)', async () 
 
   rerender(<ComboBox options={options2} onChange={mockOnChange} value={2} />);
   fireEvent.focus(input);
-  const list = document.querySelector('.iui-menu') as HTMLUListElement;
+  const list = document.querySelector('.iui-menu') as HTMLElement;
   expect(list).toBeVisible();
   expect(list.children).toHaveLength(4);
   expect(mockOnChange).not.toHaveBeenCalledTimes(2);
@@ -717,7 +620,7 @@ it('should update options (have selected option in new options list)', async () 
 });
 
 it('should update options (does not have selected option in new options list)', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const options = [0, 1, 2].map((value) => ({ value, label: `Item ${value}` }));
 
   const { container, rerender } = render(
@@ -740,7 +643,7 @@ it('should update options (does not have selected option in new options list)', 
 });
 
 it('should select multiple options', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const options = [0, 1, 2, 3].map((value) => ({
     value,
     label: `Item ${value}`,
@@ -751,7 +654,7 @@ it('should select multiple options', async () => {
   );
 
   const inputContainer = container.querySelector(
-    '.iui-input-container',
+    '.iui-input-grid',
   ) as HTMLDivElement;
   await userEvent.tab();
   await userEvent.click(screen.getByText('Item 1'));
@@ -772,7 +675,7 @@ it('should select multiple options', async () => {
 });
 
 it('should override multiple selected options', async () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const options = [0, 1, 2, 3].map((value) => ({
     value,
     label: `Item ${value}`,
@@ -789,7 +692,7 @@ it('should override multiple selected options', async () => {
   );
 
   const inputContainer = container.querySelector(
-    '.iui-input-container',
+    '.iui-input-grid',
   ) as HTMLDivElement;
 
   const tags = inputContainer.querySelectorAll('.iui-select-tag');
@@ -826,7 +729,7 @@ it('should override multiple selected options', async () => {
 
 it('should handle keyboard navigation when multiple is enabled', async () => {
   const id = 'test-component';
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const { container } = renderComponent({
     id,
     multiple: true,
@@ -838,36 +741,35 @@ it('should handle keyboard navigation when multiple is enabled', async () => {
   const input = assertBaseElement(container);
   expect(input).toHaveAttribute('aria-controls', `${id}-list`);
 
-  let items = document.querySelectorAll('.iui-menu-item');
+  let items = document.querySelectorAll('.iui-list-item');
 
   // focus index 0
   await userEvent.keyboard('{ArrowDown}');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  items = document.querySelectorAll('.iui-menu-item');
-  expect(items[0]).toHaveClass('iui-focused');
+  items = document.querySelectorAll('.iui-list-item');
+  expect(items[0]).toHaveAttribute('data-iui-focused', 'true');
 
   // 0 -> 2
   await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-2`);
-  expect(items[2]).toHaveClass('iui-focused');
+  expect(items[2]).toHaveAttribute('data-iui-focused', 'true');
 
   // 2 -> 1
   await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-1`);
-  expect(items[1]).toHaveClass('iui-focused');
-  expect(items[2]).not.toHaveClass('iui-focused');
+  expect(items[1]).toHaveAttribute('data-iui-focused', 'true');
+  expect(items[2]).not.toHaveAttribute('data-iui-focused', 'true');
 
   // 1 -> 0
   await userEvent.keyboard('{ArrowUp}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-0`);
-  expect(items[0]).toHaveClass('iui-focused');
-
+  expect(items[0]).toHaveAttribute('data-iui-focused', 'true');
   // select 0
   await userEvent.keyboard('{Enter}');
-  items = document.querySelectorAll('.iui-menu-item');
+  items = document.querySelectorAll('.iui-list-item');
   expect(mockOnChange).toHaveBeenCalledWith([0], { type: 'added', value: 0 });
   expect(document.querySelector('.iui-menu')).toBeVisible();
 
@@ -878,8 +780,9 @@ it('should handle keyboard navigation when multiple is enabled', async () => {
   });
 
   await act(async () => void (await userEvent.keyboard('{ArrowDown}')));
-  expect(screen.getByText('Item 2').closest('.iui-menu-item')).toHaveClass(
-    'iui-focused',
+  expect(screen.getByText('Item 2').closest('.iui-list-item')).toHaveAttribute(
+    'data-iui-focused',
+    'true',
   );
   expect(input).toHaveAttribute('aria-activedescendant', `${id}-option-Item-2`);
 
@@ -893,7 +796,7 @@ it('should handle keyboard navigation when multiple is enabled', async () => {
 
   // close
   await act(async () => void (await userEvent.keyboard('{Esc}')));
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 
   // reopen
   await act(async () => void (await userEvent.keyboard('X')));
@@ -911,5 +814,150 @@ it('should handle keyboard navigation when multiple is enabled', async () => {
 
   // close
   await userEvent.tab();
-  expect(document.querySelector('.iui-menu')).not.toBeVisible();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
+});
+
+it('should not crash when provided value in not in options when multiple enabled', async () => {
+  const mockOnChange = vi.fn();
+  const options = [0, 1, 2].map((value) => ({ value, label: `Item ${value}` }));
+
+  const { container } = render(
+    <ComboBox options={options} onChange={mockOnChange} multiple value={[3]} />,
+  );
+
+  const input = container.querySelector('.iui-input') as HTMLInputElement;
+  expect(input).toHaveValue('');
+});
+
+it('should not select disabled items', async () => {
+  const id = 'test-component';
+  const onChange = vi.fn();
+  const { container } = renderComponent({
+    id,
+    onChange,
+    options: [
+      { label: 'An item', value: 0 },
+      { label: 'A disabled item', value: 1, disabled: true },
+      { label: 'Another item', value: 2 },
+      { label: 'Another disabled item', value: 3, disabled: true },
+    ],
+  });
+  const input = assertBaseElement(container);
+
+  await userEvent.tab();
+  await userEvent.click(screen.getByText('A disabled item'));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(document.querySelector('.iui-menu')).toBeVisible();
+  expect(input).toHaveValue('');
+  expect(input).toHaveFocus();
+
+  // focus first disabled item, then press Enter
+  const disabled1Id = `${id}-option-A-disabled-item`;
+  await userEvent.keyboard('{ArrowDown}');
+  await userEvent.keyboard('{ArrowDown}');
+  expect(input).toHaveAttribute('aria-activedescendant', disabled1Id);
+  expect(document.querySelector(`#${disabled1Id}`)).toHaveAttribute(
+    'data-iui-focused',
+    'true',
+  );
+  await userEvent.keyboard('{Enter}');
+  expect(onChange).not.toHaveBeenCalled();
+  expect(document.querySelector('.iui-menu')).toBeVisible();
+  expect(input).toHaveValue('');
+
+  // filter the list, then try selecting another disabled item with mouse
+  await userEvent.keyboard('An');
+  await userEvent.click(screen.getByText('Another disabled item'));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(document.querySelector('.iui-menu')).toBeVisible();
+  expect(input).toHaveValue('An');
+
+  // and with keyboard
+  const disabled2Id = `${id}-option-Another-disabled-item`;
+  await userEvent.keyboard('{ArrowDown}');
+  await userEvent.keyboard('{ArrowDown}');
+  await userEvent.keyboard('{ArrowDown}');
+  expect(document.querySelector(`#${disabled2Id}`)).toHaveAttribute(
+    'data-iui-focused',
+    'true',
+  );
+  expect(input).toHaveAttribute('aria-activedescendant', disabled2Id);
+  await userEvent.keyboard('{Enter}');
+  expect(onChange).not.toHaveBeenCalled();
+  expect(document.querySelector('.iui-menu')).toBeVisible();
+  expect(input).toHaveValue('An');
+});
+
+it('should update live region when selection changes', async () => {
+  const { container } = render(
+    <ComboBox
+      options={[0, 1, 2].map((value) => ({ value, label: `Item ${value}` }))}
+      multiple
+      defaultValue={[0]}
+    />,
+  );
+
+  const liveRegion = container.querySelector('[aria-live="polite"]');
+  expect(liveRegion).toHaveTextContent('');
+
+  await userEvent.tab();
+  const options = document.querySelectorAll('[role="option"]');
+
+  await userEvent.click(options[1]);
+  await userEvent.click(options[2]);
+  expect(liveRegion).toHaveTextContent('Item 0, Item 1, Item 2');
+
+  await userEvent.click(options[0]);
+  expect(liveRegion).toHaveTextContent('Item 1, Item 2');
+});
+
+it('should be customizable', async () => {
+  const { container, getByText } = render(
+    <ComboBox
+      options={[0, 1, 2].map((value) => ({ value, label: `Item ${value}` }))}
+      message={
+        <StatusMessage contentProps={{ className: 'custom-message-class' }}>
+          My message
+        </StatusMessage>
+      }
+      status='negative'
+      className='my-input-wrapper'
+      inputProps={{ id: 'my-input-id' }}
+      dropdownMenuProps={{
+        className: 'my-menu-class',
+      }}
+      endIconProps={{ className: 'my-end-icon' }}
+    />,
+  );
+
+  const endIcon = container.querySelector(
+    '.iui-svg-icon.iui-end-icon.my-end-icon',
+  );
+  expect(endIcon).toBeTruthy();
+  expect(container.querySelector('input#my-input-id')).toBeTruthy();
+  expect(
+    container.querySelector('.iui-input-grid.my-input-wrapper'),
+  ).toBeTruthy();
+
+  fireEvent.focus(container.querySelector('input') as HTMLElement);
+  const list = document.querySelector('.iui-menu') as HTMLElement;
+  expect(list).toHaveClass('my-menu-class');
+
+  const statusContent = getByText('My message');
+  expect(statusContent).toHaveClass('custom-message-class');
+});
+
+it('should allow passing ref to ComboBox', () => {
+  const comboboxRef = React.createRef<HTMLElement>();
+  const inputRef = React.createRef<HTMLInputElement>();
+  render(
+    <ComboBox
+      options={[{ label: 'Item 1', value: 1 }]}
+      ref={comboboxRef}
+      id='test-combobox'
+      inputProps={{ ref: inputRef, id: `test-input` }}
+    />,
+  );
+  expect(comboboxRef?.current).toHaveAttribute('id', 'test-combobox');
+  expect(inputRef?.current).toHaveAttribute('id', 'test-input');
 });

@@ -9,47 +9,47 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import React from 'react';
-import { Table, TableProps } from './Table';
-import * as IntersectionHooks from '../utils/hooks/useIntersection';
+import * as React from 'react';
+import { Table, type TableProps } from './Table.js';
+import * as IntersectionHooks from '../../utils/hooks/useIntersection.js';
 import {
   BaseFilter,
   FilterButtonBar,
-  TableFilterProps,
+  type TableFilterProps,
   tableFilters,
-} from './filters';
-import { actions, CellProps, Column, Row } from 'react-table';
-import { InputGroup } from '../InputGroup';
-import { Radio } from '../Radio';
+} from './filters/index.js';
+import type { CellProps, Column, Row } from '../../react-table/react-table.js';
+import { InputGroup } from '../InputGroup/InputGroup.js';
+import { Radio } from '../Radio/Radio.js';
 import {
   SvgChevronRight,
   SvgMore,
   SvgClose,
   SvgSortUp,
   SvgSortDown,
-} from '../utils';
-import { DefaultCell, EditableCell } from './cells';
-import { TablePaginator } from './TablePaginator';
-import * as UseOverflow from '../utils/hooks/useOverflow';
-import * as UseResizeObserver from '../utils/hooks/useResizeObserver';
-import userEvent from '@testing-library/user-event';
-import { ActionColumn, SelectionColumn, ExpanderColumn } from './columns';
+} from '../../utils/index.js';
+import { DefaultCell, EditableCell } from './cells/index.js';
+import { TablePaginator } from './TablePaginator.js';
+import { userEvent } from '@testing-library/user-event';
+import {
+  ActionColumn,
+  SelectionColumn,
+  ExpanderColumn,
+} from './columns/index.js';
 
 const intersectionCallbacks = new Map<Element, () => void>();
-jest
-  .spyOn(IntersectionHooks, 'useIntersection')
-  .mockImplementation((onIntersect) => {
+vi.spyOn(IntersectionHooks, 'useIntersection').mockImplementation(
+  (onIntersect) => {
     return (el: HTMLElement) =>
       el && intersectionCallbacks.set(el, onIntersect);
-  });
+  },
+);
 
 const mockIntersection = (element: Element) => {
   intersectionCallbacks.get(element)?.();
 };
 
-const columns = (
-  onViewClick: () => void = jest.fn(),
-): Column<TestDataType>[] => [
+const columns = (onViewClick: () => void = vi.fn()): Column<TestDataType>[] => [
   {
     id: 'name',
     Header: 'Name',
@@ -198,7 +198,7 @@ const clearFilter = async (container: HTMLElement) => {
 
 const BooleanFilter = (
   props: TableFilterProps<Record<string, unknown>>,
-): JSX.Element => {
+): React.JSX.Element => {
   const [value, setValue] = React.useState<boolean | undefined>(
     props.column.filterValue as boolean | undefined,
   );
@@ -247,7 +247,7 @@ beforeEach(() => {
 });
 
 it('should render table with data', async () => {
-  const onViewClick = jest.fn();
+  const onViewClick = vi.fn();
   const { container } = renderComponent(undefined, onViewClick);
 
   expect(screen.queryByText('Header name')).toBeFalsy();
@@ -264,6 +264,21 @@ it('should show spinner when loading', () => {
   ).toBeTruthy();
   const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
   expect(rows.length).toBe(0);
+});
+
+it('should show table-body-extra with spinner when loading with pre-existing data', () => {
+  const { container } = renderComponent({
+    data: mockedData(),
+    isLoading: true,
+  });
+
+  expect(
+    container.querySelector(
+      '.iui-table-body-extra[data-iui-loading="true"] .iui-progress-indicator-radial',
+    ),
+  ).toBeTruthy();
+  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
+  expect(rows.length).toBe(3);
 });
 
 it('should show empty message when there is no data', () => {
@@ -326,7 +341,7 @@ it('should render cell with custom className', () => {
 });
 
 it('should handle checkbox clicks', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const { container } = renderComponent({ isSelectable: true, onSelect });
 
   expect(screen.queryByText('Header name')).toBeFalsy();
@@ -348,8 +363,8 @@ it('should handle checkbox clicks', async () => {
 });
 
 it('should handle row clicks', async () => {
-  const onSelect = jest.fn();
-  const onRowClick = jest.fn();
+  const onSelect = vi.fn();
+  const onRowClick = vi.fn();
   const user = userEvent.setup();
   const data = mockedData(8);
 
@@ -458,12 +473,15 @@ it('should handle row clicks', async () => {
   expect(onSelect).toHaveBeenCalledTimes(8);
   expect(onRowClick).toHaveBeenCalledTimes(7);
 
+  // Shift click special case test #3
+  // Shift click makes makes all rows from lastSelectedRowId to clicked row to have the same selection state as the clicked row
+  // So when lastSelectedRowId is un-selected, all rows in the shift select range are also unselected.
   await user.keyboard('{Shift>}'); // Hold Shift
   await user.click(getByText(data[0].name));
 
-  expect(rows[0]).toHaveAttribute('aria-selected', 'true');
-  expect(rows[1]).toHaveAttribute('aria-selected', 'true');
-  expect(rows[2]).toHaveAttribute('aria-selected', 'true');
+  expect(rows[0]).not.toHaveAttribute('aria-selected');
+  expect(rows[1]).not.toHaveAttribute('aria-selected');
+  expect(rows[2]).not.toHaveAttribute('aria-selected');
   expect(rows[3]).not.toHaveAttribute('aria-selected');
   expect(rows[4]).not.toHaveAttribute('aria-selected');
   expect(onSelect).toHaveBeenCalledTimes(9);
@@ -472,39 +490,41 @@ it('should handle row clicks', async () => {
   await user.keyboard('{/Shift}{Control>}'); // Release Shift and Hold Control
   await user.click(getByText(data[4].name)); // lastSelectedRowId = 2 -> 4 (Ctrl click updates lastSelectedRowId)
   await user.keyboard('{Control>}'); // Keep holding Control
-  await user.click(getByText(data[7].name)); // lastSelectedRowId = 4 -> 7 (Ctrl click updates lastSelectedRowId)
+  await user.click(getByText(data[2].name)); // lastSelectedRowId = 4 -> 2 (Ctrl click updates lastSelectedRowId)
+  await user.keyboard('{Control>}'); // Keep holding Control
+  await user.click(getByText(data[7].name)); // lastSelectedRowId = 2-> 7 (Ctrl click updates lastSelectedRowId)
 
-  expect(rows[0]).toHaveAttribute('aria-selected', 'true');
-  expect(rows[1]).toHaveAttribute('aria-selected', 'true');
+  expect(rows[0]).not.toHaveAttribute('aria-selected');
+  expect(rows[1]).not.toHaveAttribute('aria-selected');
   expect(rows[2]).toHaveAttribute('aria-selected', 'true');
   expect(rows[3]).not.toHaveAttribute('aria-selected');
   expect(rows[4]).toHaveAttribute('aria-selected', 'true');
   expect(rows[5]).not.toHaveAttribute('aria-selected');
   expect(rows[6]).not.toHaveAttribute('aria-selected');
   expect(rows[7]).toHaveAttribute('aria-selected', 'true');
-  expect(onSelect).toHaveBeenCalledTimes(11);
-  expect(onRowClick).toHaveBeenCalledTimes(10);
+  expect(onSelect).toHaveBeenCalledTimes(12);
+  expect(onRowClick).toHaveBeenCalledTimes(11);
 
   // Ctrl + Shift click test
-  // Previous selection (0, 1, 2, 4) should be preserved and added to new shift click selection (7 to 5)
+  // Previous selection (2, 4) should be preserved and added to new shift click selection (7 to 5)
   await user.keyboard('{Control>}{Shift>}'); // Hold Ctrl and Shift
   await user.click(getByText(data[5].name));
 
-  expect(rows[0]).toHaveAttribute('aria-selected', 'true');
-  expect(rows[1]).toHaveAttribute('aria-selected', 'true');
+  expect(rows[0]).not.toHaveAttribute('aria-selected');
+  expect(rows[1]).not.toHaveAttribute('aria-selected');
   expect(rows[2]).toHaveAttribute('aria-selected', 'true');
   expect(rows[3]).not.toHaveAttribute('aria-selected');
   expect(rows[4]).toHaveAttribute('aria-selected', 'true');
   expect(rows[5]).toHaveAttribute('aria-selected', 'true');
   expect(rows[6]).toHaveAttribute('aria-selected', 'true');
   expect(rows[7]).toHaveAttribute('aria-selected', 'true');
-  expect(onSelect).toHaveBeenCalledTimes(12);
-  expect(onRowClick).toHaveBeenCalledTimes(11);
+  expect(onSelect).toHaveBeenCalledTimes(13);
+  expect(onRowClick).toHaveBeenCalledTimes(12);
 });
 
 it('should handle sub-rows shift click selection', async () => {
-  const onSelect = jest.fn();
-  const onRowClick = jest.fn();
+  const onSelect = vi.fn();
+  const onRowClick = vi.fn();
   const data = mockedSubRowsData();
   const { container, getByText } = renderComponent({
     data,
@@ -563,8 +583,8 @@ it('should handle sub-rows shift click selection', async () => {
 });
 
 it('should not select when clicked on row but selectRowOnClick flag is false', async () => {
-  const onSelect = jest.fn();
-  const onRowClick = jest.fn();
+  const onSelect = vi.fn();
+  const onRowClick = vi.fn();
   const { container, getByText } = renderComponent({
     isSelectable: true,
     onSelect,
@@ -582,7 +602,7 @@ it('should not select when clicked on row but selectRowOnClick flag is false', a
 });
 
 it('should not select when clicked on row and preventDefault is set', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   renderComponent({
     isSelectable: true,
     onSelect,
@@ -594,9 +614,9 @@ it('should not select when clicked on row and preventDefault is set', async () =
 });
 
 it('should not trigger onSelect when sorting and filtering', async () => {
-  const onSort = jest.fn();
-  const onSelect = jest.fn();
-  const onFilter = jest.fn();
+  const onSort = vi.fn();
+  const onSelect = vi.fn();
+  const onFilter = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -680,7 +700,7 @@ it('should sort name column correctly', async () => {
     { name: 'name2', description: 'Description2' },
   ];
   const sortedByName = [...mocked].sort((a, b) => (a.name > b.name ? 1 : -1));
-  const onSort = jest.fn();
+  const onSort = vi.fn();
   const { container } = renderComponent({
     isSortable: true,
     data: mocked,
@@ -860,7 +880,7 @@ it('should display correct sort icons for descending first', async () => {
 });
 
 it('should trigger onBottomReached', () => {
-  const onBottomReached = jest.fn();
+  const onBottomReached = vi.fn();
   const { container } = renderComponent({
     data: mockedData(50),
     onBottomReached,
@@ -877,7 +897,7 @@ it('should trigger onBottomReached', () => {
 });
 
 it('should trigger onBottomReached with filter applied', async () => {
-  const onBottomReached = jest.fn();
+  const onBottomReached = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -907,7 +927,7 @@ it('should trigger onBottomReached with filter applied', async () => {
 });
 
 it('should trigger onRowInViewport', () => {
-  const onRowInViewport = jest.fn();
+  const onRowInViewport = vi.fn();
   const { container } = renderComponent({
     data: mockedData(50),
     onRowInViewport,
@@ -926,7 +946,7 @@ it('should trigger onRowInViewport', () => {
 });
 
 it('should filter table', async () => {
-  const onFilter = jest.fn();
+  const onFilter = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -978,7 +998,7 @@ it('should filter false values', async () => {
     { name: 'Name2', description: 'Description2', booleanValue: false },
   ] as TestDataType[];
 
-  const { container } = renderComponent({ columns, onFilter: jest.fn(), data });
+  const { container } = renderComponent({ columns, onFilter: vi.fn(), data });
 
   const filterIcon = container.querySelector(
     '.iui-table-filter-button .iui-button-icon',
@@ -1014,7 +1034,7 @@ it('should not filter undefined values', async () => {
     { name: 'Name3', description: 'Description2' },
   ] as TestDataType[];
 
-  const { container } = renderComponent({ columns, onFilter: jest.fn(), data });
+  const { container } = renderComponent({ columns, onFilter: vi.fn(), data });
 
   const filterIcon = container.querySelector(
     '.iui-table-filter-button .iui-button-icon',
@@ -1030,7 +1050,7 @@ it('should not filter undefined values', async () => {
 });
 
 it('should clear filter', async () => {
-  const onFilter = jest.fn();
+  const onFilter = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -1086,7 +1106,7 @@ it('should clear filter', async () => {
 });
 
 it('should not trigger onFilter when the same filter is applied', async () => {
-  const onFilter = jest.fn();
+  const onFilter = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -1108,7 +1128,7 @@ it('should not trigger onFilter when the same filter is applied', async () => {
 });
 
 it('should not filter table when manualFilters flag is on', async () => {
-  const onFilter = jest.fn();
+  const onFilter = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -1485,7 +1505,7 @@ it('should show empty filtered table content with global filter', async () => {
 });
 
 it('should not show empty filtered table content when global filter is empty', async () => {
-  const mockedColumns: Column<typeof data[number]>[] = [
+  const mockedColumns: Column<(typeof data)[number]>[] = [
     {
       id: 'name',
       Header: 'Name',
@@ -1632,8 +1652,8 @@ it('should not global filter with manualGlobalFilter', async () => {
 });
 
 it('should not trigger sorting when filter is clicked', async () => {
-  const onFilter = jest.fn();
-  const onSort = jest.fn();
+  const onFilter = vi.fn();
+  const onSort = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -1654,39 +1674,6 @@ it('should not trigger sorting when filter is clicked', async () => {
 
   expect(onFilter).toHaveBeenCalled();
   expect(onSort).not.toHaveBeenCalled();
-});
-
-it('should render filter dropdown in the correct document', async () => {
-  const mockDocument = document.implementation.createHTMLDocument();
-  const div = mockDocument.createElement('div');
-  const mockContainer = mockDocument.body.appendChild(div);
-  const onFilter = jest.fn();
-  const mockedColumns = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-      Filter: tableFilters.TextFilter(),
-      fieldType: 'text',
-    },
-  ];
-  const { container } = renderComponent(
-    { columns: mockedColumns, onFilter },
-    undefined,
-    mockContainer,
-  );
-  expect(container.querySelector('.iui-table')).toBeTruthy();
-
-  const filterToggle = container.querySelector(
-    '.iui-table-filter-button',
-  ) as HTMLElement;
-  expect(filterToggle).toBeTruthy();
-  act(() => filterToggle.click());
-
-  await waitFor(() =>
-    expect(mockDocument.querySelector('.iui-table-column-filter')).toBeTruthy(),
-  );
-  expect(document.querySelector('.iui-table-column-filter')).toBeFalsy();
 });
 
 it('should rerender table when columns change', async () => {
@@ -1723,7 +1710,7 @@ it('should rerender table when columns change', async () => {
 });
 
 it('should expand correctly', async () => {
-  const onExpandMock = jest.fn();
+  const onExpandMock = vi.fn();
   const { container, getByText } = renderComponent({
     subComponent: (row) => (
       <div>{`Expanded component, name: ${row.original.name}`}</div>
@@ -1748,8 +1735,58 @@ it('should expand correctly', async () => {
   getByText('Expanded component, name: Name1');
 });
 
+it('should show expandable content correctly after re-rendering', async () => {
+  const data = mockedData();
+  const getRowIdMock = vi.fn();
+  const { rerender } = render(
+    <Table
+      columns={[
+        {
+          id: 'name',
+          Header: 'Name',
+          Cell: () => <>test1</>,
+        },
+      ]}
+      data={data}
+      emptyTableContent='No data.'
+      subComponent={(row) => (
+        <div>{`Expanded component, name: ${row.original.name}`}</div>
+      )}
+    />,
+  );
+  expect(screen.getAllByText('test1').length).toBe(3);
+
+  rerender(
+    <Table
+      columns={[
+        {
+          id: 'name',
+          Header: 'Name',
+          Cell: () => <>test2</>,
+        },
+      ]}
+      data={data}
+      emptyTableContent='No data.'
+      subComponent={(row) => (
+        <div>{`Expanded component, name: ${row.original.name}`}</div>
+      )}
+      getRowId={getRowIdMock}
+    />,
+  );
+  expect(screen.getAllByText('test2').length).toBe(3);
+
+  await act(async () => {
+    await userEvent.click(screen.getAllByRole('button')[0]);
+  });
+
+  screen.getByText('Expanded component, name: Name1');
+
+  // getRowId is called for each row and sub-row before and after re-rendering.
+  expect(getRowIdMock).toHaveBeenCalledTimes(12);
+});
+
 it('should expand correctly with a custom expander cell', async () => {
-  const onExpandMock = jest.fn();
+  const onExpandMock = vi.fn();
   const { getByText, queryByText } = renderComponent({
     subComponent: (row) => (
       <div>{`Expanded component, name: ${row.original.name}`}</div>
@@ -1792,7 +1829,7 @@ it('should expand correctly with a custom expander cell', async () => {
 });
 
 it('should disable row and handle expansion accordingly', async () => {
-  const onExpand = jest.fn();
+  const onExpand = vi.fn();
   const { container } = renderComponent({
     onExpand,
     subComponent: (row) => (
@@ -1818,9 +1855,9 @@ it('should disable row and handle expansion accordingly', async () => {
     '.iui-slot .iui-button',
   ) as NodeListOf<HTMLButtonElement>;
   expect(expansionCells.length).toBe(3);
-  expect(expansionCells[0].disabled).toBe(false);
-  expect(expansionCells[1].disabled).toBe(true);
-  expect(expansionCells[2].disabled).toBe(false);
+  expect(expansionCells[0]).not.toHaveAttribute('aria-disabled');
+  expect(expansionCells[1]).toHaveAttribute('aria-disabled', 'true');
+  expect(expansionCells[2]).not.toHaveAttribute('aria-disabled');
 
   await userEvent.click(expansionCells[1]);
   expect(onExpand).not.toHaveBeenCalled();
@@ -1830,8 +1867,8 @@ it('should disable row and handle expansion accordingly', async () => {
 });
 
 it('should disable row and handle selection accordingly', async () => {
-  const onSelect = jest.fn();
-  const onRowClick = jest.fn();
+  const onSelect = vi.fn();
+  const onRowClick = vi.fn();
   const { container } = renderComponent({
     isSelectable: true,
     onSelect,
@@ -1888,7 +1925,7 @@ it('should disable row and handle selection accordingly', async () => {
 });
 
 it('should select and filter rows', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -1943,8 +1980,46 @@ it('should select and filter rows', async () => {
   expect(checkboxInputs[3].checked).toBe(false);
 });
 
+it('should only select main row when subComponent is present', async () => {
+  const logSpy = vitest.spyOn(console, 'log');
+  const columns = [
+    {
+      id: 'name',
+      Header: 'Name',
+      accessor: 'name',
+    },
+    {
+      id: 'description',
+      Header: 'description',
+      accessor: 'description',
+    },
+  ];
+
+  const data = mockedData();
+
+  const { container } = renderComponent({
+    columns,
+    data,
+    isSelectable: true,
+    onSelect: (selectedRows) => console.log(selectedRows),
+    subComponent: (row) => <div>{`Name ${row.original.name}`}</div>,
+  });
+
+  const checkboxCells = container.querySelectorAll('.iui-slot .iui-checkbox');
+  expect(checkboxCells.length).toBe(4);
+
+  await userEvent.click(checkboxCells[0]);
+  expect(logSpy).toHaveBeenCalledWith(data);
+
+  await userEvent.click(checkboxCells[1]);
+  expect(logSpy).toHaveBeenCalledWith([data[1], data[2]]);
+
+  await userEvent.click(checkboxCells[2]);
+  expect(logSpy).toHaveBeenCalledWith([data[2]]);
+});
+
 it('should pass custom props to row', () => {
-  const onMouseEnter = jest.fn();
+  const onMouseEnter = vi.fn();
   let element: HTMLInputElement | null = null;
   const onRef = (ref: HTMLInputElement) => {
     element = ref;
@@ -1974,8 +2049,70 @@ it.each(['condensed', 'extra-condensed'] as const)(
   },
 );
 
+it('should render sub-rows with padding-left of 12+30*(row depth) for condensed table', async () => {
+  const onExpand = vi.fn();
+  const data = mockedSubRowsData();
+  const { container } = renderComponent({
+    data,
+    onExpand,
+    density: 'condensed',
+  });
+
+  await expandAll(container);
+
+  const tableRows = container.querySelectorAll(
+    '.iui-table-body .iui-table-row',
+  );
+
+  // First row has a row depth of zero, so padding-left is 12 + 30*0 = 12
+  expect(tableRows[0].querySelector('.iui-table-cell')).toHaveStyle(
+    'padding-inline-start: 12px',
+  );
+
+  // Expanded sub-row has a row depth of two, so padding-left is 12 + 30*2 = 72
+  expect(tableRows[1].querySelector('.iui-table-cell')).toHaveStyle(
+    'padding-inline-start: 72px',
+  );
+
+  // Second row has a row depth of one, so padding-left is 12 + 30*1 = 42
+  expect(tableRows[2].querySelector('.iui-table-cell')).toHaveStyle(
+    'padding-inline-start: 42px',
+  );
+});
+
+it('should render sub-rows with padding-left of 8+30*(row depth) for extra-condensed table', async () => {
+  const onExpand = vi.fn();
+  const data = mockedSubRowsData();
+  const { container } = renderComponent({
+    data,
+    onExpand,
+    density: 'extra-condensed',
+  });
+
+  await expandAll(container);
+
+  const tableRows = container.querySelectorAll(
+    '.iui-table-body .iui-table-row',
+  );
+
+  // First row has a row depth of zero, so padding-left is 8 + 30*0 = 8
+  expect(tableRows[0].querySelector('.iui-table-cell')).toHaveStyle(
+    'padding-inline-start: 8px',
+  );
+
+  // Expanded sub-row has a row depth of two, so padding-left is 8 + 30*2 = 68
+  expect(tableRows[1].querySelector('.iui-table-cell')).toHaveStyle(
+    'padding-inline-start: 68px',
+  );
+
+  // Second row has a row depth of one, so padding-left is 8 + 30*1 = 38
+  expect(tableRows[2].querySelector('.iui-table-cell')).toHaveStyle(
+    'padding-inline-start: 38px',
+  );
+});
+
 it('should render sub-rows and handle expansions', async () => {
-  const onExpand = jest.fn();
+  const onExpand = vi.fn();
   const data = mockedSubRowsData();
   const { container } = renderComponent({ data, onExpand });
 
@@ -2047,7 +2184,7 @@ it('should render filtered sub-rows', async () => {
 });
 
 it('should handle sub-rows selection', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const data = mockedSubRowsData();
   const { container } = renderComponent({
     data,
@@ -2080,8 +2217,35 @@ it('should handle sub-rows selection', async () => {
   );
 });
 
+it('should show parent row being selected when all sub-rows are selected', async () => {
+  const data = mockedSubRowsData();
+  const { container } = renderComponent({
+    data,
+    isSelectable: true,
+  });
+
+  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
+  expect(rows.length).toBe(3);
+
+  await expandAll(container);
+
+  let checkboxes = container.querySelectorAll<HTMLInputElement>(
+    '.iui-table-body .iui-checkbox',
+  );
+  expect(checkboxes.length).toBe(10);
+  // Select all sub-rows of row 2
+  await userEvent.click(checkboxes[7]);
+  await userEvent.click(checkboxes[8]);
+
+  checkboxes = container.querySelectorAll<HTMLInputElement>(
+    '.iui-table-body .iui-checkbox',
+  );
+
+  expect(checkboxes[6].checked).toBe(true);
+});
+
 it('should show indeterminate checkbox when some sub-rows are selected', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const data = mockedSubRowsData();
   const { container } = renderComponent({
     data,
@@ -2117,7 +2281,7 @@ it('should show indeterminate checkbox when some sub-rows are selected', async (
 });
 
 it('should show indeterminate checkbox when a sub-row of a sub-row is selected', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const data = mockedSubRowsData();
   const { container } = renderComponent({
     data,
@@ -2156,7 +2320,7 @@ it('should show indeterminate checkbox when a sub-row of a sub-row is selected',
 });
 
 it('should show indeterminate checkbox when sub-row selected after filtering', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const data = mockedSubRowsData();
   const columns = [
     {
@@ -2214,7 +2378,7 @@ it('should show indeterminate checkbox when sub-row selected after filtering', a
 });
 
 it('should show indeterminate checkbox when clicking on a row itself after filtering', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const data = mockedSubRowsData();
   const columns = [
     {
@@ -2270,7 +2434,7 @@ it('should show indeterminate checkbox when clicking on a row itself after filte
 });
 
 it('should only select one row even if it has sub-rows when selectSubRows is false', async () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const data = mockedSubRowsData();
   const { container } = renderComponent({
     data,
@@ -2329,8 +2493,20 @@ it('should render sub-rows with custom expander', async () => {
   expect(rows.length).toBe(10);
 });
 
+it('should not disable select-all checkbox when all top-level rows are disabled but all subrows are not', () => {
+  const { container } = renderComponent({
+    data: mockedSubRowsData(),
+    isSelectable: true,
+    isRowDisabled: (rowData) =>
+      ['Row 1', 'Row 2', 'Row 3'].includes(rowData.name as string),
+  });
+  const selectAllCheckbox = container.querySelector('input[type=checkbox]');
+  expect(selectAllCheckbox).not.toBeDisabled();
+  expect(selectAllCheckbox).not.toBeChecked();
+});
+
 it('should edit cell data', async () => {
-  const onCellEdit = jest.fn();
+  const onCellEdit = vi.fn();
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -2379,8 +2555,8 @@ it('should edit cell data', async () => {
 });
 
 it('should handle unwanted actions on editable cell', async () => {
-  const onCellEdit = jest.fn();
-  const onSelect = jest.fn();
+  const onCellEdit = vi.fn();
+  const onSelect = vi.fn();
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -2435,40 +2611,6 @@ it('should handle unwanted actions on editable cell', async () => {
 
   await userEvent.click(editableCells[1]);
   expect(onSelect).not.toHaveBeenCalled();
-});
-
-it('should render data in pages', async () => {
-  jest
-    .spyOn(UseOverflow, 'useOverflow')
-    .mockImplementation((items) => [jest.fn(), items.length]);
-  const { container } = renderComponent({
-    data: mockedData(100),
-    pageSize: 10,
-    paginatorRenderer: (props) => <TablePaginator {...props} />,
-  });
-
-  let rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows).toHaveLength(10);
-  expect(rows[0].querySelector('.iui-table-cell')?.textContent).toEqual(
-    'Name1',
-  );
-  expect(rows[9].querySelector('.iui-table-cell')?.textContent).toEqual(
-    'Name10',
-  );
-
-  const pages = container.querySelectorAll<HTMLButtonElement>(
-    '.iui-table-paginator .iui-table-paginator-page-button',
-  );
-  expect(pages).toHaveLength(10);
-  await userEvent.click(pages[3]);
-  rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows).toHaveLength(10);
-  expect(rows[0].querySelector('.iui-table-cell')?.textContent).toEqual(
-    'Name31',
-  );
-  expect(rows[9].querySelector('.iui-table-cell')?.textContent).toEqual(
-    'Name40',
-  );
 });
 
 it('should change page size', async () => {
@@ -2532,358 +2674,7 @@ it('should render number of rows selected for paginator', async () => {
   );
 });
 
-it('should handle resize by increasing width of current column and decreasing the next ones', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 150 });
-  fireEvent.mouseUp(resizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('50px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should handle resize with touch', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  fireEvent.touchStart(resizer, { touches: [{ clientX: 100 }] });
-  fireEvent.touchMove(resizer, { touches: [{ clientX: 150 }] });
-  fireEvent.touchEnd(resizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('50px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should prevent from resizing past 1px width', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 198 });
-  fireEvent.mouseMove(resizer, { clientX: 300 });
-  fireEvent.mouseUp(resizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('198px');
-  expect(headerCells[1].style.width).toBe('2px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should prevent from resizing past max-width', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-      maxWidth: 150,
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-      maxWidth: 150,
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  // Current column
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 150 });
-  fireEvent.mouseMove(resizer, { clientX: 200 });
-  fireEvent.mouseUp(resizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('50px');
-  expect(headerCells[2].style.width).toBe('100px');
-
-  // Next column
-  fireEvent.mouseDown(resizer, { clientX: 150 });
-  fireEvent.mouseMove(resizer, { clientX: 50 });
-  fireEvent.mouseMove(resizer, { clientX: 10 });
-  fireEvent.mouseUp(resizer);
-
-  expect(headerCells[0].style.width).toBe('50px');
-  expect(headerCells[1].style.width).toBe('150px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should prevent from resizing past min-width', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-      minWidth: 50,
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-      minWidth: 50,
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  // Current column
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 50 });
-  fireEvent.mouseMove(resizer, { clientX: 10 });
-  fireEvent.mouseUp(resizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('50px');
-  expect(headerCells[1].style.width).toBe('150px');
-  expect(headerCells[2].style.width).toBe('100px');
-
-  // Next column
-  fireEvent.mouseDown(resizer, { clientX: 50 });
-  fireEvent.mouseMove(resizer, { clientX: 150 });
-  fireEvent.mouseMove(resizer, { clientX: 190 });
-  fireEvent.mouseUp(resizer);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('50px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should not resize column with disabled resize but resize closest ones', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-      disableResizing: true,
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-      disableResizing: true,
-    },
-    {
-      id: 'edit',
-      Header: 'edit',
-      Cell: () => <>Edit</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  // Current column
-  const nameResizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(nameResizer).toBeTruthy();
-
-  fireEvent.mouseDown(nameResizer, { clientX: 100 });
-  fireEvent.mouseMove(nameResizer, { clientX: 150 });
-  fireEvent.mouseUp(nameResizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(4);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('100px');
-  expect(headerCells[2].style.width).toBe('100px');
-  expect(headerCells[3].style.width).toBe('50px');
-
-  // Description column shouldn't have resizer because resizing is disabled for it
-  // and next column also isn't resizable
-  const descriptionResizer = container.querySelector(
-    '.iui-table-cell:nth-of-type(2) .iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(descriptionResizer).toBeFalsy();
-
-  // Last column
-  const viewResizer = container.querySelector(
-    '.iui-table-cell:nth-of-type(3) .iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(viewResizer).toBeTruthy();
-
-  fireEvent.mouseDown(viewResizer, { clientX: 350 });
-  fireEvent.mouseMove(viewResizer, { clientX: 250 });
-  fireEvent.mouseUp(viewResizer);
-
-  expect(headerCells[0].style.width).toBe('50px');
-  expect(headerCells[1].style.width).toBe('100px');
-  expect(headerCells[2].style.width).toBe('100px');
-  expect(headerCells[3].style.width).toBe('150px');
-});
-
 it('should not show resizer when there are no next resizable columns', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -2917,10 +2708,7 @@ it('should not show resizer when there are no next resizable columns', () => {
 });
 
 it('should not trigger sort when resizing', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const onSort = jest.fn();
+  const onSort = vi.fn();
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -2945,79 +2733,12 @@ it('should not trigger sort when resizing', () => {
     onSort,
   });
 
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
   const resizer = container.querySelector(
     '.iui-table-resizer',
   ) as HTMLDivElement;
   expect(resizer).toBeTruthy();
-
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 150 });
-  fireEvent.mouseUp(resizer);
   fireEvent.click(resizer);
-
   expect(onSort).not.toHaveBeenCalled();
-});
-
-it('should handle table resize only when some columns were resized', () => {
-  const htmlWidthMock = jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-
-  let triggerResize: (size: DOMRectReadOnly) => void = jest.fn();
-  jest
-    .spyOn(UseResizeObserver, 'useResizeObserver')
-    .mockImplementation((onResize) => {
-      triggerResize = onResize;
-      return [
-        jest.fn(),
-        { disconnect: jest.fn() } as unknown as ResizeObserver,
-      ];
-    });
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({ columns, isResizable: true });
-
-  // Initial render
-  triggerResize({ width: 300 } as DOMRectReadOnly);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-  headerCells.forEach((cell) => expect(cell.style.width).toBe('0px'));
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 150 });
-  fireEvent.mouseUp(resizer);
-
-  act(() => {
-    htmlWidthMock.mockReturnValue({ width: 50 } as DOMRect);
-    triggerResize({ width: 150 } as DOMRectReadOnly);
-  });
-  headerCells.forEach((cell) => expect(cell.style.width).toBe('50px'));
 });
 
 it('should not render resizer when resizer is disabled', () => {
@@ -3034,311 +2755,12 @@ it('should not render resizer when resizer is disabled', () => {
   expect(resizer).toBeFalsy();
 });
 
-it('should resize only the current column when resize mode is expand', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-    columnResizeMode: 'expand',
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizers = container.querySelectorAll('.iui-table-resizer');
-  // Every column should have a resizer
-  expect(resizers.length).toBe(3);
-
-  fireEvent.mouseDown(resizers[0], { clientX: 100 });
-  fireEvent.mouseMove(resizers[0], { clientX: 150 });
-  fireEvent.mouseUp(resizers[0]);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('100px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should resize current and closest column when table width would decrease when resize mode is expand', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  let triggerResize: (size: DOMRectReadOnly) => void = jest.fn();
-  jest
-    .spyOn(UseResizeObserver, 'useResizeObserver')
-    .mockImplementation((onResize) => {
-      triggerResize = onResize;
-      return [
-        jest.fn(),
-        { disconnect: jest.fn() } as unknown as ResizeObserver,
-      ];
-    });
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-    columnResizeMode: 'expand',
-  });
-
-  // Initial render
-  triggerResize({ width: 300 } as DOMRectReadOnly);
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  // Resize past table width
-  fireEvent.mouseDown(resizer, { clientX: 150 });
-  fireEvent.mouseMove(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 50 });
-  fireEvent.mouseUp(resizer);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  // Headers widths sum are not lower than table width
-  expect(headerCells[0].style.width).toBe('50px');
-  expect(headerCells[1].style.width).toBe('150px');
-  expect(headerCells[2].style.width).toBe('100px');
-});
-
-it('should resize last and closest column on the left when table width would decrease when resize mode is expand', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  let triggerResize: (size: DOMRectReadOnly) => void = jest.fn();
-  jest
-    .spyOn(UseResizeObserver, 'useResizeObserver')
-    .mockImplementation((onResize) => {
-      triggerResize = onResize;
-      return [
-        jest.fn(),
-        { disconnect: jest.fn() } as unknown as ResizeObserver,
-      ];
-    });
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-    columnResizeMode: 'expand',
-  });
-
-  // Initial render
-  triggerResize({ width: 300 } as DOMRectReadOnly);
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizers = container.querySelectorAll('.iui-table-resizer');
-  expect(resizers.length).toBe(3);
-
-  // Resize past table width
-  fireEvent.mouseDown(resizers[2], { clientX: 300 });
-  fireEvent.mouseMove(resizers[2], { clientX: 250 });
-  // fireEvent.mouseMove(resizers[2], { clientX: 50 });
-  fireEvent.mouseUp(resizers[2]);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  // Headers widths sum are not lower than table width
-  expect(headerCells[0].style.width).toBe('100px');
-  expect(headerCells[1].style.width).toBe('150px');
-  expect(headerCells[2].style.width).toBe('50px');
-});
-
-it('should not show resizer when column has disabled resizing when resize mode is expand', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-      disableResizing: true,
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-    columnResizeMode: 'expand',
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const descriptionResizer = container.querySelector(
-    '.iui-cell:nth-of-type(2) .iui-resizer',
-  ) as HTMLDivElement;
-  expect(descriptionResizer).toBeFalsy();
-});
-
-it('should stop resizing when mouse leaves the screen', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 100 } as DOMRect);
-  const columns: Column<TestDataType>[] = [
-    {
-      id: 'name',
-      Header: 'Name',
-      accessor: 'name',
-    },
-    {
-      id: 'description',
-      Header: 'description',
-      accessor: 'description',
-    },
-    {
-      id: 'view',
-      Header: 'view',
-      Cell: () => <>View</>,
-    },
-  ];
-  let resizeEndCount = 0;
-  const { container } = renderComponent({
-    columns,
-    isResizable: true,
-    stateReducer: (newState, action) => {
-      if (action.type === actions.columnDoneResizing) {
-        resizeEndCount++;
-      }
-      return newState;
-    },
-  });
-
-  const rows = container.querySelectorAll('.iui-table-body .iui-table-row');
-  expect(rows.length).toBe(3);
-
-  const resizer = container.querySelector(
-    '.iui-table-resizer',
-  ) as HTMLDivElement;
-  expect(resizer).toBeTruthy();
-
-  fireEvent.mouseDown(resizer, { clientX: 100 });
-  fireEvent.mouseMove(resizer, { clientX: 150 });
-  fireEvent.mouseLeave(resizer.ownerDocument);
-  fireEvent.mouseLeave(resizer.ownerDocument);
-  fireEvent.mouseMove(resizer, { clientX: 50 });
-  fireEvent.mouseLeave(resizer.ownerDocument);
-
-  const headerCells = container.querySelectorAll<HTMLDivElement>(
-    '.iui-table-header .iui-table-cell',
-  );
-  expect(headerCells).toHaveLength(3);
-
-  expect(headerCells[0].style.width).toBe('150px');
-  expect(headerCells[1].style.width).toBe('50px');
-  expect(headerCells[2].style.width).toBe('100px');
-
-  expect(resizeEndCount).toBe(1);
-});
-
 it('should render zebra striped table', () => {
   const { container } = renderComponent({ styleType: 'zebra-rows' });
 
   expect(
     container.querySelector('.iui-table-body.iui-zebra-striping'),
   ).toBeTruthy();
-});
-
-it('should sync body horizontal scroll with header scroll', () => {
-  const { container } = renderComponent();
-
-  const header = container.querySelector(
-    '.iui-table-header-wrapper',
-  ) as HTMLDivElement;
-  const body = container.querySelector('.iui-table-body') as HTMLDivElement;
-
-  expect(header.scrollLeft).toBe(0);
-  expect(body.scrollLeft).toBe(0);
-
-  // When body scrolls, header should scroll
-  fireEvent.scroll(body, {
-    target: { scrollLeft: 100 },
-  });
-  expect(header.scrollLeft).toBe(100);
-  expect(body.scrollLeft).toBe(100);
-
-  // When header scrolls, body should scroll
-  fireEvent.scroll(header, {
-    target: { scrollLeft: 0 },
-  });
-  expect(header.scrollLeft).toBe(0);
-  expect(body.scrollLeft).toBe(0);
 });
 
 it.each([
@@ -3375,18 +2797,17 @@ it.each([
 ])(
   'should handle column reorder by $testCase',
   ({ srcIndex, dstIndex, resultingColumns }) => {
-    const onSort = jest.fn();
-    jest.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockReturnValue(0);
-    jest
-      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
-      .mockReturnValue(100);
+    const onSort = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockReturnValue(0);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
 
     const mockColumns = columns();
+    const data = mockedData();
 
     const { container, rerender } = render(
       <Table
         columns={mockColumns}
-        data={mockedData()}
+        data={data}
         emptyTableContent='Empty table'
         emptyFilteredTableContent='No results. Clear filter.'
         enableColumnReordering
@@ -3436,7 +2857,7 @@ it.each([
       <Table
         // Passing any new columns array contents (e.g. reverse of columns) should reset columnOrder
         columns={mockColumnsReverse}
-        data={mockedData()}
+        data={data}
         emptyTableContent='Empty table'
         emptyFilteredTableContent='No results. Clear filter.'
         enableColumnReordering
@@ -3454,6 +2875,29 @@ it.each([
       );
   },
 );
+
+it('should respect initialState.columnOrder', () => {
+  const mockColumns = columns();
+  const columnOrder = ['description', 'view', 'name'];
+
+  const { container } = render(
+    <Table
+      columns={mockColumns}
+      data={mockedData()}
+      emptyTableContent='Empty table'
+      initialState={{ columnOrder }}
+    />,
+  );
+
+  // DOM order should match columnOrder
+  container
+    .querySelectorAll<HTMLDivElement>('[role=columnheader]')
+    .forEach((cell, index) =>
+      expect(cell.textContent).toBe(
+        mockColumns.find((c) => c.id === columnOrder[index])?.Header,
+      ),
+    );
+});
 
 it('should not have `draggable` attribute on columns with `disableReordering` enabled', () => {
   const columns: Column<TestDataType>[] = [
@@ -3563,9 +3007,9 @@ it('should render empty action column with column manager', async () => {
   expect(columnManager).toHaveAttribute('data-iui-variant', 'borderless');
   await userEvent.click(columnManager);
 
-  expect(document.querySelector('.iui-menu')).toBeTruthy();
+  expect(document.querySelector('[role="dialog"]')).toBeTruthy();
 
-  const columnManagerColumns = document.querySelectorAll('.iui-menu-item');
+  const columnManagerColumns = document.querySelectorAll('label');
   expect(columnManagerColumns[0].textContent).toBe('Name');
   expect(columnManagerColumns[1].textContent).toBe('Description');
   expect(columnManagerColumns[2].textContent).toBe('View');
@@ -3585,7 +3029,6 @@ it('should render action column with column manager', async () => {
     },
     {
       ...ActionColumn({ columnManager: true }),
-      id: 'view',
       Cell: () => <>View</>,
     },
   ];
@@ -3615,12 +3058,11 @@ it('should render action column with column manager', async () => {
 
   await userEvent.click(columnManager);
 
-  const dropdownMenu = document.querySelector('.iui-menu') as HTMLDivElement;
-  expect(dropdownMenu).toBeTruthy();
-  expect(dropdownMenu.classList.contains('iui-scroll')).toBeTruthy();
+  const popover = document.querySelector('[role="dialog"]') as HTMLDivElement;
+  expect(popover).toBeTruthy();
 });
 
-it('should render dropdown menu with custom style and override default style', async () => {
+it('should render popover with custom style and override default style', async () => {
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -3640,6 +3082,7 @@ it('should render dropdown menu with custom style and override default style', a
     ActionColumn({
       columnManager: {
         dropdownMenuProps: {
+          id: 'popover',
           className: 'testing-classname',
           style: {
             maxHeight: '600px',
@@ -3665,13 +3108,12 @@ it('should render dropdown menu with custom style and override default style', a
 
   await userEvent.click(columnManager);
 
-  const dropdownMenu = document.querySelector('.iui-menu') as HTMLDivElement;
-  expect(dropdownMenu).toBeTruthy();
-  expect(dropdownMenu.classList.contains('iui-scroll')).toBeTruthy();
-  expect(dropdownMenu.classList.contains('testing-classname')).toBeTruthy();
-  expect(dropdownMenu).toHaveStyle('max-height: 600px');
-  expect(dropdownMenu).toHaveStyle('background-color: red');
-  expect(dropdownMenu).toHaveAttribute('role', 'listbox');
+  const popover = document.querySelector('#popover') as HTMLDivElement;
+  expect(popover).toBeTruthy();
+  expect(popover.classList.contains('testing-classname')).toBeTruthy();
+  expect(popover).toHaveStyle('max-height: 600px');
+  expect(popover.style.backgroundColor).toEqual('red');
+  expect(popover).toHaveAttribute('role', 'listbox');
 });
 
 it('should hide column when deselected in column manager', async () => {
@@ -3708,8 +3150,7 @@ it('should hide column when deselected in column manager', async () => {
 
   const columnManager = container.querySelector('.iui-button') as HTMLElement;
   await userEvent.click(columnManager);
-  const columnManagerColumns =
-    document.querySelectorAll<HTMLLIElement>('.iui-menu-item');
+  const columnManagerColumns = document.querySelectorAll<HTMLElement>('input');
   await userEvent.click(columnManagerColumns[1]);
 
   headerCells = container.querySelectorAll<HTMLDivElement>(
@@ -3748,18 +3189,13 @@ it('should be disabled in column manager if `disableToggleVisibility` is true', 
   const columnManager = container.querySelector('.iui-button') as HTMLElement;
 
   await userEvent.click(columnManager);
-  const columnManagerColumns =
-    document.querySelectorAll<HTMLLIElement>('.iui-menu-item');
-  expect(columnManagerColumns[0]).toHaveAttribute('aria-disabled', 'true');
-
-  expect(
-    (columnManagerColumns[0].querySelector('.iui-checkbox') as HTMLInputElement)
-      .disabled,
-  ).toBeTruthy();
+  const columnManagerColumns = document.querySelectorAll<HTMLElement>('label');
+  expect(columnManagerColumns[0]).toHaveAttribute('data-iui-disabled', 'true');
+  expect(columnManagerColumns[0].querySelector('input')?.disabled).toBeTruthy();
 });
 
 it('should add selection column manually', () => {
-  const onSelect = jest.fn();
+  const onSelect = vi.fn();
   const isDisabled = (rowData: TestDataType) => rowData.name === 'Name2';
   const columns: Column<TestDataType>[] = [
     SelectionColumn({ isDisabled }),
@@ -3798,7 +3234,7 @@ it('should add selection column manually', () => {
 });
 
 it('should add expander column manually', () => {
-  const onExpand = jest.fn();
+  const onExpand = vi.fn();
   const subComponent = (row: Row<TestDataType>) => (
     <div>{`Expanded component, name: ${row.original.name}`}</div>
   );
@@ -3829,9 +3265,10 @@ it('should add expander column manually', () => {
     '.iui-table-row-expander',
   );
   expect(expanders.length).toBe(3);
-  expect(expanders[0].disabled).toBe(false);
-  expect(expanders[1].disabled).toBe(true);
-  expect(expanders[2].disabled).toBe(false);
+  expect(expanders[0]).not.toHaveAttribute('aria-disabled');
+  expect(expanders[1]).toHaveAttribute('aria-disabled', 'true');
+  expect(expanders[2]).not.toHaveAttribute('aria-disabled');
+
   fireEvent.click(expanders[2]);
   expect(onExpand).toHaveBeenCalledWith(
     [{ name: 'Name3', description: 'Description3' }],
@@ -3903,7 +3340,7 @@ it('should show column enabled when whole row is disabled', () => {
 });
 
 it('should render selectable rows without select column', async () => {
-  const onRowClick = jest.fn();
+  const onRowClick = vi.fn();
   const { container, getByText } = renderComponent({
     isSelectable: true,
     selectionMode: 'single',
@@ -3933,35 +3370,9 @@ it('should render selectable rows without select column', async () => {
   expect(onRowClick).toHaveBeenCalledTimes(3);
 });
 
-it('should scroll to selected item in non-virtualized table', async () => {
-  let scrolledElement: HTMLElement | null = null;
-  jest
-    .spyOn(HTMLElement.prototype, 'scrollIntoView')
-    .mockImplementation(function (this: HTMLElement) {
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
-      scrolledElement = this;
-    });
-
-  const data = mockedData(50);
-  renderComponent({
-    data,
-    scrollToRow: (rows) => rows.findIndex((row) => row.original === data[25]),
-  });
-
-  expect(scrolledElement).toBeTruthy();
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  expect(scrolledElement!.querySelector('.iui-table-cell')?.textContent).toBe(
-    data[25].name,
-  );
-});
-
 it('should render sticky columns correctly', () => {
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4007,8 +3418,8 @@ it('should render sticky columns correctly', () => {
   });
 
   // Scroll a bit to the right
-  const body = container.querySelector('.iui-table-body') as HTMLDivElement;
-  fireEvent.scroll(body, {
+  const table = container.querySelector('.iui-table') as HTMLDivElement;
+  fireEvent.scroll(table, {
     target: { scrollLeft: 100 },
   });
 
@@ -4025,7 +3436,7 @@ it('should render sticky columns correctly', () => {
   });
 
   // Scroll to the very right
-  fireEvent.scroll(body, {
+  fireEvent.scroll(table, {
     target: { scrollLeft: 400 },
   });
 
@@ -4043,15 +3454,11 @@ it('should render sticky columns correctly', () => {
 });
 
 it('should have correct sticky left style property', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 400 } as DOMRect);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 400,
+  } as DOMRect);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4096,15 +3503,11 @@ it('should have correct sticky left style property', () => {
 });
 
 it('should have correct sticky left style property when prior column does not have sticky prop', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 400 } as DOMRect);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 400,
+  } as DOMRect);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4148,15 +3551,11 @@ it('should have correct sticky left style property when prior column does not ha
 });
 
 it('should have correct sticky right style property', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 400 } as DOMRect);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 400,
+  } as DOMRect);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4201,15 +3600,11 @@ it('should have correct sticky right style property', () => {
 });
 
 it('should have correct sticky right style property when column after does not have sticky prop', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 400 } as DOMRect);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 400,
+  } as DOMRect);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4253,15 +3648,11 @@ it('should have correct sticky right style property when column after does not h
 });
 
 it('should have correct sticky left style property after resizing', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 400 } as DOMRect);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 400,
+  } as DOMRect);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4324,15 +3715,11 @@ it('should have correct sticky left style property after resizing', () => {
 });
 
 it('should make column sticky and then non-sticky after dragging sticky column ahead of it and back', () => {
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ width: 400 } as DOMRect);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get')
-    .mockReturnValue(900);
-  jest
-    .spyOn(HTMLDivElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 400,
+  } as DOMRect);
+  vi.spyOn(HTMLDivElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   const columns: Column<TestDataType>[] = [
     {
       id: 'name',
@@ -4537,20 +3924,8 @@ it('should render row with loading status', () => {
   expect(rows[1]).not.toHaveClass(`iui-loading`);
 });
 
-it('should navigate through table sorting with the keyboard', async () => {
-  const onSort = jest.fn();
-  renderComponent({
-    isSortable: true,
-    onSort,
-  });
-
-  await userEvent.tab(); // tab to sort icon button
-  await userEvent.keyboard('{Enter}');
-  expect(onSort).toHaveBeenCalledTimes(1);
-});
-
 it('should navigate through table filtering with the keyboard', async () => {
-  const onFilter = jest.fn();
+  const onFilter = vi.fn();
   const mockedColumns = [
     {
       id: 'name',
@@ -4579,4 +3954,139 @@ it('should navigate through table filtering with the keyboard', async () => {
       }),
     ]),
   );
+});
+
+it('should ignore top-level Header if one is passed', async () => {
+  const data = mockedData();
+  const { container } = render(
+    <Table
+      data={data}
+      emptyTableContent='nothing to see here'
+      columns={[
+        {
+          Header: 'Header name',
+          // We expect to get `columns` does not exist type error.
+          // Because although `columns` is removed from the Column type (i.e. no sub-columns),
+          // we allow to pass `columns` in the top level Header for backward compatibility.
+          // (#1072: https://github.com/iTwin/iTwinUI/pull/1072)
+          // @ts-expect-error - `columns` does not exist in type ...
+          columns: [
+            {
+              id: 'name',
+              Header: 'Name',
+              accessor: 'name',
+            },
+            {
+              id: 'description',
+              Header: 'Description',
+              accessor: 'description',
+            },
+          ],
+        },
+      ]}
+    />,
+  );
+
+  expect(screen.queryByText('Header name')).toBeFalsy();
+
+  const headerRows = container.querySelectorAll(
+    '.iui-table-header .iui-table-row',
+  );
+  expect(headerRows).toHaveLength(1);
+  const headerCells = headerRows[0]?.querySelectorAll('.iui-table-cell');
+  expect(headerCells).toHaveLength(2);
+  expect(headerCells[0].textContent).toEqual('Name');
+  expect(headerCells[1].textContent).toEqual('Description');
+
+  const bodyRows = container.querySelectorAll('.iui-table-body .iui-table-row');
+  expect(bodyRows).toHaveLength(data.length);
+  bodyRows.forEach((row, i) => {
+    const { name, description } = data[i];
+    const cells = row.querySelectorAll('.iui-table-cell');
+    expect(cells).toHaveLength(2);
+    expect(cells[0].textContent).toEqual(name);
+    expect(cells[1].textContent).toEqual(description);
+  });
+});
+
+it('should pass custom props to different parts of Table', () => {
+  const { container } = renderComponent({
+    data: [],
+    headerWrapperProps: {
+      className: 'custom-header-wrapper-class',
+      style: { fontSize: 12 },
+    },
+    headerProps: { className: 'custom-header-class', style: { fontSize: 14 } },
+    bodyProps: { className: 'custom-body-class', style: { width: 80 } },
+    emptyTableContentProps: {
+      className: 'custom-empty-table-content-class',
+      style: { fontSize: 12 },
+    },
+  });
+
+  // Test for Table header wrapper
+  const headerWrapperElement = container.querySelector(
+    '.iui-table-header-wrapper.custom-header-wrapper-class',
+  ) as HTMLElement;
+  expect(headerWrapperElement).toBeTruthy();
+  expect(headerWrapperElement.style.fontSize).toBe('12px');
+
+  // Test for Table header
+  const headerElement = container.querySelector(
+    '.iui-table-header.custom-header-class',
+  ) as HTMLElement;
+  expect(headerElement).toBeTruthy();
+  expect(headerElement.style.fontSize).toBe('14px');
+
+  // Test for Table body
+  const bodyElement = container.querySelector(
+    '.iui-table-body.custom-body-class',
+  ) as HTMLElement;
+  expect(bodyElement).toBeTruthy();
+
+  // Test for Empty Table Content
+  const emptyTableContent = container.querySelector(
+    '.iui-table-empty.custom-empty-table-content-class',
+  ) as HTMLElement;
+  expect(emptyTableContent).toBeTruthy();
+  expect(emptyTableContent.style.fontSize).toBe('12px');
+});
+
+it('should apply clamp, if cell is string value and no custom Cell is rendered', () => {
+  const data = [{ name: 'name' }];
+  const columns: Column<TestDataType>[] = [
+    {
+      Header: 'Name',
+      accessor: 'name',
+      cellClassName: 'test-cell',
+    },
+  ];
+  const { container } = renderComponent({
+    columns,
+    data,
+  });
+  const host = container.querySelector('.test-cell');
+  expect(host?.shadowRoot).toBeTruthy();
+  const lineClamp = host?.shadowRoot?.querySelector('div');
+  expect(lineClamp).toBeTruthy();
+});
+
+it('should not apply clamp, if custom Cell is used', () => {
+  const data = [{ name: 'name' }];
+  const columns: Column<TestDataType>[] = [
+    {
+      Header: 'Name',
+      accessor: 'name',
+      cellClassName: 'test-cell',
+      Cell: () => 'my custom content',
+    },
+  ];
+  const { container } = renderComponent({
+    columns,
+    data,
+  });
+  const host = container.querySelector('.test-cell');
+  expect(host?.shadowRoot).toBeTruthy();
+  const lineClamp = host?.shadowRoot?.querySelector('div');
+  expect(lineClamp).toBeNull();
 });

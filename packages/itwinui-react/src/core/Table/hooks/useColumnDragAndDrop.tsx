@@ -2,19 +2,21 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import {
-  actions,
+import type * as React from 'react';
+import { actions, makePropGetter, useGetLatest } from 'react-table';
+import type {
   ActionType,
   HeaderGroup,
   Hooks,
   IdType,
-  makePropGetter,
   TableInstance,
   TableKeyedProps,
   TableState,
-  useGetLatest,
-} from 'react-table';
+} from '../../../react-table/react-table.js';
+import { styles } from '../../../styles.js';
+
+const leftClassName = styles['iui-table-reorder-column-left'];
+const rightClassName = styles['iui-table-reorder-column-right'];
 
 const REORDER_ACTIONS = {
   columnDragStart: 'columnDragStart',
@@ -57,12 +59,15 @@ const defaultGetDragAndDropProps =
       position?: 'left' | 'right',
     ) => {
       const columnElement = event.currentTarget as HTMLElement;
-      columnElement.classList.remove('iui-table-reorder-column-right');
-      columnElement.classList.remove('iui-table-reorder-column-left');
       if (position === 'left') {
-        columnElement.classList.add('iui-table-reorder-column-left');
+        columnElement.classList.remove(rightClassName);
+        columnElement.classList.add(leftClassName);
       } else if (position === 'right') {
-        columnElement.classList.add('iui-table-reorder-column-right');
+        columnElement.classList.remove(leftClassName);
+        columnElement.classList.add(rightClassName);
+      } else {
+        columnElement.classList.remove(leftClassName);
+        columnElement.classList.remove(rightClassName);
       }
     };
 
@@ -98,7 +103,7 @@ const defaultGetDragAndDropProps =
       event.preventDefault();
       setOnDragColumnStyle(event);
 
-      const columnIds = instance.flatHeaders.map((x) => x.id);
+      const columnIds = instance.allColumns.map((x) => x.id);
       const srcIndex = instance.state.columnReorderStartIndex;
       const dstIndex = columnIds.findIndex((x) => x === header.id);
 

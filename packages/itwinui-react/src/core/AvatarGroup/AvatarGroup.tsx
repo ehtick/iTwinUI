@@ -2,12 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useTheme, CommonProps } from '../utils';
-import '@itwin/itwinui-css/css/avatar.css';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type AvatarGroupProps = {
+type AvatarGroupProps = {
   /**
    * Max number of avatars unstacked.
    * @default 5
@@ -36,12 +36,7 @@ export type AvatarGroupProps = {
    * Count Avatar props.
    */
   countIconProps?: React.ComponentPropsWithRef<'div'>;
-} & Omit<CommonProps, 'title'>;
-
-/**
- * @deprecated Since v2, this has been renamed to `AvatarGroupProps` (Use with `AvatarGroup`)
- */
-export type UserIconGroupProps = AvatarGroupProps;
+};
 
 /**
  * Group Avatars together.
@@ -70,7 +65,7 @@ export type UserIconGroupProps = AvatarGroupProps;
  *  />
  * </AvatarGroup>
  */
-export const AvatarGroup = (props: AvatarGroupProps) => {
+export const AvatarGroup = React.forwardRef((props, ref) => {
   const maxLength = 99;
   const {
     children,
@@ -86,11 +81,9 @@ export const AvatarGroup = (props: AvatarGroupProps) => {
   const childrenArray = React.Children.toArray(children);
   const childrenLength = childrenArray.length;
 
-  useTheme();
-
   const getAvatarList = (count: number) => {
     return childrenArray.slice(0, count).map((child) =>
-      React.cloneElement(child as JSX.Element, {
+      React.cloneElement(child as React.JSX.Element, {
         status: undefined,
         size: iconSize,
       }),
@@ -98,50 +91,40 @@ export const AvatarGroup = (props: AvatarGroupProps) => {
   };
 
   return (
-    <>
-      <div
-        className={cx(
-          'iui-avatar-list',
-          {
-            'iui-animated': animated,
-            'iui-stacked': stacked,
-          },
-          className,
-        )}
-        {...rest}
-      >
-        {childrenArray.length <= maxIcons + 1 && getAvatarList(maxIcons + 1)}
-        {childrenArray.length > maxIcons + 1 && (
-          <>
-            {getAvatarList(maxIcons)}
-            ​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
-            <div
-              {...countIconProps}
-              className={cx(
-                'iui-avatar',
-                { [`iui-${iconSize}`]: iconSize !== 'medium' },
-                'iui-avatar-count',
-                countIconProps?.className,
-              )}
-            >
-              <abbr className='iui-initials'>
-                {childrenLength <= maxLength
-                  ? `${childrenLength - maxIcons}`
-                  : `${maxLength}+`}
-              </abbr>
-              <span className='iui-stroke' />
-            </div>
-            ​
-          </>
-        )}
-      </div>
-    </>
+    <Box
+      className={cx(
+        'iui-avatar-list',
+        {
+          'iui-animated': animated,
+          'iui-stacked': stacked,
+        },
+        className,
+      )}
+      ref={ref}
+      {...rest}
+    >
+      {childrenArray.length <= maxIcons + 1 && getAvatarList(maxIcons + 1)}
+      {childrenArray.length > maxIcons + 1 && (
+        <>
+          {getAvatarList(maxIcons)}
+          <Box
+            {...countIconProps}
+            className={cx(
+              'iui-avatar',
+              'iui-avatar-count',
+              countIconProps?.className,
+            )}
+            data-iui-size={iconSize !== 'medium' ? iconSize : undefined}
+          >
+            {childrenLength <= maxLength
+              ? `${childrenLength - maxIcons}`
+              : `${maxLength}+`}
+          </Box>
+        </>
+      )}
+    </Box>
   );
-};
-
-/**
- * @deprecated Since v2, this has been renamed to `AvatarGroup`
- */
-export const UserIconGroup = AvatarGroup;
-
-export default AvatarGroup;
+}) as PolymorphicForwardRefComponent<'div', AvatarGroupProps>;
+if (process.env.NODE_ENV === 'development') {
+  AvatarGroup.displayName = 'AvatarGroup';
+}

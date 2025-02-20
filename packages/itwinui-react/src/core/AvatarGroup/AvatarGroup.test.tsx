@@ -2,10 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { Avatar, AvatarGroup } from '../../core';
+import { Avatar } from '../Avatar/Avatar.js';
+import { AvatarGroup } from './AvatarGroup.js';
 
 function generateAvatars(length: number) {
   const userNames = [
@@ -50,8 +50,9 @@ it('should render in its most basic state', () => {
   expect(avatarGroup.classList).not.toContain(`iui-animated`);
 
   expect(
-    container.querySelectorAll(`.iui-avatar-list > .iui-avatar.iui-small`)
-      .length,
+    container.querySelectorAll(
+      `.iui-avatar-list > .iui-avatar[data-iui-size="small"]`,
+    ).length,
   ).toBe(6);
 
   const avatarGroupCount = container.querySelectorAll(
@@ -62,9 +63,6 @@ it('should render in its most basic state', () => {
     '.iui-avatar-count',
   ) as HTMLElement;
   expect(countAvatar.textContent).toBe('2');
-
-  expect(avatarGroup.querySelectorAll('.iui-stroke').length).toBe(6);
-  expect(avatarGroup.querySelectorAll('.iui-initials').length).toBe(6);
 });
 
 it('should render animated', () => {
@@ -92,9 +90,6 @@ it('should render without count avatar', () => {
   expect(avatarGroupCount.length).toBe(6);
 
   expect(container.querySelector('.iui-avatar-count')).toBeFalsy();
-
-  expect(avatarGroup.querySelectorAll('.iui-stroke').length).toBe(6);
-  expect(avatarGroup.querySelectorAll('.iui-initials').length).toBe(6);
 });
 
 it('should render different length', () => {
@@ -117,9 +112,6 @@ it('should render different length', () => {
     '.iui-avatar-count',
   ) as HTMLElement;
   expect(countAvatar.textContent).toBe('4');
-
-  expect(avatarGroup.querySelectorAll('.iui-stroke').length).toBe(4);
-  expect(avatarGroup.querySelectorAll('.iui-initials').length).toBe(4);
 });
 
 it('should render animated', () => {
@@ -166,9 +158,9 @@ it.each(['small', 'medium', 'large', 'x-large'] as Array<
 
   expect(
     container.querySelectorAll(
-      `.iui-avatar-list > .iui-avatar${
-        size !== 'medium' ? `.iui-${size}` : ''
-      }`,
+      size !== 'medium'
+        ? `.iui-avatar-list > .iui-avatar[data-iui-size="${size}"]`
+        : '.iui-avatar-list > .iui-avatar',
     ).length,
   ).toBe(6);
 });

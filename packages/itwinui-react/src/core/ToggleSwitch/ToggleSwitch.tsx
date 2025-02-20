@@ -2,31 +2,44 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useMergedRefs, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/toggle-switch.css';
+import { Box, SvgCheckmark } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type ToggleSwitchProps = {
+type ToggleSwitchProps = {
   /**
    * Label for the toggle switch.
    */
   label?: React.ReactNode;
   /**
+   * Passes properties for ToggleSwitch label.
+   */
+  labelProps?: React.ComponentProps<'span'>;
+  /**
    * Position of the label.
    * @default 'right'
    */
   labelPosition?: 'left' | 'right';
-  /**
-   * Set focus on toggle.
-   * @default false
-   */
-  setFocus?: boolean;
-  /**
-   * Icon inside the toggle switch. Shown only when toggle is checked.
-   */
-  icon?: JSX.Element;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>;
+} & (
+  | {
+      /**
+       * Size of the toggle switch.
+       *  @default 'default'
+       */
+      size?: 'default';
+      /**
+       * Custom icon inside the toggle switch. Shown only when toggle is checked and size is not small.
+       *
+       * Will override the default checkmark icon.
+       */
+      icon?: React.JSX.Element | null;
+    }
+  | {
+      size: 'small';
+      icon?: never;
+    }
+);
 
 /**
  * A switch for turning on and off.
@@ -46,61 +59,64 @@ export type ToggleSwitchProps = {
  * <caption>Toggle with icon</caption>
  * <ToggleSwitch label='With icon toggle' icon={<svg viewBox='0 0 16 16'><path d='M1 1v14h14V1H1zm13 1.7v10.6L8.7 8 14 2.7zM8 7.3L2.7 2h10.6L8 7.3zm-.7.7L2 13.3V2.7L7.3 8zm.7.7l5.3 5.3H2.7L8 8.7z' /></svg>} />
  */
-export const ToggleSwitch = React.forwardRef(
-  (props: ToggleSwitchProps, ref: React.RefObject<HTMLInputElement>) => {
-    const {
-      disabled = false,
-      labelPosition = 'right',
-      icon,
-      label,
-      setFocus = false,
-      className,
-      style,
-      ...rest
-    } = props;
+export const ToggleSwitch = React.forwardRef((props, ref) => {
+  const {
+    disabled = false,
+    labelPosition = 'right',
+    label,
+    className,
+    style,
+    size = 'default',
+    labelProps = {},
+    icon: iconProp,
+    ...rest
+  } = props;
 
-    useTheme();
+  // Disallow custom icon for small size, but keep the default checkmark when prop is not passed.
+  const shouldShowIcon =
+    iconProp === undefined || (iconProp !== null && size !== 'small');
 
-    const inputElementRef = React.useRef<HTMLInputElement>(null);
-    const refs = useMergedRefs<HTMLInputElement>(inputElementRef, ref);
-    const WrapperComponent = label ? 'label' : 'div';
-
-    React.useEffect(() => {
-      if (inputElementRef.current && setFocus) {
-        inputElementRef.current.focus();
-      }
-    }, [setFocus]);
-
-    return (
-      <WrapperComponent
-        className={cx(
-          'iui-toggle-switch-wrapper',
-          {
-            'iui-disabled': disabled,
-            'iui-label-on-right': label && labelPosition === 'right',
-            'iui-label-on-left': label && labelPosition === 'left',
-          },
-          className,
-        )}
-        style={style}
-      >
-        <input
-          className='iui-toggle-switch'
-          type='checkbox'
-          role='switch'
-          disabled={disabled}
-          ref={refs}
-          {...rest}
-        />
-        {icon &&
-          React.cloneElement(icon, {
-            className: cx('iui-toggle-switch-icon', icon.props.className),
-            'aria-hidden': true,
-          })}
-        {label && <span className='iui-toggle-switch-label'>{label}</span>}
-      </WrapperComponent>
-    );
-  },
-);
-
-export default ToggleSwitch;
+  return (
+    <Box
+      as={label ? 'label' : 'div'}
+      className={cx(
+        'iui-toggle-switch-wrapper',
+        {
+          'iui-disabled': disabled,
+          'iui-label-on-right': label && labelPosition === 'right',
+          'iui-label-on-left': label && labelPosition === 'left',
+        },
+        className,
+      )}
+      data-iui-size={size}
+      style={style}
+    >
+      <Box
+        as='input'
+        className='iui-toggle-switch'
+        type='checkbox'
+        role='switch'
+        disabled={disabled}
+        ref={ref}
+        {...rest}
+      />
+      {shouldShowIcon && (
+        <Box as='span' className='iui-toggle-switch-icon' aria-hidden>
+          {iconProp || <SvgCheckmark />}
+        </Box>
+      )}
+      {label && (
+        <Box
+          as='span'
+          {...labelProps}
+          className={cx('iui-toggle-switch-label', labelProps?.className)}
+        >
+          {label}
+        </Box>
+      )}
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'input', ToggleSwitchProps>;
+if (process.env.NODE_ENV === 'development') {
+  ToggleSwitch.displayName = 'ToggleSwitch';
+}

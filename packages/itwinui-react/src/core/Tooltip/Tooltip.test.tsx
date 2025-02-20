@@ -2,55 +2,87 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import { act, fireEvent, render } from '@testing-library/react';
-import React from 'react';
+import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import * as React from 'react';
+import { Tooltip } from './Tooltip.js';
 
-import { Tooltip } from './Tooltip';
+it('should toggle the visibility of tooltip on hover', async () => {
+  const onVisibleChange = vi.fn();
 
-it('should toggle the visibility of tooltip on hover', () => {
-  jest.useFakeTimers();
-  const { getByText, queryByText } = render(
-    <Tooltip content='some text'>
+  const { getByText } = render(
+    <Tooltip content='some text' onVisibleChange={onVisibleChange}>
       <div>Hover Here</div>
     </Tooltip>,
   );
 
-  expect(queryByText('some text')).toBeNull();
+  const trigger = getByText('Hover Here');
+  expect(trigger).toHaveAccessibleDescription('some text');
 
-  fireEvent.mouseEnter(getByText('Hover Here'));
-  getByText('some text');
+  const tooltip = getByText('some text');
+  expect(tooltip).not.toBeVisible();
+  expect(tooltip).toHaveAttribute('popover', 'manual');
 
-  fireEvent.mouseLeave(getByText('Hover Here'));
-  act(() => void jest.runAllTimers());
-  expect(queryByText('some text')).not.toBeInTheDocument();
+  fireEvent.mouseEnter(trigger);
+  await waitFor(() => expect(tooltip).toBeVisible());
+  expect(onVisibleChange).toBeCalledWith(true);
 
-  jest.useRealTimers();
+  fireEvent.mouseLeave(trigger);
+  await waitFor(() => expect(tooltip).not.toBeVisible());
+  expect(onVisibleChange).toBeCalledWith(false);
 });
 
-it('should be visible', () => {
+it('should toggle the visibility of tooltip on focus', async () => {
+  vi.useFakeTimers();
+  const onVisibleChange = vi.fn();
+
   const { getByText } = render(
+    <Tooltip content='some text' onVisibleChange={onVisibleChange}>
+      <button>focus here</button>
+    </Tooltip>,
+  );
+
+  const trigger = getByText('focus here');
+  expect(trigger).toHaveAccessibleDescription('some text');
+
+  const tooltip = getByText('some text');
+  expect(tooltip).not.toBeVisible();
+  expect(tooltip).toHaveAttribute('popover', 'manual');
+
+  fireEvent.focus(trigger);
+  act(() => void vi.advanceTimersByTime(50));
+  expect(tooltip).toBeVisible();
+  expect(onVisibleChange).toBeCalledWith(true);
+
+  fireEvent.blur(trigger);
+  act(() => void vi.advanceTimersByTime(250));
+  expect(tooltip).not.toBeVisible();
+  expect(onVisibleChange).toBeCalledWith(false);
+
+  vi.useRealTimers();
+});
+
+it('should respect visible prop', () => {
+  const { queryByText, rerender } = render(
+    <Tooltip content='some text' visible={false}>
+      <div>Not visible!</div>
+    </Tooltip>,
+  );
+
+  expect(queryByText('some text')).not.toBeVisible();
+
+  rerender(
     <Tooltip content='some text' visible>
       <div>Visible!</div>
     </Tooltip>,
   );
 
-  getByText('some text');
-});
-
-it('should not be visible', () => {
-  const { queryByText } = render(
-    <Tooltip content='some text' visible={false}>
-      <div>Visible!</div>
-    </Tooltip>,
-  );
-
-  expect(queryByText('some text')).toBeNull();
+  expect(queryByText('some text')).toBeVisible();
 });
 
 it('should allow button clicks and hovers', () => {
-  const clickHandler = jest.fn();
-  const mouseEnterHandler = jest.fn();
-  const mouseLeaveHandler = jest.fn();
+  const clickHandler = vi.fn();
+  const mouseEnterHandler = vi.fn();
+  const mouseLeaveHandler = vi.fn();
 
   const { getByText } = render(
     <Tooltip content='Tooltip!'>
@@ -78,13 +110,57 @@ it('should allow button clicks and hovers', () => {
   expect(mouseLeaveHandler).toBeCalledTimes(1);
 });
 
-it('should override title attribute', () => {
-  const { getByText } = render(
-    <Tooltip content='some text' visible>
-      <div title='should override'>child</div>
-    </Tooltip>,
-  );
+it.each(['description', 'label', 'none'] as const)(
+  'should respect ariaStrategy=%s',
+  (strategy) => {
+    const { getByText } = render(
+      <Tooltip content='some text' ariaStrategy={strategy}>
+        <button>hi</button>
+      </Tooltip>,
+    );
 
-  getByText('some text');
-  expect(getByText('child').getAttribute('title')).toBeNull();
+    const trigger = getByText('hi');
+
+    if (strategy === 'description') {
+      expect(trigger).toHaveAccessibleName('hi');
+      expect(trigger).toHaveAccessibleDescription('some text');
+    } else if (strategy === 'label') {
+      expect(trigger).toHaveAccessibleName('some text');
+      expect(trigger).not.toHaveAccessibleDescription();
+    } else {
+      expect(trigger).toHaveAccessibleName('hi');
+      expect(trigger).not.toHaveAccessibleDescription();
+    }
+  },
+);
+
+it('should work with reference prop', async () => {
+  const TestComp = () => {
+    const [reference, setReference] = React.useState<HTMLElement | null>(null);
+    return (
+      <>
+        <button ref={setReference}>trigger</button>
+        <Tooltip content='some text' reference={reference} />
+      </>
+    );
+  };
+  const { getByText } = render(<TestComp />);
+
+  const trigger = getByText('trigger');
+  expect(trigger).toHaveAccessibleDescription('some text');
+
+  const tooltip = getByText('some text');
+  expect(tooltip).not.toBeVisible();
+
+  fireEvent.mouseEnter(trigger);
+  await waitFor(() => void expect(tooltip).toBeVisible());
+
+  fireEvent.mouseLeave(trigger);
+  await waitFor(() => void expect(tooltip).not.toBeVisible());
+
+  fireEvent.focus(trigger);
+  await waitFor(() => void expect(tooltip).toBeVisible());
+
+  fireEvent.blur(trigger);
+  await waitFor(() => void expect(tooltip).not.toBeVisible());
 });

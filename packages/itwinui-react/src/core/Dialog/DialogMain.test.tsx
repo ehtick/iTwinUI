@@ -2,26 +2,21 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { fireEvent, render } from '@testing-library/react';
-import { DialogMain } from './DialogMain';
-import DialogTitleBar from './DialogTitleBar';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { DialogMain } from './DialogMain.js';
+import { DialogTitleBar } from './DialogTitleBar.js';
 
-const DOMMatrixMock = jest.fn(() => ({ m41: 0, m42: 0 }));
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const DOMMatrixMock = vi.fn(() => ({ m41: 0, m42: 0 }));
 (window as any).DOMMatrix = DOMMatrixMock;
 
 afterAll(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).DOMMatrix = undefined;
 });
 
 it('should render in its most basic state', () => {
   const { container } = render(<DialogMain isOpen>test-content</DialogMain>);
 
-  const dialog = container.querySelector(
-    '.iui-dialog.iui-dialog-visible',
-  ) as HTMLElement;
+  const dialog = container.querySelector('.iui-dialog') as HTMLElement;
   expect(dialog).toBeTruthy();
   expect(dialog).toHaveTextContent('test-content');
   expect(dialog.getAttribute('role')).toEqual('dialog');
@@ -35,7 +30,7 @@ it('should render full page dialog', () => {
   );
 
   const dialog = container.querySelector(
-    '.iui-dialog.iui-dialog-full-page.iui-dialog-visible',
+    '.iui-dialog.iui-dialog-full-page',
   ) as HTMLElement;
   expect(dialog).toBeTruthy();
   expect(dialog).toHaveTextContent('test-content');
@@ -50,7 +45,7 @@ it('should render draggable dialog', () => {
   );
 
   const dialog = container.querySelector(
-    '.iui-dialog.iui-dialog-draggable.iui-dialog-visible',
+    '.iui-dialog.iui-dialog-draggable',
   ) as HTMLElement;
   expect(dialog).toBeTruthy();
   expect(dialog).toHaveTextContent('test-content');
@@ -64,21 +59,19 @@ it('should render with custom style and className', () => {
     </DialogMain>,
   );
 
-  const dialog = container.querySelector(
-    '.iui-dialog.iui-dialog-visible',
-  ) as HTMLElement;
+  const dialog = container.querySelector('.iui-dialog') as HTMLElement;
   expect(dialog).toBeTruthy();
   expect(dialog.classList.contains('test-class')).toBeTruthy();
-  expect(dialog).toHaveStyle('color: red');
+  expect(dialog.style.color).toEqual('red');
 });
 
-it('should close on Esc click and move focus back', () => {
+it('should close on Esc click and move focus back', async () => {
   const { container: buttonContainer } = render(<button>button</button>);
   const button = buttonContainer.querySelector('button') as HTMLElement;
   button.focus();
   expect(document.activeElement).toEqual(button);
 
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   const { container, rerender } = render(
     <DialogMain isOpen onClose={onClose} isDismissible closeOnEsc setFocus>
       Here is my dialog content
@@ -90,7 +83,9 @@ it('should close on Esc click and move focus back', () => {
   fireEvent.keyDown(dialog, { key: 'Escape' });
   expect(onClose).toHaveBeenCalled();
   // Focus dialog when opened
-  expect(document.activeElement).toEqual(dialog);
+  waitFor(() => {
+    expect(document.activeElement).toEqual(dialog);
+  });
 
   rerender(
     <DialogMain
@@ -125,7 +120,7 @@ it('should not focus dialog when setFocus is false', () => {
 });
 
 it('should not close on Esc click when closeOnEsc is false', () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   const { container } = render(
     <DialogMain isOpen onClose={onClose} closeOnEsc={false} isDismissible>
       Here is my dialog content
@@ -139,7 +134,7 @@ it('should not close on Esc click when closeOnEsc is false', () => {
 });
 
 it('should call onKeyDown when pressed any key inside dialog', () => {
-  const onKeyDown = jest.fn();
+  const onKeyDown = vi.fn();
   const { container } = render(
     <DialogMain isOpen onKeyDown={onKeyDown}>
       Here is my dialog content
@@ -232,7 +227,7 @@ it('should handle drag', () => {
   );
 
   const dialog = container.querySelector(
-    '.iui-dialog.iui-dialog-draggable.iui-dialog-visible',
+    '.iui-dialog.iui-dialog-draggable',
   ) as HTMLElement;
   expect(dialog).toBeTruthy();
 
@@ -256,10 +251,10 @@ it('should not handle drag when dialog is not draggable', () => {
     </DialogMain>,
   );
 
-  const dialog = container.querySelector(
-    '.iui-dialog.iui-dialog-visible',
-  ) as HTMLElement;
+  const dialog = container.querySelector('.iui-dialog') as HTMLElement;
   expect(dialog).toBeTruthy();
+
+  const originalTransform = dialog.style.transform;
 
   const titleBar = container.querySelector(
     '.iui-dialog-title-bar',
@@ -267,7 +262,22 @@ it('should not handle drag when dialog is not draggable', () => {
   expect(titleBar).toBeTruthy();
   fireEvent.pointerDown(titleBar, { clientX: 100, clientY: 100, button: 0 });
   fireEvent.pointerMove(titleBar, { clientX: 200, clientY: 200 });
-  expect(dialog.style.transform).toBe('');
+  expect(dialog.style.transform).toEqual(originalTransform);
   fireEvent.pointerUp(titleBar);
-  expect(dialog.style.transform).toBe('');
+  expect(dialog.style.transform).toEqual(originalTransform);
+});
+
+it('should not add explicit size to draggable dialog', () => {
+  render(
+    <DialogMain isOpen isDraggable>
+      <DialogTitleBar title='test title' />
+      test-content
+    </DialogMain>,
+  );
+
+  const dialog = screen.getByRole('dialog');
+  expect(dialog.style.width).toBe('');
+  expect(dialog.style.height).toBe('');
+  expect(dialog.style.inlineSize).toBe('');
+  expect(dialog.style.blockSize).toBe('');
 });

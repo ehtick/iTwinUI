@@ -2,13 +2,16 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { Backdrop, BackdropProps } from '../Backdrop';
-import { useMergedRefs } from '../utils';
-import { DialogContextProps, useDialogContext } from './DialogContext';
+import * as React from 'react';
+import { Backdrop } from '../Backdrop/Backdrop.js';
+import type { BackdropProps } from '../Backdrop/Backdrop.js';
+import { useMergedRefs } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { useDialogContext, type DialogContextProps } from './DialogContext.js';
+import { useDialogMainContext } from './DialogMainContext.js';
 import cx from 'classnames';
 
-export type DialogBackdropProps = BackdropProps &
+type DialogBackdropProps = BackdropProps &
   Pick<
     DialogContextProps,
     'onClose' | 'isDismissible' | 'closeOnExternalClick' | 'relativeTo'
@@ -20,11 +23,10 @@ export type DialogBackdropProps = BackdropProps &
  * @example
  * <Dialog.Backdrop />
  */
-export const DialogBackdrop = React.forwardRef<
-  HTMLDivElement,
-  DialogBackdropProps
->((props, ref) => {
+export const DialogBackdrop = React.forwardRef((props, ref) => {
   const dialogContext = useDialogContext();
+  const dialogMainContext = useDialogMainContext();
+
   const {
     isVisible = dialogContext.isOpen,
     isDismissible = dialogContext.isDismissible,
@@ -47,6 +49,7 @@ export const DialogBackdrop = React.forwardRef<
       return;
     }
     if (isDismissible && closeOnExternalClick && onClose) {
+      dialogMainContext?.beforeClose();
       onClose(event);
     }
     onMouseDown?.(event);
@@ -56,9 +59,7 @@ export const DialogBackdrop = React.forwardRef<
     <Backdrop
       isVisible={isVisible}
       className={cx(
-        {
-          'iui-backdrop-fixed': relativeTo === 'viewport',
-        },
+        { 'iui-backdrop-fixed': relativeTo === 'viewport' },
         className,
       )}
       ref={refs}
@@ -70,6 +71,7 @@ export const DialogBackdrop = React.forwardRef<
       {...rest}
     />
   );
-});
-
-export default DialogBackdrop;
+}) as PolymorphicForwardRefComponent<'div', DialogBackdropProps>;
+if (process.env.NODE_ENV === 'development') {
+  DialogBackdrop.displayName = 'Dialog.Backdrop';
+}

@@ -2,50 +2,26 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import cx from 'classnames';
-import React from 'react';
-
-import { useMergedRefs, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/input.css';
+import * as React from 'react';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { Input } from '../Input/Input.js';
 
 export type TextareaProps = {
   /**
-   * Set focus on textarea element.
-   * @default false
+   * Status of textarea.
    */
-  setFocus?: boolean;
-} & React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+  status?: 'positive' | 'warning' | 'negative';
+};
 
 /**
  * Basic textarea component
  * @example
- * <Textarea setFocus={true} placeholder='This is a textarea' />
+ * <Textarea placeholder='This is a textarea' />
  * <Textarea disabled={true} placeholder='This is a disabled textarea' />
  */
-export const Textarea = React.forwardRef(
-  (props: TextareaProps, ref: React.RefObject<HTMLTextAreaElement>) => {
-    const { className, rows = 3, setFocus = false, ...rest } = props;
-
-    useTheme();
-
-    const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
-    const refs = useMergedRefs<HTMLTextAreaElement>(ref, textAreaRef);
-
-    React.useEffect(() => {
-      if (textAreaRef.current && setFocus) {
-        textAreaRef.current.focus();
-      }
-    }, [setFocus]);
-
-    return (
-      <textarea
-        className={cx('iui-input', className)}
-        rows={rows}
-        ref={refs}
-        {...rest}
-      />
-    );
-  },
-);
-
-export default Textarea;
+export const Textarea = React.forwardRef((props, forwardedRef) => {
+  return <Input as='textarea' rows={3} ref={forwardedRef} {...props} />;
+}) as PolymorphicForwardRefComponent<'textarea', TextareaProps>;
+if (process.env.NODE_ENV === 'development') {
+  Textarea.displayName = 'Textarea';
+}

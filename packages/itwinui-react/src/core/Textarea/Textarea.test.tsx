@@ -2,10 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import { Textarea } from './Textarea';
+import { Textarea } from './Textarea.js';
 
 it('should render correctly in its most basic state', () => {
   const { container } = render(<Textarea />);
@@ -63,14 +62,4 @@ it('should have passed value', () => {
   ) as HTMLTextAreaElement;
   expect(textarea).toBeTruthy();
   expect(textarea.value).toEqual('test-value');
-});
-
-it('should set focus', () => {
-  const { container } = render(<Textarea setFocus={true} />);
-
-  const textarea = container.querySelector(
-    'textarea.iui-input',
-  ) as HTMLTextAreaElement;
-  expect(textarea).toBeTruthy();
-  expect(document.activeElement).toEqual(textarea);
 });

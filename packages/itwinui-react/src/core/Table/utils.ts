@@ -2,7 +2,11 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import { ColumnInstance } from 'react-table';
+import * as React from 'react';
+import type {
+  ColumnInstance,
+  TableInstance,
+} from '../../react-table/react-table.js';
 
 export const getCellStyle = <T extends Record<string, unknown>>(
   column: ColumnInstance<T>,
@@ -61,3 +65,26 @@ export const getStickyStyle = <T extends Record<string, unknown>>(
       column.sticky === 'right' ? `${right}px` : undefined,
   } as React.CSSProperties;
 };
+
+export const getSubRowStyle = ({ density = 'default', depth = 1 }) => {
+  let cellPadding = 16;
+  let expanderMargin = 8;
+
+  if (density === 'condensed') {
+    cellPadding = 12;
+    expanderMargin = 4;
+  } else if (density === 'extra-condensed') {
+    cellPadding = 8;
+    expanderMargin = 4;
+  }
+
+  const multiplier = 26 + expanderMargin; // 26 = expander width
+
+  return {
+    paddingInlineStart: cellPadding + depth * multiplier,
+  } satisfies React.CSSProperties;
+};
+
+export const TableInstanceContext = React.createContext<
+  TableInstance<Record<string, unknown>> | undefined
+>(undefined);

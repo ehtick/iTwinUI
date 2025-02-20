@@ -1,0 +1,103 @@
+---
+import Layout from './_layout.astro';
+import Anchor_ from '../components/Anchor.astro';
+import Icon_ from '../components/Icon.astro';
+---
+
+<Layout title='Icon'>
+  <script>
+    import '@itwin/itwinui-icons-elements/imodel-hollow';
+    import '@itwin/itwinui-icons-elements/info-circular';
+    import '@itwin/itwinui-icons-elements/status-success';
+    import '@itwin/itwinui-icons-elements/status-warning';
+    import '@itwin/itwinui-icons-elements/status-error';
+  </script>
+  <style is:global>
+    section {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      margin-bottom: 22px;
+      padding: 12px;
+      margin-inline: -12px;
+    }
+    #demo-typography {
+      display: grid;
+    }
+    #demo-typography > div {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  </style>
+
+  <h1>Icon</h1>
+  <hr />
+
+  <h2>Non-actionable icons</h2>
+  <section id='demo-icons'>
+    <Icon_ svg='imodel-hollow' size='s' />
+    <Icon_ svg='imodel-hollow' size='m' />
+    <Icon_ svg='imodel-hollow' size='l' />
+  </section>
+
+  <h2>Actionable icons</h2>
+  <section>
+    <p class='iui-text-small iui-text-muted'>
+      Use
+      <Anchor_ href='button.html#demo-borderless'>borderless buttons</Anchor_>
+       if an icon is actionable!
+    </p>
+  </section>
+
+  <h2>Icons with padding</h2>
+  <section id='demo-padded'>
+    <Icon_ svg='imodel-hollow' size='s' padded />
+    <Icon_ svg='imodel-hollow' size='m' padded />
+    <Icon_ svg='imodel-hollow' size='l' padded />
+  </section>
+
+  <h2>Icons with status</h2>
+  <section id='demo-status'>
+    <Icon_ svg='info-circular' fill='informational' />
+
+    <Icon_ svg='status-success ' fill='positive' />
+
+    <Icon_ svg='status-warning' fill='warning' />
+
+    <Icon_ svg='status-error' fill='negative' />
+  </section>
+
+  <h2>Auto scale with text</h2>
+  <section id='demo-typography'>
+    <div class='iui-text-headline iui-text-spacing'>
+      <Icon_ svg='imodel-hollow' size='auto' />
+       Headline
+    </div>
+
+    <div class='iui-text-title iui-text-spacing'>
+      <Icon_ svg='imodel-hollow' size='auto' />
+       Title
+    </div>
+
+    <div class='iui-text-subheading iui-text-spacing'>
+      <Icon_ svg='imodel-hollow' size='auto' />
+       Subheading
+    </div>
+
+    <div class='iui-text-leading iui-text-spacing'>
+      <Icon_ svg='imodel-hollow' size='auto' />
+       Leading
+    </div>
+
+    <div class='iui-text-block iui-text-spacing'>
+      <Icon_ svg='imodel-hollow' size='auto' />
+       Body
+    </div>
+
+    <div class='iui-text-small iui-text-spacing'>
+      <Icon_ svg='imodel-hollow' size='auto' />
+       Small
+    </div>
+  </section>
+</Layout>

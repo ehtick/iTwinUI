@@ -1,49 +1,66 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import './global';
-@import './alert/classes';
-@import './anchor/classes';
-@import './avatar/classes';
-@import './badge/classes';
-@import './backdrop/classes';
-@import './blockquote/classes';
-@import './breadcrumbs/classes';
-@import './button/classes';
-@import './carousel/classes';
-@import './checkbox/classes';
-@import './code/classes';
-@import './color-picker/classes';
-@import './date-picker/classes';
-@import './dialog/classes';
-@import './expandable-block/classes';
-@import './fieldset/classes';
-@import './file-upload/classes';
-@import './footer/classes';
-@import './header/classes';
-@import './information-panel/classes';
-@import './input/classes';
-@import './keyboard/classes';
-@import './location-marker/classes';
-@import './menu/classes';
-@import './non-ideal-state/classes';
-@import './progress-indicator/classes';
-@import './radio/classes';
-@import './radio-tile/classes';
-@import './select/classes';
-@import './side-navigation/classes';
-@import './skip-to-content/classes';
-@import './slider/classes';
-@import './stepper/classes';
-@import './surface/classes';
-@import './table/classes';
-@import './tabs/classes';
-@import './tag/classes';
-@import './text/classes';
-@import './tile/classes';
-@import './time-picker/classes';
-@import './toast/classes';
-@import './toggle-switch/classes';
-@import './tooltip/classes';
-@import './tree/classes';
-@import './utils/classes';
-@import './workflow-diagram/classes';
+@use 'sass:meta';
+
+@layer itwinui.foundations.v3 {
+  @include meta.load-css('global');
+}
+
+@layer itwinui.v3.components {
+  @include meta.load-css('field');
+  @include meta.load-css('alert/alert');
+  @include meta.load-css('anchor/anchor');
+  @include meta.load-css('avatar/avatar');
+  @include meta.load-css('badge/badge');
+  @include meta.load-css('backdrop/backdrop');
+  @include meta.load-css('blockquote/blockquote');
+  @include meta.load-css('breadcrumbs/breadcrumbs');
+  @include meta.load-css('button/button');
+  @include meta.load-css('carousel/carousel');
+  @include meta.load-css('checkbox/checkbox');
+  @include meta.load-css('code/code');
+  @include meta.load-css('color-picker/color-picker');
+  @include meta.load-css('date-picker/date-picker');
+  @include meta.load-css('dialog/dialog');
+  @include meta.load-css('expandable-block/expandable-block');
+  @include meta.load-css('fieldset/fieldset');
+  @include meta.load-css('file-upload/file-upload');
+  @include meta.load-css('footer/footer');
+  @include meta.load-css('header/header');
+  @include meta.load-css('information-panel/information-panel');
+  @include meta.load-css('input/input');
+  @include meta.load-css('input-container/input-container');
+  @include meta.load-css('keyboard/keyboard');
+  @include meta.load-css('menu/menu');
+  @include meta.load-css('non-ideal-state/non-ideal-state');
+  @include meta.load-css('overlay/overlay');
+  @include meta.load-css('progress-indicator/progress-indicator');
+  @include meta.load-css('radio/radio');
+  @include meta.load-css('radio-tile/radio-tile');
+  @include meta.load-css('searchbox/searchbox');
+  @include meta.load-css('select/select');
+  @include meta.load-css('side-navigation/side-navigation');
+  @include meta.load-css('skip-to-content/skip-to-content');
+  @include meta.load-css('slider/slider');
+  @include meta.load-css('status-message/status-message');
+  @include meta.load-css('stepper/stepper');
+  @include meta.load-css('surface/surface');
+  @include meta.load-css('panels/panels');
+  @include meta.load-css('table/table');
+  @include meta.load-css('tabs/tabs');
+  @include meta.load-css('tag/tag');
+  @include meta.load-css('text/text');
+  @include meta.load-css('tile/tile');
+  @include meta.load-css('time-picker/time-picker');
+  @include meta.load-css('toast/toast');
+  @include meta.load-css('toggle-switch/toggle-switch');
+  @include meta.load-css('tooltip/tooltip');
+  @include meta.load-css('transfer-list/transfer-list');
+  @include meta.load-css('tree/tree');
+  @include meta.load-css('utils/utils');
+  @include meta.load-css('workflow-diagram/workflow-diagram');
+}
+
+@layer itwinui.v3.bridge {
+  @include meta.load-css('./bridge');
+}

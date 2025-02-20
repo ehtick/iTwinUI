@@ -1,70 +1,62 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
+@use '../mixins';
 
-@mixin iui-expandable-block {
+// ----------------------------------------------------------------------------
+
+.iui-expandable-block {
   --_iui-expandable-block-expander-icon-fill: var(--iui-color-icon);
-  @include iui-expandable-block-variant;
-  @include iui-expandable-block-size;
+  --_iui-expandable-block-expander-icon-transform: none;
+
+  --_iui-expandable-block-border: 1px solid var(--_iui-expandable-block-border-color);
+  --_iui-expandable-block-border-color: var(--iui-color-border);
+  --_iui-expandable-block-background-color: var(--iui-color-background);
+  --_iui-expandable-block-content-padding: var(--iui-size-s);
+  --_iui-expandable-block-header-background-color-disabled: var(--iui-color-background-disabled);
+  --_iui-expandable-block-header-background-color-hover: var(--iui-color-background-hover);
+  --_iui-expandable-block-header-focus-offset: -2px;
+  --_iui-expandable-block-header-focus-thickness: 2px;
+
+  --_iui-expandable-block-header-caption-color-hover: var(--iui-color-text-hover);
+
+  &[data-iui-expanded='true'] {
+    --_iui-expandable-block-header-bottom-border-radius: 0;
+    --_iui-expandable-block-expander-icon-transform: rotate(90deg);
+  }
+
+  --_iui-expandable-block-expander-icon-size: var(--iui-size-m);
+  --_iui-expandable-block-header-gap: var(--iui-size-s);
+  --_iui-expandable-block-header-padding: var(--iui-size-s);
 
   display: flex;
   flex-direction: column;
-  width: 100%;
+  isolation: isolate;
+  inline-size: 100%;
   border-radius: var(--iui-border-radius-1);
 
-  &:where(.iui-expanded) {
-    --_iui-expandable-block-expander-icon-transform: rotate(90deg);
+  &[data-iui-size='small'] {
+    --_iui-expandable-block-expander-icon-size: var(--iui-size-s);
+    --_iui-expandable-block-header-gap: var(--iui-size-xs);
+    --_iui-expandable-block-header-padding: calc(var(--iui-size-s) * 0.5) var(--iui-size-xs);
   }
-}
 
-/// @arg $variant Can be one of: default, borderless
-@mixin iui-expandable-block-variant($variant: 'default') {
-  @if $variant == 'default' {
-    --_iui-expandable-block-border: 1px solid var(--_iui-expandable-block-border-color);
-    --_iui-expandable-block-border-color: var(--iui-color-border);
-    --_iui-expandable-block-background-color: var(--iui-color-background);
-    --_iui-expandable-block-content-padding: var(--iui-size-s);
-    --_iui-expandable-block-header-background-color-disabled: var(--iui-color-background-disabled);
-    --_iui-expandable-block-header-background-color-hover: var(--iui-color-background-hover);
-    --_iui-expandable-block-header-focus-offset: -2px;
-    --_iui-expandable-block-header-focus-thickness: 2px;
-
-    &:where(.iui-expanded) {
-      --_iui-expandable-block-header-bottom-border-radius: 0;
-    }
-  }
-  @if $variant == 'borderless' {
+  &[data-iui-variant='borderless'] {
     --_iui-expandable-block-border: none;
     --_iui-expandable-block-background-color: transparent;
     --_iui-expandable-block-content-padding: none;
     --_iui-expandable-block-header-background-color-disabled: transparent;
-    --_iui-expandable-block-header-background-color-hover: var(--iui-color-background-transparent-hover);
     --_iui-expandable-block-header-focus-offset: -1px;
     --_iui-expandable-block-header-focus-thickness: 1px;
 
-    &:where(.iui-expanded) {
+    &[data-iui-expanded='true'] {
       --_iui-expandable-block-header-bottom-border-radius: inherit;
     }
   }
 }
 
-/// @arg $size Can be one of: default, small
-@mixin iui-expandable-block-size($size: 'default') {
-  @if $size == 'default' {
-    --_iui-expandable-block-expander-icon-size: var(--iui-size-m);
-    --_iui-expandable-block-header-gap: var(--iui-size-s);
-    --_iui-expandable-block-header-padding: var(--iui-size-s);
-  }
-  @if $size == 'small' {
-    --_iui-expandable-block-expander-icon-size: var(--iui-size-s);
-    --_iui-expandable-block-header-gap: var(--iui-size-xs);
-    --_iui-expandable-block-header-padding: calc(var(--iui-size-s) * 0.5) var(--iui-size-xs);
-  }
-}
-
-@mixin iui-expandable-block-header {
-  @include iui-reset;
-  @include iui-focus(
+.iui-expandable-header {
+  @include mixins.iui-reset;
+  @include mixins.iui-focus(
     $offset: var(--_iui-expandable-block-header-focus-offset),
     $thickness: var(--_iui-expandable-block-header-focus-thickness)
   );
@@ -75,14 +67,14 @@
   cursor: pointer;
   user-select: none;
   color: var(--iui-color-text);
-  line-height: inherit;
-  font-family: inherit;
-  text-align: left;
+  font: inherit;
+  z-index: 1;
+  text-align: start;
   background-color: var(--_iui-expandable-block-background-color);
   border: var(--_iui-expandable-block-border);
   border-radius: inherit;
-  border-bottom-left-radius: var(--_iui-expandable-block-header-bottom-border-radius, inherit);
-  border-bottom-right-radius: var(--_iui-expandable-block-header-bottom-border-radius, inherit);
+  border-end-start-radius: var(--_iui-expandable-block-header-bottom-border-radius, inherit);
+  border-end-end-radius: var(--_iui-expandable-block-header-bottom-border-radius, inherit);
   transition: background-color var(--iui-duration-1) ease-out;
   @media (forced-colors: active) {
     --_iui-expandable-block-expander-icon-fill: CanvasText;
@@ -90,22 +82,20 @@
 
   &:where(:hover) {
     --_iui-expandable-block-expander-icon-fill: var(--iui-color-icon-hover);
-    --_iui-expandable-block-header-caption-color: var(--iui-color-text-hover);
+    --_iui-expandable-block-header-caption-color: var(--_iui-expandable-block-header-caption-color-hover);
     --_iui-expandable-block-header-label-color: var(--iui-color-text-hover);
 
     background-color: var(--_iui-expandable-block-header-background-color-hover);
 
     @media (forced-colors: active) {
       --_iui-expandable-block-expander-icon-fill: Highlight;
-      --_iui-expandable-block-header-caption-color: Highlight;
+      --_iui-expandable-block-header-caption-color-hover: Highlight;
       --_iui-expandable-block-header-label-color: Highlight;
       border-color: Highlight;
     }
   }
 
-  &[disabled],
-  &:disabled,
-  &[aria-disabled='true'] {
+  &:is([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']) {
     --_iui-expandable-block-expander-icon-fill: var(--iui-color-icon-disabled);
     --_iui-expandable-block-header-caption-color: var(--iui-color-text-disabled);
     --_iui-expandable-block-header-label-color: var(--iui-color-text-disabled);
@@ -123,33 +113,28 @@
   }
 }
 
-/// @arg $type Can be one of: expander, status
-@mixin iui-expandable-block-header-icons($type) {
-  @include iui-icon-style('m');
-
-  @if $type == 'expander' {
-    width: var(--_iui-expandable-block-expander-icon-size);
-    height: var(--_iui-expandable-block-expander-icon-size);
-    fill: var(--_iui-expandable-block-expander-icon-fill);
-    transform: var(--_iui-expandable-block-expander-icon-transform, none);
-    transition: fill var(--iui-duration-1) ease-out;
-    @media (prefers-reduced-motion: no-preference) {
-      transition: fill var(--iui-duration-1) ease-out, transform var(--iui-duration-1) ease-out;
-    }
+.iui-expandable-block-icon {
+  --iui-svg-size: var(--_iui-expandable-block-expander-icon-size);
+  --iui-svg-fill: var(--_iui-expandable-block-expander-icon-fill);
+  transform: var(--_iui-expandable-block-expander-icon-transform);
+  transition: fill var(--iui-duration-1) ease-out;
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      fill var(--iui-duration-1) ease-out,
+      transform var(--iui-duration-1) ease-out;
   }
 }
 
-@mixin iui-expandable-block-header-label {
+.iui-expandable-block-label {
   display: flex;
   flex-direction: column;
   flex: auto;
-  min-width: 0;
+  min-inline-size: 0;
   font-size: var(--iui-font-size-2);
   color: var(--_iui-expandable-block-header-label-color, inherit);
 }
 
-/// @arg $type Can be one of: label, sublabel
-@mixin iui-expandable-block-header-label-text($type) {
+:is(.iui-expandable-block-title, .iui-expandable-block-caption) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -157,26 +142,56 @@
   @media (forced-colors: active) {
     transition: none;
   }
-
-  @if $type == 'sublabel' {
-    font-size: var(--iui-font-size-0);
-    color: var(--_iui-expandable-block-header-caption-color, var(--iui-color-text-muted));
-  }
 }
 
-@mixin iui-expandable-block-content {
-  overflow: hidden;
+.iui-expandable-block-caption {
+  font-size: var(--iui-font-size-0);
+  color: var(--_iui-expandable-block-header-caption-color, var(--iui-color-text-muted));
+}
+
+.iui-expandable-content {
   background-color: var(--_iui-expandable-block-background-color);
-  border-bottom: var(--_iui-expandable-block-border);
-  border-right: var(--_iui-expandable-block-border);
-  border-left: var(--_iui-expandable-block-border);
-  border-bottom-left-radius: inherit;
-  border-bottom-right-radius: inherit;
+  border-inline-end: var(--_iui-expandable-block-border);
+  border-inline-start: var(--_iui-expandable-block-border);
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
 
-  @include iui-transition-group;
+  // using transition technique from https://css-tricks.com/css-grid-can-do-auto-height-transitions/
+  display: grid;
+  grid-template-rows: 0fr;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  transition: all var(--iui-duration-1) ease-out;
+  transition-property: opacity;
+  @media (prefers-reduced-motion: no-preference) {
+    transition-property: grid-template-rows, visibility, opacity, transform;
+  }
 
-  // padding should be in a separate div because otherwise it messes up height transition
   > div {
-    padding: var(--_iui-expandable-block-content-padding);
+    min-block-size: 0;
+    visibility: hidden;
+    padding-inline: var(--_iui-expandable-block-content-padding);
+    @media (prefers-reduced-motion: no-preference) {
+      transition: visibility var(--iui-duration-1) ease-out;
+    }
+    align-self: end;
+  }
+
+  :where(.iui-expandable-block[data-iui-expanded='true']) & {
+    grid-template-rows: 1fr;
+
+    > div {
+      padding-block: var(--_iui-expandable-block-content-padding);
+      border-block-end: var(--_iui-expandable-block-border);
+      visibility: visible;
+    }
+  }
+
+  :where(.iui-expandable-block:not([data-iui-expanded='true'])) & {
+    opacity: 0;
+    @supports not (top: Round(1px, 1px)) {
+      transform: translateY(-1rem);
+    }
+    transform: translateY(Round(-1rem, 1px));
   }
 }

@@ -2,17 +2,16 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 import {
   SvgMore as SvgPlaceholder,
   SvgCaretDownSmall,
   SvgCaretUpSmall,
-} from '../utils';
+} from '../../utils/index.js';
 
-import HeaderButton from './HeaderButton';
-import { MenuItem } from '../Menu';
-import userEvent from '@testing-library/user-event';
+import { HeaderButton } from './HeaderButton.js';
+import { MenuItem } from '../Menu/MenuItem.js';
+import { userEvent } from '@testing-library/user-event';
 
 it('should render in its most basic state', () => {
   const { container } = render(<HeaderButton name='MockName' />);
@@ -57,8 +56,8 @@ it('should render isActive correctly', () => {
 });
 
 it('should render split button correctly', async () => {
-  const itemOneOnClick = jest.fn();
-  const buttonOnClick = jest.fn();
+  const itemOneOnClick = vi.fn();
+  const buttonOnClick = vi.fn();
 
   const { container } = render(
     <HeaderButton
@@ -98,10 +97,10 @@ it('should render split button correctly', async () => {
   expect(buttonOnClick).toBeCalled();
 
   await userEvent.click(innerButtons[1] as HTMLButtonElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   expect(menu).toBeTruthy();
-  expect(menu.querySelectorAll('li')).toHaveLength(3);
-  const menuItem = menu.querySelector('li') as HTMLLIElement;
+  expect(menu.querySelectorAll('[role=menuitem]')).toHaveLength(3);
+  const menuItem = menu.querySelector('[role=menuitem]') as HTMLElement;
   expect(menuItem).toBeTruthy();
   await userEvent.click(menuItem);
   expect(itemOneOnClick).toBeCalled();
@@ -114,15 +113,15 @@ it('should render startIcon correctly', () => {
 
   const {
     container: { firstChild: placeholderIcon },
-  } = render(<SvgPlaceholder className='iui-header-breadcrumb-button-icon' />);
-  expect(container.querySelector('.iui-header-breadcrumb-button-icon')).toEqual(
-    placeholderIcon,
-  );
+  } = render(<SvgPlaceholder />);
+  expect(
+    container.querySelector('.iui-header-breadcrumb-button-icon svg'),
+  ).toEqual(placeholderIcon);
 });
 
 it('should render menuItems correctly', async () => {
   // Summarized, as this is based on Dropdown button, which is tested independently.
-  const itemOneOnClick = jest.fn();
+  const itemOneOnClick = vi.fn();
   const { container } = render(
     <HeaderButton
       name='MockName'
@@ -166,8 +165,7 @@ it('should render menuItems correctly', async () => {
     ),
   ).toEqual(downArrow);
 
-  let menu = document.querySelector('.iui-menu') as HTMLUListElement;
-  expect(menu).toBeFalsy();
+  expect(document.querySelector('.iui-menu')).toBeFalsy();
 
   await userEvent.click(button);
 
@@ -185,19 +183,15 @@ it('should render menuItems correctly', async () => {
     ),
   ).toEqual(upArrow);
 
-  const tippy = document.querySelector('[data-tippy-root]') as HTMLElement;
-  expect(tippy.style.visibility).toEqual('visible');
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
+  expect(menu).toBeVisible();
+  expect(menu.querySelectorAll('[role=menuitem]')).toHaveLength(3);
 
-  menu = document.querySelector('.iui-menu') as HTMLUListElement;
-  expect(menu).toBeTruthy();
-
-  expect(menu.querySelectorAll('li')).toHaveLength(3);
-
-  const menuItem = menu.querySelector('li') as HTMLLIElement;
+  const menuItem = menu.querySelector('[role=menuitem]') as HTMLElement;
   expect(menuItem).toBeTruthy();
   await userEvent.click(menuItem);
 
-  expect(tippy).not.toBeVisible();
+  expect(menu).not.toBeVisible();
 
   expect(
     container.querySelector(

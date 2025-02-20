@@ -2,18 +2,18 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { CarouselContext } from './CarouselContext';
+import { CarouselContext } from './CarouselContext.js';
 import {
   getBoundedValue,
-  getWindow,
+  useMediaQuery,
   useMergedRefs,
   useResizeObserver,
-  useTheme,
-} from '../utils';
-import { CarouselDot } from './CarouselDot';
-import '@itwin/itwinui-css/css/carousel.css';
+  Box,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { CarouselDot } from './CarouselDot.js';
 
 type CarouselDotsListProps = {
   /** Number of total dots/slides in the carousel. Will be inferred from Carousel context or children. Otherwise, it is required to be passed. */
@@ -22,10 +22,10 @@ type CarouselDotsListProps = {
   currentIndex?: number;
   /** Callback fired when any of the dots are clicked. */
   onSlideChange?: (index: number) => void;
-} & React.ComponentPropsWithoutRef<'div'>;
+};
 
 /**
- * The `CarouselDots` component shows a list of `CarouselDot` components which can be used to
+ * The `CarouselDotsList` component shows a list of `CarouselDot` components which can be used to
  * choose a specific slide. If used as a descendant of `Carousel`, then this component does not need
  * any props or `children`.
  *
@@ -35,21 +35,18 @@ type CarouselDotsListProps = {
  * @example
  * <Carousel>
  *   // ...
- *   <Carousel.Dots />
+ *   <Carousel.DotsList />
  * </Carousel>
  *
  * @example
- * <Carousel.Dots
+ * <Carousel.DotsList
  *   length={10}
  *   maxCount={3}
  *   currentIndex={current}
  *   onSlideChange={(i) => setCurrent(i)}
  * />
  */
-export const CarouselDotsList = React.forwardRef<
-  HTMLDivElement,
-  CarouselDotsListProps
->((props, ref) => {
+export const CarouselDotsList = React.forwardRef((props, ref) => {
   const {
     currentIndex: userCurrentIndex,
     length,
@@ -58,8 +55,6 @@ export const CarouselDotsList = React.forwardRef<
     children,
     ...rest
   } = props;
-
-  useTheme();
 
   const context = React.useContext(CarouselContext);
   const slideCount =
@@ -73,6 +68,7 @@ export const CarouselDotsList = React.forwardRef<
         context.setCurrentIndex(index);
         context.scrollToSlide.current(index);
       }
+      (listRef.current?.children[index] as HTMLElement)?.focus();
       onSlideChange?.(index);
     },
     [context, onSlideChange],
@@ -132,13 +128,12 @@ export const CarouselDotsList = React.forwardRef<
         return (
           <CarouselDot
             key={index}
-            aria-label={`Slide ${index}`}
+            aria-label={`Slide ${index + 1}`}
             isActive={index === currentIndex}
             onClick={() => handleSlideChange(index)}
             isSmall={isSecondSmallDot}
             isSmaller={isFirstSmallDot || isClipped}
             id={idPrefix && `${idPrefix}--dot-${index}`}
-            aria-controls={idPrefix && `${idPrefix}--slide-${index}`}
           />
         );
       });
@@ -151,6 +146,8 @@ export const CarouselDotsList = React.forwardRef<
     handleSlideChange,
   ]);
 
+  const motionOk = useMediaQuery('(prefers-reduced-motion: no-preference)');
+
   React.useEffect(() => {
     const firstDot = listRef.current?.children[firstVisibleDotIndex] as
       | HTMLElement
@@ -158,10 +155,6 @@ export const CarouselDotsList = React.forwardRef<
     if (!listRef.current || !firstDot) {
       return;
     }
-
-    const motionOk = getWindow()?.matchMedia(
-      '(prefers-reduced-motion: no-preference)',
-    )?.matches;
 
     listRef.current.scrollTo({
       left: firstDot.offsetLeft - listRef.current.offsetLeft,
@@ -171,19 +164,56 @@ export const CarouselDotsList = React.forwardRef<
     if (justMounted.current) {
       justMounted.current = false;
     }
-  }, [currentIndex, firstVisibleDotIndex, slideCount, visibleCount, width]);
+  }, [
+    currentIndex,
+    firstVisibleDotIndex,
+    motionOk,
+    slideCount,
+    visibleCount,
+    width,
+  ]);
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+
+    const key = event.key;
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      event.preventDefault();
+    }
+  };
+
+  const handleKeyUp = (event: React.KeyboardEvent) => {
+    switch (event.key) {
+      case 'ArrowLeft': {
+        handleSlideChange((slideCount + currentIndex - 1) % slideCount);
+        break;
+      }
+      case 'ArrowRight': {
+        handleSlideChange((slideCount + currentIndex + 1) % slideCount);
+        break;
+      }
+    }
+  };
 
   return (
     <>
-      <div
+      <Box
         className={cx('iui-carousel-navigation-dots', className)}
         role='tablist'
         aria-label='Slides'
         ref={refs}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        tabIndex={-1} // this prevents undesirable tabbing to the list in Firefox/Chrome
         {...rest}
       >
         {children ?? dots}
-      </div>
+      </Box>
     </>
   );
-});
+}) as PolymorphicForwardRefComponent<'div', CarouselDotsListProps>;
+if (process.env.NODE_ENV === 'development') {
+  CarouselDotsList.displayName = 'Carousel.DotsList';
+}

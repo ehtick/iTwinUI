@@ -2,20 +2,19 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { useTheme } from '../../../utils';
-import {
-  FilterButtonBar,
-  FilterButtonBarTranslation,
-} from '../FilterButtonBar';
-import { BaseFilter } from '../BaseFilter';
-import { TableFilterProps } from '../types';
-import '@itwin/itwinui-css/css/table.css';
-import DatePickerInput from './DatePickerInput';
+import * as React from 'react';
+import { useGlobals } from '../../../../utils/index.js';
+import { FilterButtonBar } from '../FilterButtonBar.js';
+import type { FilterButtonBarTranslation } from '../FilterButtonBar.js';
+import { BaseFilter } from '../BaseFilter.js';
+import type { TableFilterProps } from '../types.js';
+import { DatePickerInput } from './DatePickerInput.js';
+import type { DatePickerLocalizedNames } from '../../../DatePicker/DatePicker.js';
 
 export type DateRangeTranslation = {
   from: string;
   to: string;
+  datePicker?: DatePickerLocalizedNames;
 };
 
 const defaultStrings: DateRangeTranslation = {
@@ -46,7 +45,7 @@ export type DateRangeFilterProps<T extends Record<string, unknown>> =
     parseInput?: (text: string) => Date;
     placeholder?: string;
     translatedLabels?: DateRangeTranslation & FilterButtonBarTranslation;
-  };
+  } & Pick<React.ComponentProps<typeof DatePickerInput>, 'showYearSelection'>;
 
 export const DateRangeFilter = <T extends Record<string, unknown>>(
   props: DateRangeFilterProps<T>,
@@ -59,15 +58,24 @@ export const DateRangeFilter = <T extends Record<string, unknown>>(
     formatDate = defaultFormatDate,
     parseInput = defaultParseInput,
     placeholder = 'MMM dd, yyyy',
+    showYearSelection,
   } = props;
 
-  useTheme();
+  useGlobals();
 
   const translatedStrings = { ...defaultStrings, ...translatedLabels };
 
   const [from, setFrom] = React.useState<Date | undefined>(
     column.filterValue?.[0] ? new Date(column.filterValue?.[0]) : undefined,
   );
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
   const onFromChange = React.useCallback((date?: Date) => {
     setFrom((prevDate) => {
       if (prevDate || !date) {
@@ -88,6 +96,7 @@ export const DateRangeFilter = <T extends Record<string, unknown>>(
   const [to, setTo] = React.useState<Date | undefined>(
     column.filterValue?.[1] ? new Date(column.filterValue?.[1]) : undefined,
   );
+
   const onToChange = React.useCallback((date?: Date) => {
     setTo((prevDate) => {
       if (prevDate || !date) {
@@ -105,23 +114,20 @@ export const DateRangeFilter = <T extends Record<string, unknown>>(
     });
   }, []);
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter') {
-      setFilter([from, to]);
-    }
-  };
-
   return (
-    <BaseFilter>
+    <BaseFilter onSubmit={() => setFilter([from, to])}>
       <DatePickerInput
+        ref={inputRef}
         label={translatedStrings.from}
         date={from}
         onChange={onFromChange}
         formatDate={formatDate}
         parseInput={parseInput}
-        onKeyDown={onKeyDown}
         placeholder={placeholder}
-        setFocus
+        selectedDate={to}
+        isFromOrTo='from'
+        localizedNames={translatedStrings.datePicker}
+        showYearSelection={showYearSelection}
       />
       <DatePickerInput
         label={translatedStrings.to}
@@ -129,11 +135,13 @@ export const DateRangeFilter = <T extends Record<string, unknown>>(
         onChange={onToChange}
         formatDate={formatDate}
         parseInput={parseInput}
-        onKeyDown={onKeyDown}
         placeholder={placeholder}
+        selectedDate={from}
+        isFromOrTo='to'
+        localizedNames={translatedStrings.datePicker}
+        showYearSelection={showYearSelection}
       />
       <FilterButtonBar
-        setFilter={() => setFilter([from, to])}
         clearFilter={clearFilter}
         translatedLabels={translatedLabels}
       />

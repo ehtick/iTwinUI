@@ -1,0 +1,124 @@
+---
+title: Select
+description: A select, also known as a dropdown menu, displays a list of selectable choices and options.
+thumbnail: Select
+---
+
+<p>{frontmatter.description}</p>
+
+<LiveExample src='Select.main.jsx'>
+  <AllExamples.SelectMainExample client:load />
+</LiveExample>
+
+A select is a control element meant to allow the user to select an option from a list. Select menus take up less space since they can be collapsed back into a single line. Use select menus in forms and lists that have many items that each have several options to pick from.
+
+## Usage
+
+The basic usage of `Select` involves using the `options` prop to pass an array of objects with `label` and `value` properties. The `label` is the user-facing text, and the `value` is the internal value that will be returned when the option is selected.
+
+```jsx
+<Select
+  options={[
+    { value: 'apple', label: 'Apple' },
+    { value: 'kiwi', label: 'Kiwi' },
+    { value: 'orange', label: 'Orange' },
+  ]}
+/>
+```
+
+The default appearance of the collapsed select menu can also display placeholder text (such as "Select an Option…") using the `placeholder` prop, or a pre-selected option using the `value` prop.
+
+Note that this `value` prop reflects the `value` of the selected option (not the `label`), and it must be used in conjunction with the `onChange` prop to maintain your state.
+
+```jsx {4, 5}
+const [value, setValue] = React.useState('apple');
+
+<Select
+  value={value}
+  onChange={setValue}
+  options={[
+    { value: 'apple', label: 'Apple' },
+    { value: 'kiwi', label: 'Kiwi' },
+    { value: 'orange', label: 'Orange' },
+  ]}
+>
+```
+
+### With label
+
+To add a label, pass a `label` prop to the `<LabeledSelect>` component. `LabeledSelect` is a simple wrapper around the base `Select` with additinal functionality.
+
+```jsx {2}
+<LabeledSelect
+  label='Fruit'
+  options={[
+    { value: 'apple', label: 'Apple' },
+    { value: 'kiwi', label: 'Kiwi' },
+    { value: 'orange', label: 'Orange' },
+  ]}
+/>
+```
+
+### With Icon
+
+<LiveExample src='Select.icon.jsx'>
+  <AllExamples.SelectIconExample client:load />
+</LiveExample>
+
+### Disabled
+
+<LiveExample src='Select.disable.jsx'>
+  <AllExamples.SelectDisableExample client:load />
+</LiveExample>
+
+The menu can be disabled as its default state, without any option selected; it can be disabled with an option selected; and options in the dropdown menu can be disabled so the user cannot select one or more specific options, depending on context.
+
+### Sublabels
+
+If the options have sub-labels, but the field is default-sized, omit the sub-label in the field when it displays a selected option (as shown above).
+
+<LiveExample src='Select.sublabels.jsx'>
+  <AllExamples.SelectSublabelsExample client:load />
+</LiveExample>
+
+### Statuses
+
+<LiveExample src='Select.statuses.jsx'>
+  <AllExamples.SelectStatusesExample client:load />
+</LiveExample>
+
+### Truncation
+
+Ideally, truncation in select menus should be avoided as much as possible. It is recommended that the collapsed select be wide enough to fit 24 characters, plus the ellipsis symbol. There may be cases where this cannot be followed, so it is only our best recommendation.
+
+<LiveExample src='Select.truncate.jsx'>
+  <AllExamples.SelectTruncateExample client:load />
+</LiveExample>
+
+In certain situations, text truncation is inevitable. This may happen in a select menu containing files or folders that were named by the user.
+
+### Native select
+
+By default, the `Select` component is rendered as a fully custom select. If you want to use the native `<select>` element, you can specify the `native` prop.
+
+It is recommended to use the native select when the options are few and simple.
+
+<LiveExample src='Select.native.jsx'>
+  <AllExamples.SelectNativeExample client:load />
+</LiveExample>
+
+The native select has some limitations, such as no support for icons and sublabels. However, it is more accessible and works much better on mobile devices, where using a custom dropdown menu hurts the user experience. The native select also has the benefit of participating in the browser's built-in form validation and autofill.
+
+### Borderless
+
+The `native` Select can also be rendered without borders, by specifying `styleType="borderless"`.
+
+When using the borderless Select, `placeholder` is not allowed and it must have a default selected value. If a default value is not specified (using `value` or `defaultValue`), the first option will be automatically selected.
+
+<LiveExample src='Select.borderless.jsx'>
+  <AllExamples.SelectBorderlessExample client:idle />
+</LiveExample>
+
+## Props
+
+<PropsTable path='@itwin/itwinui-react/esm/core/LabeledSelect/LabeledSelect.d.ts' />

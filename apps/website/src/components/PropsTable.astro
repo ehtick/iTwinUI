@@ -14,19 +14,25 @@ import snarkdown from 'snarkdown';
 
 export interface Props {
   path: string;
+  /**
+   * Uses the props for the `componentName`. If not provided, it will use the filename as the `componentName`.
+   */
+  componentName?: string;
 }
 
 const defaultHandlers = Object.values(docgenHandlers).map((handler) => handler);
 const defaultResolver = docgenResolver.findAllExportedComponentDefinitions;
 const defaultImporter = docgenImporters.makeFsImporter();
 
-const relativePath = Astro.props.path.replace(
+const { path: pathProp, componentName } = Astro.props as Props;
+
+const relativePath = pathProp.replace(
   '@itwin/itwinui-react',
   '../../packages/itwinui-react' // relative from root of `website` workspace
 );
 
 const componentPath = path.join(__dirname, relativePath);
-const componentName = path.parse(componentPath).name.split('.')[0]; // Spliting on `.` since some files are .d.ts files
+const componentNameFallback = path.parse(componentPath).name.split('.')[0]; // Spliting on `.` since some files are .d.ts files
 const src = fs.readFileSync(componentPath, 'utf8');
 
 const docgenResults = componentPath.endsWith('.tsx')
@@ -35,7 +41,9 @@ const docgenResults = componentPath.endsWith('.tsx')
     }) as DocumentationObject[])
   : docgenTsParse(componentPath);
 
-const componentDoc = [...docgenResults].find((docs) => docs['displayName'] === componentName);
+const componentDoc = [...docgenResults].find(
+  (docs) => docs['displayName'] === (componentName ?? componentNameFallback)
+);
 ---
 
 <div class='wrapper'>
@@ -69,69 +77,73 @@ const componentDoc = [...docgenResults].find((docs) => docs['displayName'] === c
 </div>
 
 <style lang='scss'>
-  .wrapper {
-    display: flex;
-    overflow: auto;
-  }
-
-  table {
-    color: var(--color-subtext);
-    border-spacing: 0;
-    border-collapse: collapse;
-    width: 100%;
-
-    &,
-    * {
-      font-size: var(--type--1);
-    }
-  }
-
-  tr {
-    background: transparent;
-
-    & + & {
-      border-top: 0.5px solid hsl(0 0% 0% / 0.2);
-    }
-  }
-
-  th,
-  td {
-    padding: var(--space-3) var(--space-2);
-    max-width: 35ch;
-
-    &:first-child {
-      padding-left: 0;
+  @layer components {
+    .wrapper {
+      display: flex;
+      overflow: auto;
     }
 
-    &:last-child {
-      padding-right: 0;
+    table {
+      color: var(--color-subtext);
+      border-spacing: 0;
+      border-collapse: collapse;
+      width: 100%;
+
+      &,
+      :global(*) {
+        font-size: var(--type--1);
+        line-height: 1.5;
+      }
     }
-  }
 
-  th {
-    text-align: left;
-    text-transform: uppercase;
-    letter-spacing: 0.05ch;
-  }
+    tr {
+      background: transparent;
 
-  tr + tr {
-    border-top: 1px solid var(--color-line-2);
-  }
+      & + & {
+        border-top: 0.5px solid hsl(0 0% 0% / 0.2);
+      }
+    }
 
-  .md {
-    font-family: var(--font-body);
-    margin-bottom: var(--space-2);
+    th,
+    td {
+      padding: var(--space-3) var(--space-2);
+      max-width: 35ch;
+      overflow-wrap: break-word;
 
-    & code {
+      &:first-child {
+        padding-left: 0;
+      }
+
+      &:last-child {
+        padding-right: 0;
+      }
+    }
+
+    th {
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0.05ch;
+    }
+
+    tr + tr {
+      border-top: 1px solid var(--color-line-2);
+    }
+
+    .md {
+      font-family: var(--font-body);
+      margin-bottom: var(--space-2);
+
+      & code {
+        font-family: var(--font-mono);
+      }
+    }
+
+    .mono {
       font-family: var(--font-mono);
     }
-  }
 
-  .mono {
-    font-family: var(--font-mono);
-  }
-
-  .types {
-    font-family: var(--font-mono);
+    .types {
+      font-family: var(--font-mono);
+    }
   }
 </style>

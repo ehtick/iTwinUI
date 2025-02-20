@@ -3,9 +3,9 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { useTheme, ClassNameProps, StylingProps } from '../utils';
-import '@itwin/itwinui-css/css/time-picker.css';
+import * as React from 'react';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
 const isSameHour = (
   date1: Date,
@@ -185,14 +185,14 @@ export type TimePickerProps = {
    *   }
    */
   combinedRenderer?: (date: Date, precision: Precision) => React.ReactNode;
-} & StylingProps;
+};
 
 /**
  * Time picker component
  * @example
  * <TimePicker date={new Date()} onChange={(e) => console.log('New time value: ' + e)} />
  */
-export const TimePicker = (props: TimePickerProps): JSX.Element => {
+export const TimePicker = React.forwardRef((props, forwardedRef) => {
   const {
     date,
     onChange,
@@ -214,8 +214,6 @@ export const TimePicker = (props: TimePickerProps): JSX.Element => {
     className,
     ...rest
   } = props;
-
-  useTheme();
 
   const [selectedTime, setSelectedTime] = React.useState(date);
   const [focusedTime, setFocusedTime] = React.useState(
@@ -443,7 +441,11 @@ export const TimePicker = (props: TimePickerProps): JSX.Element => {
   }, [secondStep, selectedTime]);
 
   return (
-    <div className={cx('iui-time-picker', className)} {...rest}>
+    <Box
+      className={cx('iui-time-picker', className)}
+      ref={forwardedRef}
+      {...rest}
+    >
       {useCombinedRenderer ? (
         <TimePickerColumn
           data={time}
@@ -517,9 +519,12 @@ export const TimePicker = (props: TimePickerProps): JSX.Element => {
           className='iui-period'
         />
       )}
-    </div>
+    </Box>
   );
-};
+}) as PolymorphicForwardRefComponent<'div', TimePickerProps>;
+if (process.env.NODE_ENV === 'development') {
+  TimePicker.displayName = 'TimePicker';
+}
 
 type TimePickerColumnProps<T = Date> = {
   /**
@@ -555,9 +560,13 @@ type TimePickerColumnProps<T = Date> = {
    * @default 'minutes'
    */
   precision?: Precision;
-} & ClassNameProps;
+} & {
+  [k: string]: unknown;
+};
 
-const TimePickerColumn = <T,>(props: TimePickerColumnProps<T>): JSX.Element => {
+const TimePickerColumn = <T,>(
+  props: TimePickerColumnProps<T>,
+): React.JSX.Element => {
   const {
     data,
     onFocusChange,
@@ -569,19 +578,8 @@ const TimePickerColumn = <T,>(props: TimePickerColumnProps<T>): JSX.Element => {
     precision = 'minutes',
     className = 'iui-time',
   } = props;
+
   const needFocus = React.useRef(setFocus);
-
-  // Used to focus row only when changed (keyboard navigation)
-  // e.g. without this on every rerender it would be focused
-  React.useEffect(() => {
-    if (needFocus.current) {
-      needFocus.current = false;
-    }
-  });
-
-  const scrollIntoView = (ref: HTMLLIElement | null, isSame: boolean) => {
-    isSame && ref?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  };
 
   const handleTimeKeyDown = (
     event: React.KeyboardEvent<HTMLLIElement>,
@@ -590,6 +588,10 @@ const TimePickerColumn = <T,>(props: TimePickerColumnProps<T>): JSX.Element => {
     onSelect: (value: number) => void,
     currentValue: number,
   ) => {
+    if (event.altKey) {
+      return;
+    }
+
     switch (event.key) {
       case 'ArrowDown':
         if (currentValue + 1 > maxValue) {
@@ -617,12 +619,13 @@ const TimePickerColumn = <T,>(props: TimePickerColumnProps<T>): JSX.Element => {
   };
 
   return (
-    <div className={className}>
+    <Box className={`${className}`}>
       <ol>
         {data.map((value, index) => {
           const isSameFocus = isSameFocused(value);
           return (
-            <li
+            <Box
+              as='li'
               onKeyDown={(event) => {
                 handleTimeKeyDown(
                   event,
@@ -638,20 +641,30 @@ const TimePickerColumn = <T,>(props: TimePickerColumnProps<T>): JSX.Element => {
               key={index}
               tabIndex={isSameFocus ? 0 : undefined}
               ref={(ref) => {
-                scrollIntoView(ref, isSameFocus);
-                needFocus.current && isSameFocus && ref?.focus();
+                if (!ref || !isSameFocus) {
+                  return;
+                }
+
+                // Move focus/scroll in the next task, after the DOM has stabilized.
+                // This gives it priority over other conflicting logic (e.g. from floating-ui/Popover).
+                setTimeout(() => {
+                  ref.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+                  if (needFocus.current) {
+                    ref.focus();
+                    needFocus.current = false;
+                  }
+                });
               }}
               onClick={() => {
                 onSelectChange(value);
               }}
             >
               {valueRenderer(value, precision)}
-            </li>
+            </Box>
           );
         })}
       </ol>
-    </div>
+    </Box>
   );
 };
-
-export default TimePicker;

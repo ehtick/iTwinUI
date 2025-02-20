@@ -2,18 +2,15 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import '@itwin/itwinui-css/css/color-picker.css';
-import {
-  useTheme,
-  CommonProps,
+import * as React from 'react';
+import { ColorValue, useMergedRefs, Box } from '../../utils/index.js';
+import type {
   ColorType,
-  ColorValue,
   HsvColor,
-  getTabbableElements,
-} from '../utils';
+  PolymorphicForwardRefComponent,
+} from '../../utils/index.js';
 import cx from 'classnames';
-import { ColorPickerContext } from './ColorPickerContext';
+import { ColorPickerContext } from './ColorPickerContext.js';
 
 export const getColorValue = (color: ColorType | ColorValue | undefined) => {
   if (color instanceof ColorValue) {
@@ -22,7 +19,7 @@ export const getColorValue = (color: ColorType | ColorValue | undefined) => {
   return ColorValue.create(color);
 };
 
-export type ColorPickerProps = {
+type ColorPickerProps = {
   /**
    * Content of the color palette.
    *
@@ -46,16 +43,20 @@ export type ColorPickerProps = {
    */
   onChangeComplete?: (color: ColorValue) => void;
   /**
-   * If true, the first focusable element in the color picker will automatically be focused.
-   * @default false
-   */
-  setFocus?: boolean;
-  /**
    * If true, ColorBuilder will show the alpha slider and ColorInputPanel will show an alpha input.
    * @default false
    */
   showAlpha?: boolean;
-} & Omit<CommonProps, 'title'>;
+  /**
+   * Whether there is a background, border, shadow, etc.
+   *
+   * Should be set to true if used in a popover that doesn't have its own background,
+   * or set to false if the popover has its own background or embedding within a page.
+   *
+   * @default true
+   */
+  applyBackground?: boolean;
+};
 
 /**
  * ColorPicker to display color builder options, color inputs, and a palette of ColorSwatches.
@@ -70,29 +71,19 @@ export type ColorPickerProps = {
  *   <ColorPalette label='Saved colors' colors={['#FFFFFF', '#5A6973']} />
  * </ColorPicker>
  */
-export const ColorPicker = (props: ColorPickerProps) => {
+export const ColorPicker = React.forwardRef((props, forwardedRef) => {
   const {
     children,
     className,
     selectedColor,
     onChange,
     onChangeComplete,
-    setFocus = false,
     showAlpha = false,
+    applyBackground = true,
     ...rest
   } = props;
 
-  useTheme();
-
   const ref = React.useRef<HTMLDivElement>(null);
-
-  // set focus on the first tabbable element
-  React.useEffect(() => {
-    if (ref.current && setFocus) {
-      const tabbableElements = getTabbableElements(ref.current);
-      (tabbableElements[0] as HTMLElement).focus();
-    }
-  }, [setFocus]);
 
   const inColor = React.useMemo(
     () => getColorValue(selectedColor),
@@ -145,7 +136,15 @@ export const ColorPicker = (props: ColorPickerProps) => {
   );
 
   return (
-    <div className={cx('iui-color-picker', className)} ref={ref} {...rest}>
+    <Box
+      className={cx(
+        'iui-color-picker',
+        { 'iui-popover-surface': applyBackground },
+        className,
+      )}
+      ref={useMergedRefs(ref, forwardedRef)}
+      {...rest}
+    >
       <ColorPickerContext.Provider
         value={{
           activeColor,
@@ -158,8 +157,9 @@ export const ColorPicker = (props: ColorPickerProps) => {
       >
         {children}
       </ColorPickerContext.Provider>
-    </div>
+    </Box>
   );
-};
-
-export default ColorPicker;
+}) as PolymorphicForwardRefComponent<'div', ColorPickerProps>;
+if (process.env.NODE_ENV === 'development') {
+  ColorPicker.displayName = 'ColorPicker';
+}

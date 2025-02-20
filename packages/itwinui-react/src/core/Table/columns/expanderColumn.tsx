@@ -2,11 +2,15 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { SvgChevronRight } from '../../utils';
-import { CellProps, CellRendererProps, Row } from 'react-table';
-import { IconButton } from '../../Buttons';
-import { DefaultCell } from '../cells';
+import * as React from 'react';
+import { SvgChevronRight } from '../../../utils/index.js';
+import type {
+  CellProps,
+  CellRendererProps,
+  Row,
+} from '../../../react-table/react-table.js';
+import { IconButton } from '../../Buttons/IconButton.js';
+import { DefaultCell } from '../cells/index.js';
 
 export const EXPANDER_CELL_ID = 'iui-table-expander';
 
@@ -17,7 +21,7 @@ export const EXPANDER_CELL_ID = 'iui-table-expander';
  * const subComponent = useCallback(
  *   (row: Row) => (
  *     <div style={{ padding: 16 }}>
- *       <Leading>Extra information</Leading>
+ *       <Text variant='leading'>Extra information</Text>
  *       <pre>
  *         <code>{JSON.stringify({ values: row.values }, null, 2)}</code>
  *       </pre>
@@ -59,6 +63,7 @@ export const ExpanderColumn = <T extends Record<string, unknown>>(
       } else {
         return (
           <IconButton
+            aria-label='Toggle expandable content'
             className='iui-table-row-expander'
             styleType='borderless'
             size='small'
@@ -67,6 +72,7 @@ export const ExpanderColumn = <T extends Record<string, unknown>>(
               row.toggleRowExpanded();
             }}
             disabled={isDisabled?.(props.row.original)}
+            aria-expanded={row.isExpanded}
           >
             {<SvgChevronRight />}
           </IconButton>

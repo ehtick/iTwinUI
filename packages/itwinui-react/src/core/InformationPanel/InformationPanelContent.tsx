@@ -3,11 +3,11 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { CommonProps, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/information-panel.css';
+import * as React from 'react';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type InformationPanelContentProps = {
+type InformationPanelContentProps = {
   /**
    * If set to 'inline', the label/input pairs will be shown on the same line.
    * The component handles the spacing and alignment automatically.
@@ -20,7 +20,7 @@ export type InformationPanelContentProps = {
    * Should ideally be pairs of `Label` and input components.
    */
   children: React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * The `InformationPanelContent` component should be used inside `InformationPanelBody`
@@ -45,25 +45,25 @@ export type InformationPanelContentProps = {
  *   <Input id='path-input' value='/Shared/Music/' />
  * </InformationPanelContent>
  */
-export const InformationPanelContent = (
-  props: InformationPanelContentProps,
-) => {
-  const { className, displayStyle = 'default', children, ...rest } = props;
+export const InformationPanelContent = React.forwardRef(
+  (props, forwardedRef) => {
+    const { className, displayStyle = 'default', children, ...rest } = props;
 
-  useTheme();
-
-  return (
-    <div
-      className={cx(
-        'iui-information-body-content',
-        { 'iui-inline': displayStyle === 'inline' },
-        className,
-      )}
-      {...rest}
-    >
-      {children}
-    </div>
-  );
-};
-
-export default InformationPanelContent;
+    return (
+      <Box
+        className={cx(
+          'iui-information-body-content',
+          { 'iui-inline': displayStyle === 'inline' },
+          className,
+        )}
+        ref={forwardedRef}
+        {...rest}
+      >
+        {children}
+      </Box>
+    );
+  },
+) as PolymorphicForwardRefComponent<'div', InformationPanelContentProps>;
+if (process.env.NODE_ENV === 'development') {
+  InformationPanelContent.displayName = 'InformationPanelContent';
+}

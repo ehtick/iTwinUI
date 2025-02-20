@@ -6,10 +6,6 @@
 npm install @itwin/itwinui-variables
 ```
 
-```console
-yarn add @itwin/itwinui-variables
-```
-
 ## Usage
 
 Import in CSS:
@@ -18,7 +14,7 @@ Import in CSS:
 @import '@itwin/itwinui-variables';
 ```
 
-Or in JS:
+Or in JS (if using a bundler):
 
 ```js
 import '@itwin/itwinui-variables';
@@ -30,6 +26,13 @@ import '@itwin/itwinui-variables';
 > @import '@itwin/itwinui-variables/index.css';
 > ```
 
+Specify a theme ("light" or "dark") by adding a `data-iui-theme` attribute to the top of your app.
+```html
+<body data-iui-theme="light">
+  <!-- your application code -->
+</body>
+```
+
 Now you can start using the variables:
 
 ```css
@@ -40,15 +43,7 @@ button {
 }
 ```
 
-By default, the variables use light theme. You can switch to dark theme using `data-iui-theme` in your HTML.
-
-```html
-<body data-iui-theme="dark">
-  <!-- your application code -->
-</body>
-```
-
-You can also specify `data-iui-contrast` to switch to a high contrast theme.
+You can also specify `data-iui-contrast` to switch to a high contrast version of the current theme.
 
 ```html
 <body data-iui-theme="dark" data-iui-contrast="high">
@@ -56,8 +51,14 @@ You can also specify `data-iui-contrast` to switch to a high contrast theme.
 </body>
 ```
 
-If you want the variables to automatically respect the user preferences (color-scheme and contrast), then import `os.css`:
+If you want the variables to automatically respect the user preferences (`prefers-color-scheme` and `prefers-contrast`), then you need to additionally import `os.css`, and use `data-iui-theme` without a value. For example:
 
 ```css
+@import '@itwin/itwinui-variables';
 @import '@itwin/itwinui-variables/os.css';
+```
+```html
+<body data-iui-theme>
+  <!-- your application code -->
+</body>
 ```

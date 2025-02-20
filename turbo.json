@@ -1,6 +1,5 @@
 {
   "$schema": "https://turborepo.org/schema.json",
-  "baseBranch": "origin/main",
   "pipeline": {
     "build": {
       "dependsOn": ["^build"],
@@ -11,32 +10,43 @@
       "outputs": ["css/**"]
     },
     "@itwin/itwinui-react#build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "@itwin/itwinui-css#build"],
       "outputs": ["esm/**", "cjs/**"]
     },
-    "storybook#build": {
+    "css-workshop#build": {
+      "dependsOn": ["@itwin/itwinui-css#build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "react-workshop#build": {
       "dependsOn": ["^build"],
-      "outputs": ["storybook-static/**"]
+      "outputs": ["build/**"]
     },
-    "test": {
-      "outputs": []
+    "portal#build": {
+      "dependsOn": ["@itwin/itwinui-css#build"],
+      "outputs": ["dist/**"]
     },
-    "storybook#test": {
+    "test": {},
+    "react-workshop#test": {
+      "dependsOn": ["build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "css-workshop#test": {
       "dependsOn": ["build"]
     },
-    "@itwin/itwinui-css#test": {
+    "a11y#test": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "e2e#test": {
       "dependsOn": ["build"]
     },
-    "lint": {
-      "outputs": []
-    },
+    "lint": {},
     "dev": {
       "dependsOn": [],
-      "cache": false
+      "cache": false,
+      "persistent": true
     },
-    "format": {
-      "outputs": []
-    },
+    "format": {},
     "clean": {
       "outputs": [],
       "cache": false

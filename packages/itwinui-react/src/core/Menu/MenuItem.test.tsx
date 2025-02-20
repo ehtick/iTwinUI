@@ -2,14 +2,21 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { fireEvent, render } from '@testing-library/react';
-import MenuItem from './MenuItem';
-import { SvgSmileyHappy } from '../utils';
-import userEvent from '@testing-library/user-event';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { MenuItem } from './MenuItem.js';
+import { SvgSmileyHappy } from '../../utils/index.js';
+import { Menu } from './Menu.js';
+import { Button } from '../Buttons/Button.js';
 
 function assertBaseElement(
-  menuItem: HTMLLIElement,
+  menuItem: HTMLElement,
   {
     role = 'menuitem',
     isSelected = false,
@@ -19,112 +26,153 @@ function assertBaseElement(
   } = {},
 ) {
   expect(menuItem).toBeTruthy();
-  expect(menuItem.getAttribute('tabindex')).toEqual(disabled ? null : '-1');
+  expect(menuItem.getAttribute('tabindex')).toEqual(isSelected ? '0' : '-1');
   expect(menuItem.getAttribute('role')).toEqual(role);
-  expect(menuItem.classList.contains('iui-active')).toBe(isSelected);
-  expect(menuItem.classList.contains('iui-disabled')).toBe(disabled);
+  expect(menuItem.hasAttribute(`data-iui-active`)).toBe(isSelected);
+  expect(menuItem.hasAttribute(`data-iui-disabled`)).toBe(disabled);
   expect(menuItem.textContent).toContain('Test item');
-  const content = menuItem.querySelector('.iui-content') as HTMLElement;
-  const label = content.querySelector('.iui-menu-label') as HTMLElement;
-  expect(label).toBeTruthy();
-  expect(label.textContent).toContain('Test item');
+  const content = menuItem.querySelector(
+    '.iui-list-item-content',
+  ) as HTMLElement;
+  expect(content).toBeTruthy();
+  expect(content.textContent).toContain('Test item');
   expect(
-    (menuItem.firstChild as HTMLElement).classList.contains('iui-icon'),
+    (menuItem.firstChild as HTMLElement).classList.contains(
+      'iui-list-item-icon',
+    ),
   ).toBe(hasIcon);
   expect(
-    (menuItem.lastChild as HTMLElement).classList.contains('iui-icon'),
+    (menuItem.lastChild as HTMLElement).classList.contains(
+      'iui-list-item-icon',
+    ),
   ).toBe(hasBadge);
 }
 
 it('should render content', () => {
   const { container } = render(<MenuItem>Test item</MenuItem>);
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
 });
 
 it('should render as selected', () => {
   const { container } = render(<MenuItem isSelected>Test item</MenuItem>);
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem, { isSelected: true });
 });
 
 it('should render as disabled', () => {
-  const mockedOnClick = jest.fn();
+  const mockedOnClick = vi.fn();
   const { container } = render(
     <MenuItem disabled onClick={mockedOnClick}>
       Test item
     </MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem, { disabled: true });
 
   fireEvent.click(menuItem);
   expect(mockedOnClick).toHaveBeenCalledTimes(0);
 });
 
-it('should render with an icon', () => {
+it('should render with an startIcon', () => {
   const { container } = render(
-    <MenuItem icon={<SvgSmileyHappy />}>Test item</MenuItem>,
+    <MenuItem startIcon={<SvgSmileyHappy />}>Test item</MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem, { hasIcon: true });
 });
 
-it('should render with a badge', () => {
+it('should render with a endIcon', () => {
   const { container } = render(
-    <MenuItem badge={<SvgSmileyHappy />}>Test item</MenuItem>,
+    <MenuItem endIcon={<SvgSmileyHappy />}>Test item</MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem, { hasBadge: true });
 });
 
 it('should render with custom role', () => {
   const { container } = render(<MenuItem role='option'>Test item</MenuItem>);
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem, { role: 'option' });
 });
 
 it('should handle click', () => {
-  const mockedOnClick = jest.fn();
+  const mockedOnClick = vi.fn();
   const { container } = render(
     <MenuItem onClick={mockedOnClick} value='test_value'>
       Test item
     </MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
 
   fireEvent.click(menuItem);
   expect(mockedOnClick).toHaveBeenCalledWith('test_value');
 });
 
-it('should handle key press', () => {
-  const mockedOnClick = jest.fn();
+it('should not be clickable with disabled', () => {
+  const mockedOnClick = vi.fn();
+  const { container } = render(
+    <MenuItem disabled onClick={mockedOnClick}>
+      Test item
+    </MenuItem>,
+  );
+
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
+  assertBaseElement(menuItem, { disabled: true });
+
+  fireEvent.click(menuItem);
+  expect(mockedOnClick).not.toHaveBeenCalled();
+});
+
+it('should focus on hover (when MenuItem is in a Menu)', async () => {
+  render(
+    <Menu trigger={<Button data-testid='trigger'>Trigger</Button>}>
+      <MenuItem data-testid='item'>Test item</MenuItem>
+    </Menu>,
+  );
+
+  const trigger = screen.getByTestId('trigger');
+  await act(async () => trigger.click());
+
+  const menuItem = screen.getByTestId('item');
+  expect(menuItem).not.toHaveFocus();
+  fireEvent.mouseEnter(menuItem);
+  expect(menuItem).toHaveFocus();
+});
+
+it('should handle key press', async () => {
+  const mockedOnClick = vi.fn();
   const { container } = render(
     <MenuItem onClick={mockedOnClick} value='test_value'>
       Test item
     </MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
 
   fireEvent.keyDown(menuItem, { key: 'Enter', altKey: true });
   expect(mockedOnClick).not.toHaveBeenCalled();
 
-  fireEvent.keyDown(menuItem, { key: 'Enter' });
-  expect(mockedOnClick).toHaveBeenNthCalledWith(1, 'test_value');
-  fireEvent.keyDown(menuItem, { key: ' ' });
-  expect(mockedOnClick).toHaveBeenNthCalledWith(2, 'test_value');
-  fireEvent.keyDown(menuItem, { key: 'Spacebar' });
-  expect(mockedOnClick).toHaveBeenNthCalledWith(3, 'test_value');
+  menuItem.focus();
+
+  userEvent.keyboard('{Enter}');
+  await waitFor(() =>
+    expect(mockedOnClick).toHaveBeenNthCalledWith(1, 'test_value'),
+  );
+
+  userEvent.keyboard(' ');
+  await waitFor(() =>
+    expect(mockedOnClick).toHaveBeenNthCalledWith(2, 'test_value'),
+  );
 });
 
 it('should add custom className', () => {
@@ -132,7 +180,7 @@ it('should add custom className', () => {
     <MenuItem className='test-className'>Test item</MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
   expect(menuItem.classList).toContain('test-className');
 });
@@ -142,7 +190,7 @@ it('should add custom style', () => {
     <MenuItem style={{ color: 'red' }}>Test item</MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
   expect(menuItem.style.color).toEqual('red');
 });
@@ -150,10 +198,9 @@ it('should add custom style', () => {
 it('should render large size', () => {
   const { container } = render(<MenuItem size='large'>Test item</MenuItem>);
 
-  const menuItem = container.querySelector(
-    '.iui-menu-item.iui-large',
-  ) as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
+  expect(menuItem).toHaveAttribute('data-iui-size', 'large');
 });
 
 it('should render sublabel', () => {
@@ -161,30 +208,34 @@ it('should render sublabel', () => {
     <MenuItem sublabel='Test sublabel'>Test item</MenuItem>,
   );
 
-  const menuItem = container.querySelector(
-    '.iui-menu-item.iui-large',
-  ) as HTMLLIElement;
+  const menuItem = container.querySelector('.iui-list-item') as HTMLElement;
   assertBaseElement(menuItem);
+  expect(menuItem).toHaveAttribute('data-iui-size', 'large');
 
   const sublabel = menuItem.querySelector(
-    '.iui-content .iui-menu-description',
+    '.iui-list-item-content .iui-list-item-description',
   ) as HTMLElement;
   expect(sublabel).toBeTruthy();
   expect(sublabel.textContent).toEqual('Test sublabel');
 });
 
 it('should show sub menu on hover', () => {
-  const mockedSubSubOnClick = jest.fn();
-  const { container } = render(
+  vi.useFakeTimers();
+
+  const mockedSubSubOnClick = vi.fn();
+  render(
     <MenuItem
       value='test_value'
+      data-testid='parent'
       subMenuItems={[
         <MenuItem
           key={1}
+          data-testid='sub'
           value='test_value_sub'
           subMenuItems={[
             <MenuItem
               key={1}
+              data-testid='sub-sub'
               onClick={mockedSubSubOnClick}
               value='test_value_sub_sub'
             >
@@ -200,71 +251,27 @@ it('should show sub menu on hover', () => {
     </MenuItem>,
   );
 
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
-  assertBaseElement(menuItem, { hasBadge: true });
+  const menuItem = screen.getByTestId('parent');
+  expect(menuItem).toHaveTextContent('Test item');
 
   // hover over menu item
-  fireEvent.mouseOver(menuItem);
-  const subMenu = container.querySelectorAll(
-    '[data-tippy-root] .iui-menu-item',
-  )[0] as HTMLLIElement;
-  expect(subMenu.textContent).toBe('Test sub');
-  expect(container.ownerDocument.activeElement).toEqual(subMenu);
+  fireEvent.mouseEnter(menuItem);
+  act(() => vi.advanceTimersByTime(100));
+  const subMenuItem = screen.getByTestId('sub');
+  expect(subMenuItem).toHaveTextContent('Test sub');
 
   // hover over sub menu item
-  fireEvent.mouseOver(subMenu);
-  const subSubMenu = container.querySelectorAll(
-    '[data-tippy-root] .iui-menu-item',
-  )[1] as HTMLLIElement;
-  expect(subSubMenu.textContent).toBe('Test sub sub');
-  expect(container.ownerDocument.activeElement).toEqual(subSubMenu);
-  fireEvent.click(subSubMenu);
+  fireEvent.mouseEnter(subMenuItem);
+  act(() => vi.advanceTimersByTime(100));
+  const subSubMenuItem = screen.getByTestId('sub-sub');
+  expect(subSubMenuItem).toHaveTextContent('Test sub sub');
+  fireEvent.click(subSubMenuItem);
   expect(mockedSubSubOnClick).toHaveBeenCalled();
 
   // leave sub menu item
-  fireEvent.mouseLeave(subMenu, { relatedTarget: menuItem });
-  expect(subSubMenu).not.toBeVisible();
-});
+  fireEvent.mouseLeave(subMenuItem, { relatedTarget: menuItem });
+  act(() => vi.advanceTimersByTime(100));
+  expect(subSubMenuItem).not.toBeVisible();
 
-it('should handle key press with sub menus', async () => {
-  const mockedSubOnClick = jest.fn();
-  const { container } = render(
-    <MenuItem
-      value='test_value'
-      subMenuItems={[
-        <MenuItem key={1} onClick={mockedSubOnClick} value='test_value_sub'>
-          Test sub
-        </MenuItem>,
-      ]}
-    >
-      Test item
-    </MenuItem>,
-  );
-
-  const menuItem = container.querySelector('.iui-menu-item') as HTMLLIElement;
-  assertBaseElement(menuItem, { hasBadge: true });
-
-  // go right to open sub menu
-  menuItem.focus();
-  await userEvent.keyboard('{ArrowRight}');
-  const subTippy = container.querySelector('[data-tippy-root]') as HTMLElement;
-  const subMenu = subTippy.querySelector('.iui-menu-item') as HTMLLIElement;
-  expect(subMenu.textContent).toBe('Test sub');
-  expect(container.ownerDocument.activeElement).toEqual(subMenu);
-
-  // go left to close sub menu
-  await userEvent.keyboard('{ArrowLeft}');
-  expect(subTippy).not.toBeVisible();
-
-  // go right to open sub menu
-  await userEvent.keyboard('{ArrowRight}');
-  expect(subTippy).toBeVisible();
-
-  // click
-  await userEvent.keyboard('{Enter}');
-  expect(mockedSubOnClick).toHaveBeenNthCalledWith(1, 'test_value_sub');
-  await userEvent.keyboard(' ');
-  expect(mockedSubOnClick).toHaveBeenNthCalledWith(2, 'test_value_sub');
-  await userEvent.keyboard('{Spacebar}');
-  expect(mockedSubOnClick).toHaveBeenNthCalledWith(3, 'test_value_sub');
+  vi.useRealTimers();
 });

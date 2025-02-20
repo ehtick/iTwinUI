@@ -2,12 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { useTheme } from '../utils';
+import * as React from 'react';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 import cx from 'classnames';
-import '@itwin/itwinui-css/css/utils.css';
 
-export type NotificationMarkerProps = {
+type NotificationMarkerProps = {
   /**
    * Content of the NotificationMarker.
    */
@@ -31,17 +31,18 @@ export type NotificationMarkerProps = {
    */
   pulsing?: boolean;
   /**
-   * Set this programmatically to false when you just want to render the passed children without the notification
-   * @default true
+   * Instead of conditionally rendering the `NotificationMarker`, the `enabled` prop can be used.
+   *
+   * When `enabled` is set to `false`, the DOM element will still be present, but the notification marker will not be displayed visually.
+   *
    * @example
-   * let [newMessagesCount, ...] = useState(0);
-   * ...
-   * <NotificationMarker enabled={newMessagesCount > 0}>
-   *   <SvgNotification />
+   * <NotificationMarker enabled={notifications.length > 0}>
+   *  …
    * </NotificationMarker>
+   * @default true
    */
   enabled?: boolean;
-} & React.ComponentProps<'span'>;
+};
 
 /**
  * A small notification circle to the top-right of the passed children prop.
@@ -55,30 +56,29 @@ export type NotificationMarkerProps = {
  * @example
  * <NotificationMarker status='positive' pulsing={true}>Live</NotificationMarker>
  */
-export const NotificationMarker = React.forwardRef(
-  (props: NotificationMarkerProps, ref: React.Ref<HTMLSpanElement>) => {
-    const {
-      className,
-      children,
-      status = 'primary',
-      pulsing = false,
-      enabled = true,
-      ...rest
-    } = props;
-    useTheme();
+export const NotificationMarker = React.forwardRef((props, ref) => {
+  const {
+    className,
+    children,
+    status = 'primary',
+    pulsing = false,
+    enabled = true,
+    ...rest
+  } = props;
 
-    return (
-      <span
-        ref={ref}
-        className={cx({ 'iui-notification-marker': enabled }, className)}
-        data-iui-variant={enabled ? status : null}
-        data-iui-urgent={enabled ? pulsing : null}
-        {...rest}
-      >
-        {children}
-      </span>
-    );
-  },
-);
-
-export default NotificationMarker;
+  return (
+    <Box
+      as='span'
+      ref={ref}
+      className={cx({ 'iui-notification-marker': enabled }, className)}
+      data-iui-variant={enabled ? status : null}
+      data-iui-urgent={enabled ? pulsing : null}
+      {...rest}
+    >
+      {children}
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'span', NotificationMarkerProps>;
+if (process.env.NODE_ENV === 'development') {
+  NotificationMarker.displayName = 'NotificationMarker';
+}

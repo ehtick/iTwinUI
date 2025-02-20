@@ -8,13 +8,14 @@ import { Alert, ThemeProvider } from '@itwin/itwinui-react';
 export default function AlertDemo() {
   return (
     <ThemeProvider theme='dark'>
-      <Alert
-        onClose={() => console.log('CLOSED')}
-        clickableText='Learn more'
-        style={{ minWidth: 280 }}
-      >
-        This is an alert
-      </Alert>
+      <Alert.Wrapper style={{ minWidth: 'min(100%, 350px)' }}>
+        <Alert.Icon />
+        <Alert.Message>
+          This is an alert
+          <Alert.Action onClick={() => console.log('Clicked more info!')}>Learn more</Alert.Action>
+        </Alert.Message>
+        <Alert.CloseButton onClick={() => console.log('CLOSED')} />
+      </Alert.Wrapper>
     </ThemeProvider>
   );
 }

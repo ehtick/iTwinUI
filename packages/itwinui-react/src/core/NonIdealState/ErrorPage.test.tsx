@@ -2,9 +2,8 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import { render, screen } from '@testing-library/react';
-import React from 'react';
-import { ErrorPage, ErrorPageType } from './ErrorPage';
+import { render, screen, waitFor } from '@testing-library/react';
+import { ErrorPage, type ErrorPageType } from './ErrorPage.js';
 import {
   Svg401,
   Svg403,
@@ -17,7 +16,7 @@ import {
   SvgTimedOut,
 } from '@itwin/itwinui-illustrations-react';
 
-describe(ErrorPage, () => {
+describe('ErrorPage', () => {
   const defaultTests = [
     {
       errorType: '300',
@@ -107,11 +106,11 @@ describe(ErrorPage, () => {
   ] as {
     errorType: ErrorPageType;
     errorName: string;
-    illustration: JSX.Element;
+    illustration: React.JSX.Element;
   }[];
 
   defaultTests.forEach((test) => {
-    it(`displays ${test.errorType} error with default message`, () => {
+    it(`displays ${test.errorType} error with default message`, async () => {
       const { container } = render(<ErrorPage errorType={test.errorType} />);
       screen.getByText(test.errorName);
 
@@ -119,10 +118,12 @@ describe(ErrorPage, () => {
         container: { firstChild: illustration },
       } = render(test.illustration);
 
-      expect(
-        container.querySelector('.iui-non-ideal-state-illustration')
-          ?.firstElementChild,
-      ).toEqual(illustration);
+      await waitFor(() =>
+        expect(
+          container.querySelector('.iui-non-ideal-state-illustration')
+            ?.firstElementChild,
+        ).toEqual(illustration),
+      );
     });
   });
 
@@ -229,7 +230,7 @@ describe(ErrorPage, () => {
   });
 
   it('displays primary button', () => {
-    const onClick = jest.fn();
+    const onClick = vi.fn();
     render(
       <ErrorPage
         errorType='404'
@@ -243,7 +244,7 @@ describe(ErrorPage, () => {
   });
 
   it('displays secondary button', () => {
-    const onClick = jest.fn();
+    const onClick = vi.fn();
     render(
       <ErrorPage
         errorType='404'
@@ -289,6 +290,6 @@ describe(ErrorPage, () => {
       '.iui-non-ideal-state',
     ) as HTMLElement;
     expect(element).toHaveClass('test class');
-    expect(element).toHaveStyle('color: blue');
+    expect(element.style.color).toEqual('blue');
   });
 });

@@ -1,0 +1,82 @@
+---
+title: File upload
+description: Allow the user to upload files from their system.
+thumbnail: FileUpload
+---
+
+<p>{frontmatter.description}</p>
+
+<LiveExample src='FileUpload.main.jsx'>
+  <AllExamples.FileUploadMainExample client:load />
+</LiveExample>
+
+File uploading is a common interaction that may happen in various different ways depending on the context. The general pattern involves:
+
+1. Letting the user know they can upload content.
+2. Displaying upload status progress.
+3. Confirming the upload’s status upon completion.
+
+This page is mainly concerned with the first part of the process (before the upload actually starts). For showing progress, you can use a [dialog](dialog) with a [progress indicator](progressindicator) inside it.
+
+## Usage
+
+iTwinUI provides a few different components for working with file uploads.
+
+### FileUpload
+
+`FileUpload` is a simple wrapper component that can be used to add drag-and-drop behavior to _any_ component.
+
+<LiveExample src='FileUpload.wrappinginput.jsx'>
+  <AllExamples.FileUploadWrappingInputExample client:load />
+</LiveExample>
+
+The `onFileDropped` prop is called with two arguments: the file list and the underlying [`"drop"` event](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/drop_event). The file list can suffice for simple file uploads, while the event contains more data (for example, [`event.dataTransfer.items`](https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/items)) that can be useful if you have a more complex use case, such as directory uploads.
+
+### FileUploadCard
+
+`FileUploadCard` consists of a card-like UI that uses a [file input](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file) underneath. The empty state (when no file is uploaded) is specified using the `emptyCard` prop which is set to use `FileEmptyCard` by default.
+
+`FileUploadCard` includes the following sub-components:
+
+- `FileUploadCard.Action`
+- `FileUploadCard.Info`
+- `FileUploadCard.Title`
+- `FileUploadCard.Description`
+- `FileUploadCard.Icon`
+- `FileUploadCard.Input`
+- `FileUploadCard.InputLabel`
+
+`FileEmptyCard` includes the following sub-components:
+
+- `FileEmptyCard.Icon`
+- `FileEmptyCard.Text`
+
+The following example shows how some of these parts can be customized.
+
+<LiveExample src='FileUpload.custom.jsx'>
+  <AllExamples.FileUploadCustomExample client:load />
+</LiveExample>
+
+## Usage guidelines
+
+### Chat
+
+The user can either click on an attach icon or drag & drop a file over the text area. The text area will visibly change when a file is dragged above it. Once the user drops the file above the text area a progress indicator appears. Depending on the applications needs, one of two things can happen.
+
+The file could immediately be uploaded and added to the chat stream without any additional input from the user. Because there is no way to stop / cancel the upload it is a good idea to allow users to retract / delete messages after they have been sent.
+
+The second option is the file could be queued within the message itself. This gives the user a chance to remove the file if they have changed their mind or accidentally uploaded the wrong file. This method does require an additional step from the user but is typically safer than the previous method.
+
+### Table
+
+The user can either click on an upload button or drag & drop a file over the table. The table will visibly change when a file is dragged above it. Once the user drops the file above the table two things happen simultaneously.
+
+First, the file appears at the top of the table. The files that are being uploaded are visually different from the rest of the files so the user knows they are an upload in progress. As the files upload, they visually change to match the rest of the files. Once the file is finished uploading, it remains at the top of the table despite sort filters applied. Upon any sort of table refresh (page refresh, a new column sort, etc) the most recently uploaded files that were at the top are then sorted amongst the rest of the files.
+
+The second thing that happens when a file is uploaded is the upload tracker appears in the bottom right. This allows the user to track their upload progress if they navigate further down the page when infinite scrolling is enabled / navigate to a deeper page when pagination is enabled.
+
+In some cases, there may be a table with no files uploaded yet. In a situation like this, we display an empty state explaining how to populate the table.
+
+## Props
+
+<PropsTable path='@itwin/itwinui-react/esm/core/FileUpload/FileUpload.d.ts' />

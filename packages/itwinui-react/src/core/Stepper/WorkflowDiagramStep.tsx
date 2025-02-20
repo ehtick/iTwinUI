@@ -3,28 +3,37 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { Tooltip } from '../Tooltip';
-import { StylingProps } from '../utils';
-import { StepperStepProps } from './StepperStep';
+import * as React from 'react';
+import { Tooltip } from '../Tooltip/Tooltip.js';
+import { Box, type CommonProps } from '../../utils/index.js';
+import type { StepperStepProps } from './StepperStep.js';
 
-export type WorkflowDiagramStepProps = Pick<
-  StepperStepProps,
-  'title' | 'description'
-> &
-  StylingProps;
+export type WorkflowDiagramStepProps = {
+  /**
+   *  Allows props to be passed for diagram content.
+   */
+  contentProps?: React.ComponentProps<'span'>;
+} & Pick<StepperStepProps, 'title' | 'description'> &
+  Omit<CommonProps, 'title'>;
 
 export const WorkflowDiagramStep = (props: WorkflowDiagramStepProps) => {
-  const { title, description, className, style, ...rest } = props;
+  const { title, description, className, style, contentProps, ...rest } = props;
 
   const stepShape = (
-    <li
+    <Box
+      as='li'
       className={cx('iui-workflow-diagram-step', className)}
       style={style}
       {...rest}
     >
-      <span className='iui-workflow-diagram-content'>{title}</span>
-    </li>
+      <Box
+        as='span'
+        {...contentProps}
+        className={cx('iui-workflow-diagram-content', contentProps?.className)}
+      >
+        {title}
+      </Box>
+    </Box>
   );
 
   return description ? (

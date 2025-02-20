@@ -2,13 +2,12 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
-import { getColorValue, ColorPicker } from './ColorPicker';
-import { ColorPalette } from './ColorPalette';
-import { ColorBuilder } from './ColorBuilder';
-import { ColorInputPanel } from './ColorInputPanel';
-import { ColorValue } from '../utils';
+import { getColorValue, ColorPicker } from './ColorPicker.js';
+import { ColorPalette } from './ColorPalette.js';
+import { ColorBuilder } from './ColorBuilder.js';
+import { ColorInputPanel } from './ColorInputPanel.js';
+import { ColorValue } from '../../utils/index.js';
 
 it('should convert color list to ColorValues', () => {
   ['#9BA5AF', '#23450b', '#00121D', '#002A44'].forEach((value) => {
@@ -41,6 +40,97 @@ it('should add className and style correctly', () => {
   ) as HTMLElement;
   expect(swatch).toBeTruthy();
   expect(swatch).toHaveStyle('width: 100px');
+});
+
+it('should render color field with custom props', () => {
+  const { container } = render(
+    <ColorPicker>
+      <ColorBuilder
+        colorFieldProps={{
+          className: 'test-color-field',
+          style: { borderRadius: '10px' },
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const colorField = container.querySelector(
+    '.iui-color-field.test-color-field',
+  ) as HTMLElement;
+  expect(colorField).toBeTruthy();
+  expect(colorField.style.borderRadius).toBe('10px');
+});
+
+it('should render color dot with custom props', () => {
+  const { container } = render(
+    <ColorPicker>
+      <ColorBuilder
+        colorDotProps={{
+          className: 'test-color-dot',
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const colorDot = container.querySelector(
+    '.iui-color-dot.test-color-dot',
+  ) as HTMLElement;
+  expect(colorDot).toBeTruthy();
+});
+
+it('should render color builder with custom hue slider', () => {
+  const handleChange = vi.fn();
+  const { container } = render(
+    <ColorPicker>
+      <ColorBuilder
+        hueSliderProps={{
+          className: 'test-hue-slider',
+          values: [0],
+          onChange: handleChange,
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const hueSlider = container.querySelector(
+    '.iui-hue-slider.test-hue-slider',
+  ) as HTMLElement;
+  expect(hueSlider).toBeTruthy();
+  const hueSliderThumb = container.querySelector(
+    '.iui-slider-thumb',
+  ) as HTMLDivElement;
+  fireEvent.pointerDown(hueSliderThumb, {
+    pointerId: 5,
+    buttons: 1,
+    clientX: 210,
+  });
+  expect(handleChange).toHaveBeenCalledTimes(1);
+});
+
+it('should render color builder with custom opacity slider', () => {
+  const handleChange = vi.fn();
+  const { container } = render(
+    <ColorPicker showAlpha>
+      <ColorBuilder
+        opacitySliderProps={{
+          className: 'test-opacity-slider',
+          values: [100],
+          onChange: handleChange,
+        }}
+      />
+    </ColorPicker>,
+  );
+
+  const opacitySlider = container.querySelector(
+    '.iui-opacity-slider.test-opacity-slider',
+  ) as HTMLElement;
+  expect(opacitySlider).toBeTruthy();
+  const opacitySliderThumb = container.querySelectorAll(
+    '.iui-slider-thumb',
+  )[1] as HTMLElement;
+  fireEvent.keyDown(opacitySliderThumb, { key: 'ArrowLeft' });
+  fireEvent.keyUp(opacitySliderThumb, { key: 'ArrowLeft' });
+  expect(handleChange).toHaveBeenCalledTimes(1);
 });
 
 it('should render advanced color picker with no color swatches', () => {
@@ -142,29 +232,31 @@ it('should set the dot positions', () => {
   //Set the correct position on color square
   const colorDot = container.querySelector('.iui-color-dot') as HTMLElement;
   expect(colorDot).toBeTruthy();
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '0% auto auto 100%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('0% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('100% auto');
 
   // Set the correct position on the slider
   const sliderDot = container.querySelectorAll(
     '.iui-slider-thumb',
   )[0] as HTMLElement;
   expect(sliderDot).toBeTruthy();
-  expect(sliderDot.style.getPropertyValue('left')).toEqual(
-    '11.699164345403899%',
+  expect(sliderDot).toHaveStyle(
+    '--iui-slider-thumb-position: 11.699164345403899%',
   );
-
   // Set the correct position on the opacity slider
   const opacityDot = container.querySelectorAll(
     '.iui-slider-thumb',
   )[1] as HTMLElement;
   expect(opacityDot).toBeTruthy();
-  expect(opacityDot.style.getPropertyValue('left')).toEqual('80%');
+  expect(opacityDot).toHaveStyle('--iui-slider-thumb-position: 80%');
 });
 
 it('should handle arrow key navigation on hue slider dot', () => {
-  const onSelectionChanged = jest.fn();
+  const onSelectionChanged = vi.fn();
 
   const { container } = render(
     <ColorPicker
@@ -184,15 +276,15 @@ it('should handle arrow key navigation on hue slider dot', () => {
 
   const sliderDot = container.querySelector('.iui-slider-thumb') as HTMLElement;
   expect(sliderDot).toBeTruthy();
-  expect(sliderDot.style.getPropertyValue('left')).toEqual('0%');
+  expect(sliderDot).toHaveStyle('--iui-slider-thumb-position: 0%');
 
   // Go right
   fireEvent.keyDown(sliderDot, { key: 'ArrowRight' });
   fireEvent.keyDown(sliderDot, { key: 'ArrowRight' });
   fireEvent.keyUp(sliderDot, { key: 'ArrowRight' }); // Releasing keyboard triggers calling onChangeCompleted
   expect(onSelectionChanged).toHaveBeenCalledTimes(1);
-  expect(sliderDot.style.getPropertyValue('left')).toEqual(
-    '0.5571030640668524%',
+  expect(sliderDot).toHaveStyle(
+    '--iui-slider-thumb-position: 0.5571030640668524%',
   );
   expect(colorBuilder).toHaveStyle('--iui-color-field-hue: #ff0800');
 
@@ -200,21 +292,21 @@ it('should handle arrow key navigation on hue slider dot', () => {
   fireEvent.keyDown(sliderDot, { key: 'ArrowLeft' });
   fireEvent.keyUp(sliderDot, { key: 'ArrowLeft' });
   expect(onSelectionChanged).toHaveBeenCalledTimes(2);
-  expect(sliderDot.style.getPropertyValue('left')).toEqual(
-    '0.2785515320334262%',
+  expect(sliderDot).toHaveStyle(
+    '--iui-slider-thumb-position: 0.2785515320334262%',
   );
   expect(colorBuilder).toHaveStyle('--iui-color-field-hue: #ff0400');
 
   // Go left to edge
   fireEvent.keyDown(sliderDot, { key: 'ArrowLeft' });
-  expect(sliderDot.style.getPropertyValue('left')).toEqual('0%');
+  expect(sliderDot).toHaveStyle('--iui-slider-thumb-position: 0%');
   fireEvent.keyDown(sliderDot, { key: 'ArrowLeft' });
-  expect(sliderDot.style.getPropertyValue('left')).toEqual('0%');
+  expect(sliderDot).toHaveStyle('--iui-slider-thumb-position: 0%');
 });
 
 it('should handle arrow key navigation on color dot', () => {
-  const onChange = jest.fn();
-  const onChangeComplete = jest.fn();
+  const onChange = vi.fn();
+  const onChangeComplete = vi.fn();
 
   const { container } = render(
     <ColorPicker
@@ -236,22 +328,28 @@ it('should handle arrow key navigation on color dot', () => {
 
   const sliderDot = container.querySelector('.iui-slider-thumb') as HTMLElement;
   expect(sliderDot).toBeTruthy();
-  expect(sliderDot.style.getPropertyValue('left')).toEqual('0%');
+  expect(sliderDot).toHaveStyle('--iui-slider-thumb-position: 0%');
 
   const colorDot = container.querySelector('.iui-color-dot') as HTMLElement;
   expect(colorDot).toBeTruthy();
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '0% auto auto 100%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('0% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('100% auto');
 
   // Go down
   fireEvent.keyDown(colorDot, { key: 'ArrowDown' });
   fireEvent.keyDown(colorDot, { key: 'ArrowDown' });
   expect(onChange).toHaveBeenCalledTimes(2);
   expect(onChangeComplete).not.toHaveBeenCalled();
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '2% auto auto 100%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('2% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('100% auto');
   expect(colorBuilder).toHaveStyle(
     '--iui-color-picker-selected-color: #fa0000',
   );
@@ -261,9 +359,12 @@ it('should handle arrow key navigation on color dot', () => {
   // Go left
   fireEvent.keyDown(colorDot, { key: 'ArrowLeft' });
   expect(onChange).toHaveBeenCalledTimes(3);
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '2% auto auto 99%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('2% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('99% auto');
   expect(colorBuilder).toHaveStyle(
     '--iui-color-picker-selected-color: #fa0202',
   );
@@ -274,17 +375,23 @@ it('should handle arrow key navigation on color dot', () => {
   // Go up to top
   fireEvent.keyDown(colorDot, { key: 'ArrowUp' });
   fireEvent.keyDown(colorDot, { key: 'ArrowUp' });
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '0% auto auto 99%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('0% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('99% auto');
   expect(colorBuilder).toHaveStyle(
     '--iui-color-picker-selected-color: #ff0303',
   );
 
   fireEvent.keyDown(colorDot, { key: 'ArrowUp' });
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '0% auto auto 99%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('0% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('99% auto');
   expect(colorBuilder).toHaveStyle(
     '--iui-color-picker-selected-color: #ff0303',
   );
@@ -293,9 +400,12 @@ it('should handle arrow key navigation on color dot', () => {
 
   // Go right to the edge
   fireEvent.keyDown(colorDot, { key: 'ArrowRight' });
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '0% auto auto 100%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('0% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('100% auto');
   expect(colorBuilder).toHaveStyle(
     '--iui-color-picker-selected-color: #ff0000',
   );
@@ -304,9 +414,12 @@ it('should handle arrow key navigation on color dot', () => {
 
   // Go up
   fireEvent.keyDown(colorDot, { key: 'ArrowUp' });
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '0% auto auto 100%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('0% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('100% auto');
   expect(colorBuilder).toHaveStyle(
     '--iui-color-picker-selected-color: #ff0000',
   );
@@ -315,8 +428,8 @@ it('should handle arrow key navigation on color dot', () => {
 });
 
 it('should call onChange and onChangeComplete from hueSlider', () => {
-  const handleOnUpdate = jest.fn();
-  const handleOnChange = jest.fn();
+  const handleOnUpdate = vi.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker
@@ -356,8 +469,8 @@ it('should call onChange and onChangeComplete from hueSlider', () => {
 });
 
 it('should handle pointer down/move/up from color square', () => {
-  const handleOnUpdate = jest.fn();
-  const handleOnChange = jest.fn();
+  const handleOnUpdate = vi.fn();
+  const handleOnChange = vi.fn();
 
   const { container } = render(
     <ColorPicker
@@ -423,39 +536,25 @@ it('should preserve hue when color dot is black/at bottom of square', () => {
 
   const colorDot = container.querySelector('.iui-color-dot') as HTMLElement;
   expect(colorDot).toBeTruthy();
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '98.4% auto auto 75%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('98.4% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('75% auto');
 
   // Go to bottom of square and hue should be preserved
   fireEvent.keyDown(colorDot, { key: 'ArrowDown' });
   fireEvent.keyDown(colorDot, { key: 'ArrowDown' });
-  expect(colorDot.style.getPropertyValue('--iui-color-dot-inset')).toEqual(
-    '100% auto auto 75%',
-  );
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-block'),
+  ).toEqual('100% auto');
+  expect(
+    colorDot.style.getPropertyValue('--iui-color-dot-inset-inline'),
+  ).toEqual('75% auto');
   expect(colorBuilder.style.getPropertyValue('--iui-color-field-hue')).toBe(
     '#00ff55',
   );
-});
-
-it('should set focus if setFocus is true', () => {
-  const { container } = render(
-    <ColorPicker setFocus>
-      <ColorBuilder />
-    </ColorPicker>,
-  );
-  expect(container.querySelector('.iui-color-picker')).toBeTruthy();
-  expect(container.querySelector('.iui-color-dot')).toHaveFocus(); // first tabbable element
-});
-
-it('should not set focus if setFocus is false', () => {
-  const { container } = render(
-    <ColorPicker>
-      <ColorBuilder />
-    </ColorPicker>,
-  );
-  expect(container.querySelector('.iui-color-picker')).toBeTruthy();
-  expect(container.querySelector('.iui-color-dot')).not.toHaveFocus();
 });
 
 it('should render advanced color picker with opacity slider', () => {
@@ -484,7 +583,7 @@ it('should render advanced color picker with opacity slider', () => {
 });
 
 it('should handle arrow key navigation on opacity slider dot', () => {
-  const onSelectionChanged = jest.fn();
+  const onSelectionChanged = vi.fn();
   const selectedColor = ColorValue.create({ h: 0, s: 100, l: 50 });
   const { container } = render(
     <ColorPicker
@@ -507,7 +606,7 @@ it('should handle arrow key navigation on opacity slider dot', () => {
     '.iui-slider-thumb',
   )[1] as HTMLElement;
   expect(opacityDot).toBeTruthy();
-  expect(opacityDot.style.getPropertyValue('left')).toEqual('100%');
+  expect(opacityDot).toHaveStyle('--iui-slider-thumb-position: 100%');
 
   // Go left
   fireEvent.keyDown(opacityDot, { key: 'ArrowLeft' });
@@ -516,7 +615,7 @@ it('should handle arrow key navigation on opacity slider dot', () => {
     1,
     ColorValue.create({ h: 0, s: 100, l: 50, a: 0.99 }),
   );
-  expect(opacityDot.style.getPropertyValue('left')).toEqual('99%');
+  expect(opacityDot).toHaveStyle('--iui-slider-thumb-position: 99%');
 
   // Go right
   fireEvent.keyDown(opacityDot, { key: 'ArrowRight' });
@@ -525,11 +624,11 @@ it('should handle arrow key navigation on opacity slider dot', () => {
     2,
     ColorValue.create({ h: 0, s: 100, l: 50, a: 1 }),
   );
-  expect(opacityDot.style.getPropertyValue('left')).toEqual('100%');
+  expect(opacityDot).toHaveStyle('--iui-slider-thumb-position: 100%');
 });
 
 it('should render color picker and handle onChangeCompleted when alpha is false', () => {
-  const handleOnChange = jest.fn();
+  const handleOnChange = vi.fn();
   const selectedColor = ColorValue.create({ h: 0, s: 100, l: 50 });
   const { container } = render(
     <ColorPicker
@@ -564,4 +663,17 @@ it('should render color picker and handle onChangeCompleted when alpha is false'
   expect(handleOnChange).toHaveBeenCalledWith(
     ColorValue.create({ h: 1, s: 100, l: 50 }),
   );
+});
+
+it.each([true, false])('should respect `applyBackground`', (value) => {
+  const { container } = render(
+    <ColorPicker applyBackground={value}>blah</ColorPicker>,
+  );
+  if (value) {
+    expect(container.querySelector('div')).toHaveClass('iui-popover-surface');
+  } else {
+    expect(container.querySelector('div')).not.toHaveClass(
+      'iui-popover-surface',
+    );
+  }
 });

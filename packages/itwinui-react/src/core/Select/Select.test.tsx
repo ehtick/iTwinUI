@@ -2,23 +2,25 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react';
-import Select, { SelectProps, SelectMultipleTypeProps } from './Select';
-import { SvgSmileyHappy } from '../utils';
-import { MenuItem } from '../Menu';
-import userEvent from '@testing-library/user-event';
+import * as React from 'react';
+import { findAllByRole, fireEvent, render } from '@testing-library/react';
+import {
+  Select,
+  type CustomSelectProps,
+  type SelectMultipleTypeProps,
+} from './Select.js';
+import { SvgSmileyHappy } from '../../utils/index.js';
+import { MenuItem } from '../Menu/MenuItem.js';
+import { userEvent } from '@testing-library/user-event';
 
 function assertSelect(
   select: HTMLElement,
   { text = '', isPlaceholderVisible = false, hasIcon = false } = {},
 ) {
   expect(select).toBeTruthy();
-  expect(select.getAttribute('aria-expanded')).toEqual('false');
-  const selectButton = select.querySelector(
-    '.iui-select-button',
-  ) as HTMLElement;
+  const selectButton = select.querySelector('[role=combobox]') as HTMLElement;
   expect(selectButton).toBeTruthy();
+  expect(selectButton).toHaveAttribute('aria-expanded', 'false');
   expect(selectButton.classList.contains('iui-placeholder')).toBe(
     isPlaceholderVisible,
   );
@@ -27,26 +29,27 @@ function assertSelect(
 }
 
 function assertMenu(
-  menu: HTMLUListElement,
+  menu: HTMLElement,
   { hasIcon = false, selectedIndex = -1, disabledIndex = -1 } = {},
 ) {
   expect(menu).toBeTruthy();
   expect(menu.getAttribute('role')).toEqual('listbox');
-  expect(menu.classList).toContain('iui-scroll');
-  const menuItems = menu.querySelectorAll('.iui-menu-item');
+  const menuItems = menu.querySelectorAll('.iui-list-item');
   expect(menuItems.length).toBe(3);
   menuItems.forEach((item, index) => {
     expect(item.textContent).toContain(`Test${index}`);
-    expect(!!item.querySelector('.iui-icon')).toBe(hasIcon);
-    expect(item.classList.contains('iui-active')).toBe(selectedIndex === index);
-    expect(item.classList.contains('iui-disabled')).toBe(
+    expect(!!item.querySelector('.iui-list-item-icon')).toBe(
+      hasIcon || selectedIndex === index,
+    );
+    expect(item.hasAttribute('data-iui-active')).toBe(selectedIndex === index);
+    expect(item.hasAttribute('data-iui-disabled')).toBe(
       disabledIndex === index,
     );
   });
 }
 
 function renderComponent(
-  props?: Partial<SelectProps<number>> & SelectMultipleTypeProps<number>,
+  props?: Partial<CustomSelectProps<number>> & SelectMultipleTypeProps<number>,
 ) {
   return render(
     <Select<number>
@@ -60,7 +63,7 @@ function renderComponent(
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 it('should render empty select', () => {
@@ -75,6 +78,25 @@ it('should show placeholder', () => {
 
   const select = container.querySelector('.iui-input-with-icon') as HTMLElement;
   assertSelect(select, { text: 'TestPlaceholder', isPlaceholderVisible: true });
+});
+
+it('should respect styleType={"borderless"}', () => {
+  const { container } = render(
+    <Select
+      native
+      options={[
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B' },
+      ]}
+      styleType='borderless'
+    />,
+  );
+
+  const selectButton = container.querySelector(
+    '.iui-select-button',
+  ) as HTMLElement;
+
+  expect(selectButton).toHaveAttribute('data-iui-variant', 'borderless');
 });
 
 it('should show value inside select', () => {
@@ -93,7 +115,7 @@ it('should show value with icon inside select', () => {
     options: [...new Array(3)].map((_, index) => ({
       label: `Test${index}`,
       value: index,
-      icon: <SvgSmileyHappy />,
+      startIcon: <SvgSmileyHappy />,
     })),
   });
 
@@ -102,38 +124,41 @@ it('should show value with icon inside select', () => {
 });
 
 it('should render disabled select', async () => {
-  const mockedFn = jest.fn();
+  const mockedFn = vi.fn();
   const { container } = renderComponent({
     disabled: true,
     onChange: mockedFn,
   });
 
   const selectButton = container.querySelector(
-    '.iui-select-button.iui-disabled',
+    '.iui-select-button[data-iui-disabled=true]',
   ) as HTMLElement;
   expect(selectButton).toBeTruthy();
+  expect(selectButton).toHaveAttribute('aria-disabled', 'true');
+  expect(selectButton.getAttribute('tabIndex')).toBe('0');
   await userEvent.click(selectButton);
   expect(mockedFn).not.toHaveBeenCalled();
-  expect(selectButton.getAttribute('tabIndex')).toBeNull();
   fireEvent.keyDown(selectButton, 'Spacebar');
   expect(document.querySelector('.iui-menu')).toBeNull();
 });
 
 it('should set focus on select and call onBlur', () => {
-  const onBlur = jest.fn();
-  const { container } = renderComponent({ setFocus: true, onBlur });
+  const onBlur = vi.fn();
+  const { container } = renderComponent({ onBlur });
 
   const select = container.querySelector('.iui-input-with-icon') as HTMLElement;
   assertSelect(select);
   const selectButton = container.querySelector(
     '.iui-select-button',
   ) as HTMLElement;
+  selectButton.focus();
   expect(selectButton).toBeTruthy();
-  expect(selectButton).toHaveFocus();
   expect(selectButton.getAttribute('tabIndex')).toBe('0');
+  expect(selectButton).toHaveFocus();
   expect(onBlur).not.toHaveBeenCalled();
 
   fireEvent.click(selectButton);
+  vi.runAllTimers();
   expect(selectButton).not.toHaveFocus();
   expect(onBlur).toHaveBeenCalled();
 });
@@ -183,11 +208,11 @@ it('should open menu on click', () => {
 
   const select = container.querySelector('.iui-input-with-icon') as HTMLElement;
   expect(select).toBeTruthy();
-  let menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  let menu = document.querySelector('.iui-menu') as HTMLElement;
   expect(menu).toBeFalsy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu);
 });
 
@@ -204,38 +229,32 @@ it('should respect visible prop', () => {
   const select = container.querySelector('.iui-input-with-icon') as HTMLElement;
   expect(select).toBeTruthy();
 
-  const tippy = document.querySelector('[data-tippy-root]') as HTMLElement;
-  expect(tippy).toBeVisible();
-  assertMenu(document.querySelector('.iui-menu') as HTMLUListElement);
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
+  expect(menu).toBeVisible();
+  assertMenu(menu);
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  expect(tippy).not.toBeVisible();
+  expect(menu).toBeVisible();
 
-  rerender(<Select options={options} popoverProps={{ visible: true }} />);
-  expect(tippy).toBeVisible();
+  rerender(<Select options={options} popoverProps={{ visible: false }} />);
+  expect(menu).not.toBeVisible();
 });
 
-it.each(['Enter', ' ', 'Spacebar'])(
+it.each(['{Enter}', ' ', '{Spacebar}'])(
   'should open menu on "%s" key press',
-  (key) => {
+  async (key) => {
     const { container } = renderComponent();
 
     const select = container.querySelector(
       '.iui-input-with-icon',
     ) as HTMLElement;
     expect(select).toBeTruthy();
-    let menu = document.querySelector('.iui-menu') as HTMLUListElement;
+    let menu = document.querySelector('.iui-menu') as HTMLElement;
     expect(menu).toBeFalsy();
 
-    act(() => {
-      fireEvent.keyDown(
-        select.querySelector('.iui-select-button') as HTMLElement,
-        {
-          key,
-        },
-      );
-    });
-    menu = document.querySelector('.iui-menu') as HTMLUListElement;
+    await userEvent.tab();
+    await userEvent.keyboard(key);
+    menu = document.querySelector('.iui-menu') as HTMLElement;
     assertMenu(menu);
   },
 );
@@ -245,7 +264,7 @@ it('should show menu items with icons', () => {
     options: [...new Array(3)].map((_, index) => ({
       label: `Test${index}`,
       value: index,
-      icon: <SvgSmileyHappy />,
+      startIcon: <SvgSmileyHappy />,
     })),
   });
 
@@ -253,7 +272,7 @@ it('should show menu items with icons', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu, { hasIcon: true });
 });
 
@@ -270,12 +289,12 @@ it('should show menu with disabled item', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu, { disabledIndex: 1 });
 });
 
 it('should show selected item in menu', () => {
-  const scrollSpy = jest.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
+  const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
   const { container } = renderComponent({
     value: 1,
     options: [...new Array(3)].map((_, index) => ({
@@ -288,13 +307,13 @@ it('should show selected item in menu', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu, { selectedIndex: 1 });
-  expect(scrollSpy).toHaveBeenCalledTimes(1);
+  expect(scrollSpy).toHaveBeenCalled();
 });
 
 it('should call onChange on item click', () => {
-  const onChange = jest.fn();
+  const onChange = vi.fn();
   const { container } = renderComponent({
     onChange,
   });
@@ -303,10 +322,10 @@ it('should call onChange on item click', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu);
 
-  const menuItem = menu.querySelectorAll('li');
+  const menuItem = menu.querySelectorAll('[role=option]');
   expect(menuItem.length).toBe(3);
   fireEvent.click(menuItem[1]);
   expect(onChange).toHaveBeenCalledWith(1);
@@ -319,19 +338,21 @@ it('should render menu with custom className', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu);
   expect(menu.classList).toContain('test-className');
 });
 
-it('should render menu with custom style', () => {
+it('should render menu with custom style', async () => {
   const { container } = renderComponent({ menuStyle: { color: 'red' } });
 
   const select = container.querySelector('.iui-input-with-icon') as HTMLElement;
   expect(select).toBeTruthy();
 
-  fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  await userEvent.click(
+    select.querySelector('.iui-select-button') as HTMLElement,
+  );
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu);
   expect(menu.style.color).toEqual('red');
 });
@@ -354,9 +375,9 @@ it('should use custom renderer for menu items', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   expect(menu).toBeTruthy();
-  const menuItems = menu.querySelectorAll('li');
+  const menuItems = menu.querySelectorAll<HTMLElement>('[role=option]');
   expect(menuItems.length).toBe(3);
 
   expect(menuItems[0].textContent).toEqual('Yellow');
@@ -395,7 +416,9 @@ it('should render large SelectOption', async () => {
     select.querySelector('.iui-select-button') as HTMLElement,
   );
 
-  const menuItems = document.querySelectorAll('.iui-menu-item.iui-large');
+  const menuItems = document.querySelectorAll(
+    `.iui-list-item[data-iui-size='large']`,
+  );
   expect(menuItems.length).toEqual(3);
 });
 
@@ -413,12 +436,14 @@ it('should render sublabel', () => {
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
 
-  const menuItems = document.querySelectorAll('.iui-menu-item.iui-large');
+  const menuItems = document.querySelectorAll(
+    `.iui-list-item[data-iui-size='large']`,
+  );
   expect(menuItems.length).toEqual(3);
 
   menuItems.forEach((menuItem, index) => {
     const sublabel = menuItem.querySelector(
-      '.iui-content .iui-menu-description',
+      '.iui-list-item-content .iui-list-item-description',
     ) as HTMLElement;
     expect(sublabel).toBeTruthy();
     expect(sublabel.textContent).toEqual(`Sublabel ${index}`);
@@ -439,13 +464,13 @@ it('should pass custom props to menu item', () => {
 
   fireEvent.click(container.querySelector('.iui-select-button') as HTMLElement);
   const menuItem = document.querySelector(
-    '.iui-menu-item.test-class',
+    '.iui-list-item.test-class',
   ) as HTMLElement;
   expect(menuItem.getAttribute('data-value')).toBe('Test one');
 });
 
 it('should select multiple items', () => {
-  const onChange = jest.fn();
+  const onChange = vi.fn();
   const { container, rerender } = renderComponent({
     onChange,
     multiple: true,
@@ -455,10 +480,10 @@ it('should select multiple items', () => {
   expect(select).toBeTruthy();
 
   fireEvent.click(select.querySelector('.iui-select-button') as HTMLElement);
-  const menu = document.querySelector('.iui-menu') as HTMLUListElement;
+  const menu = document.querySelector('.iui-menu') as HTMLElement;
   assertMenu(menu);
 
-  let menuItems = menu.querySelectorAll('.iui-menu-item');
+  let menuItems = menu.querySelectorAll('.iui-list-item');
   expect(menuItems.length).toBe(3);
   fireEvent.click(menuItems[1]);
   expect(onChange).toHaveBeenCalledWith(1, 'added');
@@ -476,9 +501,9 @@ it('should select multiple items', () => {
       onChange={onChange}
     />,
   );
-  menuItems = menu.querySelectorAll('.iui-menu-item');
-  expect(menuItems[1].classList).toContain('iui-active');
-  expect(menuItems[2].classList).toContain('iui-active');
+  menuItems = menu.querySelectorAll('.iui-list-item');
+  expect(menuItems[1]).toHaveAttribute('data-iui-active', 'true');
+  expect(menuItems[2]).toHaveAttribute('data-iui-active', 'true');
 
   const tagContainer = select.querySelector('.iui-select-tag-container');
   expect(tagContainer?.childNodes.length).toBe(2);
@@ -514,4 +539,185 @@ it('should use custom render for selected item (multiple)', async () => {
   expect(selectedValues.length).toBe(2);
   expect((selectedValues[0] as HTMLElement).style.color).toEqual('green');
   expect((selectedValues[1] as HTMLElement).style.color).toEqual('red');
+});
+
+it('should update live region when selection changes', async () => {
+  const MultiSelectTest = () => {
+    const [selected, setSelected] = React.useState([0]);
+    return (
+      <Select
+        options={[0, 1, 2].map((value) => ({
+          value,
+          label: `Item ${value}`,
+        }))}
+        popoverProps={{ visible: true }}
+        multiple
+        value={selected}
+        onChange={(value, type) =>
+          setSelected((prev) =>
+            type === 'added'
+              ? [...prev, value]
+              : prev.filter((v) => v !== value),
+          )
+        }
+      />
+    );
+  };
+  const { container } = render(<MultiSelectTest />);
+
+  const liveRegion = container.querySelector('[aria-live="polite"]');
+  expect(liveRegion).toHaveTextContent('');
+  const options = document.querySelectorAll('[role="option"]');
+
+  await userEvent.click(options[1]);
+  expect(liveRegion).toHaveTextContent('Item 0, Item 1');
+
+  await userEvent.click(options[2]);
+  expect(liveRegion).toHaveTextContent('Item 0, Item 1, Item 2');
+
+  await userEvent.click(options[0]);
+  expect(liveRegion).toHaveTextContent('Item 1, Item 2');
+});
+
+it.each([true, false] as const)(
+  'should work in uncontrolled mode (multiple=%s)',
+  async (multiple) => {
+    const { container } = render(
+      <Select
+        multiple={multiple}
+        options={[
+          { value: 'A', label: 'A' },
+          { value: 'B', label: 'B' },
+        ]}
+      />,
+    );
+
+    const selectButton = container.querySelector(
+      '[role=combobox]',
+    ) as HTMLElement;
+    await userEvent.click(selectButton);
+
+    // select option A
+    await userEvent.click((await findAllByRole(document.body, 'option'))[0]);
+
+    expect(selectButton).toHaveTextContent('A');
+
+    // reopen menu
+    if (!multiple) {
+      await userEvent.click(selectButton);
+    }
+
+    // select option B
+    await userEvent.click((await findAllByRole(document.body, 'option'))[1]);
+
+    // deselect option A
+    if (multiple) {
+      expect(selectButton).toHaveTextContent('AB');
+      await userEvent.click((await findAllByRole(document.body, 'option'))[0]);
+    }
+
+    expect(selectButton).toHaveTextContent('B');
+  },
+);
+
+it('should allow passing ref to Select', () => {
+  const selectRef = React.createRef<HTMLElement>();
+  render(
+    <Select
+      options={[{ value: 1, label: 'Option 1' }]}
+      ref={selectRef}
+      data-select
+    />,
+  );
+
+  expect(selectRef?.current).toHaveAttribute('data-select');
+});
+
+it('should reset value when null is passed', () => {
+  const { container, rerender } = render(
+    <Select value='A' options={[{ value: 'A', label: 'A' }]} />,
+  );
+  expect(container.querySelector('[role=combobox]')).toHaveTextContent('A');
+
+  rerender(<Select value={null} options={[{ value: 'A', label: 'A' }]} />);
+  expect(container.querySelector('[role=combobox]')).toHaveTextContent('');
+});
+
+it('should support native select (uncontrolled)', async () => {
+  const onChangeFn = vi.fn();
+
+  const { container } = render(
+    <Select
+      native
+      options={[
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B', disabled: true },
+      ]}
+      className='my-wrapper'
+      placeholder='Select an option'
+      triggerProps={{ className: 'my-select' }}
+      required
+      onChange={onChangeFn}
+      size='small'
+      status='positive'
+    />,
+  );
+
+  const wrapper = container.querySelector('.my-wrapper') as HTMLElement;
+  const select = wrapper.querySelector('select') as HTMLSelectElement;
+  expect(select).toHaveClass('my-select');
+  expect(select).toHaveValue('');
+  expect(select).toBeRequired();
+  expect(select).toHaveAttribute('data-iui-size', 'small');
+  expect(select).toHaveAttribute('data-iui-status', 'positive');
+
+  const options = select.querySelectorAll('option');
+  expect(options.length).toBe(3);
+  expect(options[0]).toHaveTextContent('Select an option');
+  expect(options[0]).toHaveAttribute('disabled');
+  expect(options[1]).toHaveTextContent('A');
+  expect(options[2]).toHaveTextContent('B');
+  expect(options[2]).toHaveAttribute('disabled');
+
+  await userEvent.selectOptions(select, 'A');
+  expect(select).toHaveValue('A');
+  expect(onChangeFn).toHaveBeenCalledWith('A', expect.objectContaining({}));
+});
+
+it('should support native select (controlled)', async () => {
+  const { container, rerender } = render(
+    <Select
+      native
+      options={[{ value: 'A', label: 'A' }]}
+      placeholder='Select an option'
+      defaultValue='A'
+    />,
+  );
+
+  const select = container.querySelector('select') as HTMLSelectElement;
+  expect(select).toHaveValue('A');
+
+  rerender(
+    <Select
+      native
+      options={[{ value: 'A', label: 'A' }]}
+      placeholder='Select an option'
+      defaultValue='A'
+      value={null}
+    />,
+  );
+  expect(select).toHaveValue('');
+
+  rerender(
+    <Select
+      native
+      options={[
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B' },
+      ]}
+      placeholder='Select an option'
+      value='B'
+    />,
+  );
+  expect(select).toHaveValue('B');
 });

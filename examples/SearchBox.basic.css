@@ -1,0 +1,5 @@
+.demo-container {
+  width: 70cqi;
+  display: flex;
+  gap: var(--iui-size-xs);
+}

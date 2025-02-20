@@ -2,10 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import { SvgMore as SvgPlaceholder } from '../utils';
-import React from 'react';
+import { SvgMore as SvgPlaceholder } from '../../utils/index.js';
 import { render } from '@testing-library/react';
-import { ToggleSwitch } from './ToggleSwitch';
+import { ToggleSwitch } from './ToggleSwitch.js';
 
 const assertBaseElements = (
   container: HTMLElement,
@@ -31,6 +30,18 @@ it('should render correctly in its most basic state', () => {
   expect(container.querySelector('.iui-toggle-switch-label')).toBeNull();
 });
 
+it('should render toggle with small size', () => {
+  const { container } = render(<ToggleSwitch size='small' />);
+
+  assertBaseElements(container);
+  expect(container.querySelector('.iui-toggle-switch-label')).toBeNull();
+  expect(
+    container
+      .querySelector('.iui-toggle-switch-wrapper')
+      ?.getAttribute('data-iui-size'),
+  ).toBe('small');
+});
+
 it('should render checked toggle', () => {
   const { container } = render(<ToggleSwitch defaultChecked />);
 
@@ -42,7 +53,7 @@ it('should render checked toggle', () => {
   ).toBe(true);
 });
 
-it('should render toggle with icon', () => {
+it('should render toggle with custom icon', () => {
   const { container } = render(
     <ToggleSwitch defaultChecked icon={<SvgPlaceholder />} />,
   );
@@ -50,6 +61,17 @@ it('should render toggle with icon', () => {
   assertBaseElements(container);
   expect(container.querySelector('.iui-toggle-switch-label')).toBeNull();
   expect(container.querySelector('.iui-toggle-switch-icon')).toBeTruthy();
+});
+
+it('should not display custom icon when size is small', () => {
+  const { container } = render(
+    // @ts-expect-error: we don't allow icon setting in small toggle switch
+    <ToggleSwitch defaultChecked icon={<SvgPlaceholder />} size='small' />,
+  );
+
+  assertBaseElements(container);
+  expect(container.querySelector('.iui-toggle-switch-label')).toBeNull();
+  expect(container.querySelector('.iui-toggle-switch-icon')).toBeNull();
 });
 
 it('should render disabled toggle', () => {
@@ -81,22 +103,6 @@ it('should render label on the left', () => {
   getByText('my label');
 });
 
-it('should set focus', () => {
-  let element: HTMLInputElement | null = null;
-  const onRef = (ref: HTMLInputElement) => {
-    element = ref;
-  };
-  const { container, getByText } = render(
-    <ToggleSwitch label='my label' ref={onRef} setFocus />,
-  );
-
-  assertBaseElements(container, 'right');
-
-  getByText('my label');
-  expect(element).toBeTruthy();
-  expect(document.activeElement).toEqual(element);
-});
-
 it('should apply style and class', () => {
   const { container } = render(
     <ToggleSwitch className='my-class' style={{ width: 80 }} />,
@@ -108,4 +114,31 @@ it('should apply style and class', () => {
   ) as HTMLElement;
   expect(element).toBeTruthy();
   expect(element.style.width).toBe('80px');
+});
+
+it('should not render an icon if it is set to null', () => {
+  const { container } = render(<ToggleSwitch icon={null} />);
+  expect(container.querySelector('.iui-toggle-switch-icon')).toBeNull();
+});
+
+it('should correctly pass labelProps', () => {
+  const { container } = render(
+    <ToggleSwitch
+      className='switch-class'
+      style={{ color: 'blue' }}
+      label='some-label'
+      labelProps={{
+        className: 'some-class',
+        style: { color: 'red' },
+      }}
+    />,
+  );
+
+  const label = container.querySelector('.some-class') as HTMLElement;
+
+  expect(label.style.color).toBe('red');
+
+  expect(
+    (container.querySelector('.switch-class') as HTMLElement).style.color,
+  ).toBe('blue');
 });

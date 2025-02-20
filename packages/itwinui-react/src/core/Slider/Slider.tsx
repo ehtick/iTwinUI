@@ -3,17 +3,14 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import {
-  useTheme,
-  CommonProps,
-  getBoundedValue,
-  useEventListener,
-} from '../utils';
-import '@itwin/itwinui-css/css/slider.css';
-import { TooltipProps } from '../Tooltip';
-import { Track } from './Track';
-import { Thumb } from './Thumb';
+import * as React from 'react';
+import { getBoundedValue, useEventListener, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { Track } from './Track.js';
+import { Thumb } from './Thumb.js';
+import type { Tooltip } from '../Tooltip/Tooltip.js';
+import { FloatingDelayGroup } from '@floating-ui/react';
+import { defaultTooltipDelay } from '../Tooltip/Tooltip.js';
 
 /**
  * Determines which segments are shown with color.
@@ -23,6 +20,8 @@ export type TrackDisplayMode =
   | 'none'
   | 'odd-segments'
   | 'even-segments';
+
+type TooltipProps = React.ComponentProps<typeof Tooltip>;
 
 const getPercentageOfRectangle = (
   rect: DOMRect,
@@ -91,11 +90,6 @@ const focusThumb = (sliderContainer: HTMLDivElement, activeIndex: number) => {
 
 export type SliderProps = {
   /**
-   * Set focus on first thumb in slider element.
-   * @default false
-   */
-  setFocus?: boolean;
-  /**
    * Minimum slider value.
    * @default 0
    */
@@ -157,9 +151,29 @@ export type SliderProps = {
    */
   maxLabel?: React.ReactNode;
   /**
-   * Additional props for container `<div>` that hold the slider rail, thumbs, and tracks.
+   * Additional props for container `<div>` that hold the slider thumbs, and tracks.
    */
-  railContainerProps?: React.HTMLAttributes<HTMLDivElement>;
+  trackContainerProps?: React.HTMLAttributes<HTMLDivElement>;
+  /**
+   * Allows props to be passed for slider-min
+   */
+  minProps?: React.ComponentProps<'span'>;
+  /**
+   * Allows props to be passed for slider-max
+   */
+  maxProps?: React.ComponentProps<'span'>;
+  /**
+   * Allows props to be passed for slider-track
+   */
+  trackProps?: React.ComponentProps<'div'>;
+  /**
+   * Allows props to be passed for slider-tick
+   */
+  tickProps?: React.ComponentProps<'span'>;
+  /**
+   * Allows props to be passed for slider-ticks
+   */
+  ticksProps?: React.ComponentProps<'div'>;
   /**
    * Defines the allowed behavior when moving Thumbs when multiple Thumbs are
    * shown. It controls if a Thumb movement should be limited to only move in
@@ -172,7 +186,7 @@ export type SliderProps = {
   /**
    * Callback that can provide additional props for `<div>` representing a thumb.
    */
-  thumbProps?: (index: number) => React.HTMLAttributes<HTMLDivElement>;
+  thumbProps?: (index: number) => React.ComponentPropsWithRef<'div'>;
   /**
    * Callback fired at the end of a thumb move (i.e. on pointerUp) and when user clicks on rail.
    */
@@ -188,299 +202,311 @@ export type SliderProps = {
    * @default 'horizontal'
    */
   orientation?: 'horizontal' | 'vertical';
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * Slider component that display Thumbs for each value specified along a Rail.
  * @example
  * <Slider values={[10]} min={0} max={60} disabled />
  * <Slider values={[10, 20]} min={0} max={50} step={2} />
- * <Slider values={[10, 20, 30, 40]} min={0} max={60} setFocus
+ * <Slider values={[10, 20, 30, 40]} min={0} max={60}
  *   thumbMode='allow-crossing' />
  */
-export const Slider = React.forwardRef(
-  (props: SliderProps, ref: React.RefObject<HTMLDivElement>) => {
-    const {
-      min = 0,
-      max = 100,
-      values,
-      step = 1,
-      setFocus = false,
-      tooltipProps,
-      disabled = false,
-      tickLabels,
-      minLabel,
-      maxLabel,
-      trackDisplayMode = 'auto',
-      thumbMode = 'inhibit-crossing',
+export const Slider = React.forwardRef((props, ref) => {
+  const {
+    min = 0,
+    max = 100,
+    values,
+    step = 1,
+    tooltipProps,
+    disabled = false,
+    tickLabels,
+    minLabel,
+    maxLabel,
+    trackDisplayMode = 'auto',
+    thumbMode = 'inhibit-crossing',
+    onChange,
+    onUpdate,
+    thumbProps,
+    className,
+    trackContainerProps,
+    minProps,
+    maxProps,
+    trackProps,
+    tickProps,
+    ticksProps,
+    orientation = 'horizontal',
+    ...rest
+  } = props;
+
+  const [currentValues, setCurrentValues] = React.useState(values);
+  React.useEffect(() => {
+    setCurrentValues(values);
+  }, [values]);
+
+  const [minValueLabel, setMinValueLabel] = React.useState(
+    () => minLabel ?? min.toString(),
+  );
+  React.useEffect(() => {
+    setMinValueLabel(minLabel ?? min.toString());
+  }, [minLabel, min]);
+
+  const [maxValueLabel, setMaxValueLabel] = React.useState(
+    () => maxLabel ?? max.toString(),
+  );
+  React.useEffect(() => {
+    setMaxValueLabel(maxLabel ?? max.toString());
+  }, [maxLabel, max]);
+
+  const [trackDisplay, setTrackDisplay] = React.useState<TrackDisplayMode>(() =>
+    getDefaultTrackDisplay(trackDisplayMode, currentValues),
+  );
+  React.useEffect(() => {
+    setTrackDisplay(getDefaultTrackDisplay(trackDisplayMode, currentValues));
+  }, [trackDisplayMode, currentValues]);
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const getNumDecimalPlaces = React.useMemo(() => {
+    const stepString = step.toString();
+    const decimalIndex = stepString.indexOf('.');
+    return stepString.length - (decimalIndex + 1);
+  }, [step]);
+
+  const getAllowableThumbRange = React.useCallback(
+    (index: number) => {
+      if (thumbMode === 'inhibit-crossing') {
+        const minVal = index === 0 ? min : currentValues[index - 1] + step;
+        const maxVal =
+          index < currentValues.length - 1
+            ? currentValues[index + 1] - step
+            : max;
+        return [minVal, maxVal];
+      }
+      return [min, max];
+    },
+    [max, min, step, thumbMode, currentValues],
+  );
+
+  const [activeThumbIndex, setActiveThumbIndex] = React.useState<
+    number | undefined
+  >(undefined);
+
+  const updateThumbValue = React.useCallback(
+    (event: PointerEvent, callbackType: 'onChange' | 'onUpdate') => {
+      if (containerRef.current && undefined !== activeThumbIndex) {
+        const percent = getPercentageOfRectangle(
+          containerRef.current.getBoundingClientRect(),
+          event.clientX,
+          event.clientY,
+          orientation,
+        );
+        let pointerValue = min + (max - min) * percent;
+        pointerValue = roundValueToClosestStep(pointerValue, step, min);
+        const [minVal, maxVal] = getAllowableThumbRange(activeThumbIndex);
+        pointerValue = getBoundedValue(pointerValue, minVal, maxVal);
+        if (pointerValue !== currentValues[activeThumbIndex]) {
+          const newValues = [...currentValues];
+          newValues[activeThumbIndex] = pointerValue;
+          setCurrentValues(newValues);
+          'onChange' === callbackType
+            ? onChange?.(newValues)
+            : onUpdate?.(newValues);
+        } else if ('onChange' === callbackType) {
+          onChange?.(currentValues);
+        }
+      }
+    },
+    [
+      activeThumbIndex,
+      min,
+      max,
+      step,
+      getAllowableThumbRange,
+      currentValues,
+      onUpdate,
+      onChange,
+      orientation,
+    ],
+  );
+
+  const handlePointerMove = React.useCallback(
+    (event: PointerEvent): void => {
+      if (activeThumbIndex === undefined) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      updateThumbValue(event, 'onUpdate');
+    },
+    [activeThumbIndex, updateThumbValue],
+  );
+
+  // function called by Thumb keyboard processing
+  const onThumbValueChanged = React.useCallback(
+    (index: number, value: number, keyboardReleased: boolean) => {
+      if (currentValues[index] === value && !keyboardReleased) {
+        return;
+      }
+
+      if (keyboardReleased) {
+        onChange?.(currentValues); // currentValues since key up should not change value but only stop continuous value selection
+      } else {
+        const newValues = [...currentValues]; // newValues since key down should change value
+        newValues[index] = value;
+        onUpdate?.(newValues);
+        setCurrentValues(newValues);
+      }
+    },
+    [currentValues, onUpdate, onChange],
+  );
+
+  const onThumbActivated = React.useCallback((index: number) => {
+    setActiveThumbIndex(index);
+  }, []);
+
+  const handlePointerUp = React.useCallback(
+    (event: PointerEvent) => {
+      if (activeThumbIndex === undefined) {
+        return;
+      }
+      updateThumbValue(event, 'onChange');
+      setActiveThumbIndex(undefined);
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [activeThumbIndex, updateThumbValue],
+  );
+
+  const handlePointerDownOnSlider = React.useCallback(
+    (event: React.PointerEvent) => {
+      if (containerRef.current) {
+        const percent = getPercentageOfRectangle(
+          containerRef.current.getBoundingClientRect(),
+          event.clientX,
+          event.clientY,
+          orientation,
+        );
+        let pointerValue = min + (max - min) * percent;
+        pointerValue = roundValueToClosestStep(pointerValue, step, min);
+
+        const closestValueIndex = getClosestValueIndex(
+          currentValues,
+          pointerValue,
+        );
+        const [minVal, maxVal] = getAllowableThumbRange(closestValueIndex);
+        pointerValue = getBoundedValue(pointerValue, minVal, maxVal);
+        if (pointerValue === currentValues[closestValueIndex]) {
+          return;
+        }
+        const newValues = [...currentValues];
+        newValues[closestValueIndex] = pointerValue;
+        setCurrentValues(newValues);
+        onChange?.(newValues);
+        onUpdate?.(newValues);
+        focusThumb(containerRef.current, closestValueIndex);
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    [
+      min,
+      max,
+      step,
+      currentValues,
+      getAllowableThumbRange,
       onChange,
       onUpdate,
-      thumbProps,
-      className,
-      railContainerProps,
-      orientation = 'horizontal',
-      ...rest
-    } = props;
+      orientation,
+    ],
+  );
 
-    const [currentValues, setCurrentValues] = React.useState(values);
-    React.useEffect(() => {
-      setCurrentValues(values);
-    }, [values]);
+  useEventListener(
+    'pointermove',
+    handlePointerMove,
+    containerRef.current?.ownerDocument,
+  );
+  useEventListener(
+    'pointerup',
+    handlePointerUp,
+    containerRef.current?.ownerDocument,
+  );
 
-    const [minValueLabel, setMinValueLabel] = React.useState(
-      () => minLabel ?? min.toString(),
-    );
-    React.useEffect(() => {
-      setMinValueLabel(minLabel ?? min.toString());
-    }, [minLabel, min]);
+  const tickMarkArea = React.useMemo(() => {
+    if (!tickLabels) {
+      return null;
+    }
 
-    const [maxValueLabel, setMaxValueLabel] = React.useState(
-      () => maxLabel ?? max.toString(),
-    );
-    React.useEffect(() => {
-      setMaxValueLabel(maxLabel ?? max.toString());
-    }, [maxLabel, max]);
-
-    const [trackDisplay, setTrackDisplay] = React.useState<TrackDisplayMode>(
-      () => getDefaultTrackDisplay(trackDisplayMode, currentValues),
-    );
-    React.useEffect(() => {
-      setTrackDisplay(getDefaultTrackDisplay(trackDisplayMode, currentValues));
-    }, [trackDisplayMode, currentValues]);
-
-    useTheme();
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-      if (containerRef.current && setFocus) {
-        focusThumb(containerRef.current, 0);
-      }
-    }, [setFocus]);
-
-    const getNumDecimalPlaces = React.useMemo(() => {
-      const stepString = step.toString();
-      const decimalIndex = stepString.indexOf('.');
-      return stepString.length - (decimalIndex + 1);
-    }, [step]);
-
-    const getAllowableThumbRange = React.useCallback(
-      (index: number) => {
-        if (thumbMode === 'inhibit-crossing') {
-          const minVal = index === 0 ? min : currentValues[index - 1] + step;
-          const maxVal =
-            index < currentValues.length - 1
-              ? currentValues[index + 1] - step
-              : max;
-          return [minVal, maxVal];
-        }
-        return [min, max];
-      },
-      [max, min, step, thumbMode, currentValues],
-    );
-
-    const [activeThumbIndex, setActiveThumbIndex] = React.useState<
-      number | undefined
-    >(undefined);
-
-    const updateThumbValue = React.useCallback(
-      (event: PointerEvent, callbackType: 'onChange' | 'onUpdate') => {
-        if (containerRef.current && undefined !== activeThumbIndex) {
-          const percent = getPercentageOfRectangle(
-            containerRef.current.getBoundingClientRect(),
-            event.clientX,
-            event.clientY,
-            orientation,
-          );
-          let pointerValue = min + (max - min) * percent;
-          pointerValue = roundValueToClosestStep(pointerValue, step, min);
-          const [minVal, maxVal] = getAllowableThumbRange(activeThumbIndex);
-          pointerValue = getBoundedValue(pointerValue, minVal, maxVal);
-          if (pointerValue !== currentValues[activeThumbIndex]) {
-            const newValues = [...currentValues];
-            newValues[activeThumbIndex] = pointerValue;
-            setCurrentValues(newValues);
-            'onChange' === callbackType
-              ? onChange?.(newValues)
-              : onUpdate?.(newValues);
-          } else if ('onChange' === callbackType) {
-            onChange?.(currentValues);
-          }
-        }
-      },
-      [
-        activeThumbIndex,
-        min,
-        max,
-        step,
-        getAllowableThumbRange,
-        currentValues,
-        onUpdate,
-        onChange,
-        orientation,
-      ],
-    );
-
-    const handlePointerMove = React.useCallback(
-      (event: PointerEvent): void => {
-        if (activeThumbIndex === undefined) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        updateThumbValue(event, 'onUpdate');
-      },
-      [activeThumbIndex, updateThumbValue],
-    );
-
-    // function called by Thumb keyboard processing
-    const onThumbValueChanged = React.useCallback(
-      (index: number, value: number, keyboardReleased: boolean) => {
-        if (currentValues[index] === value && !keyboardReleased) {
-          return;
-        }
-
-        if (keyboardReleased) {
-          onChange?.(currentValues); // currentValues since key up should not change value but only stop continuous value selection
-        } else {
-          const newValues = [...currentValues]; // newValues since key down should change value
-          newValues[index] = value;
-          onUpdate?.(newValues);
-          setCurrentValues(newValues);
-        }
-      },
-      [currentValues, onUpdate, onChange],
-    );
-
-    const onThumbActivated = React.useCallback((index: number) => {
-      setActiveThumbIndex(index);
-    }, []);
-
-    const handlePointerUp = React.useCallback(
-      (event: PointerEvent) => {
-        if (activeThumbIndex === undefined) {
-          return;
-        }
-        updateThumbValue(event, 'onChange');
-        setActiveThumbIndex(undefined);
-        event.preventDefault();
-        event.stopPropagation();
-      },
-      [activeThumbIndex, updateThumbValue],
-    );
-
-    const handlePointerDownOnSlider = React.useCallback(
-      (event: React.PointerEvent) => {
-        if (containerRef.current) {
-          const percent = getPercentageOfRectangle(
-            containerRef.current.getBoundingClientRect(),
-            event.clientX,
-            event.clientY,
-            orientation,
-          );
-          let pointerValue = min + (max - min) * percent;
-          pointerValue = roundValueToClosestStep(pointerValue, step, min);
-
-          const closestValueIndex = getClosestValueIndex(
-            currentValues,
-            pointerValue,
-          );
-          const [minVal, maxVal] = getAllowableThumbRange(closestValueIndex);
-          pointerValue = getBoundedValue(pointerValue, minVal, maxVal);
-          if (pointerValue === currentValues[closestValueIndex]) {
-            return;
-          }
-          const newValues = [...currentValues];
-          newValues[closestValueIndex] = pointerValue;
-          setCurrentValues(newValues);
-          onChange?.(newValues);
-          onUpdate?.(newValues);
-          focusThumb(containerRef.current, closestValueIndex);
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      },
-      [
-        min,
-        max,
-        step,
-        currentValues,
-        getAllowableThumbRange,
-        onChange,
-        onUpdate,
-        orientation,
-      ],
-    );
-
-    useEventListener(
-      'pointermove',
-      handlePointerMove,
-      containerRef.current?.ownerDocument,
-    );
-    useEventListener(
-      'pointerup',
-      handlePointerUp,
-      containerRef.current?.ownerDocument,
-    );
-
-    const tickMarkArea = React.useMemo(() => {
-      if (!tickLabels) {
-        return null;
-      }
-
-      if (Array.isArray(tickLabels)) {
-        return (
-          <div className='iui-slider-ticks'>
-            {tickLabels.map((label, index) => (
-              <span key={index} className='iui-slider-tick'>
-                {label}
-              </span>
-            ))}
-          </div>
-        );
-      }
-
-      return tickLabels;
-    }, [tickLabels]);
-
-    const generateTooltipProps = React.useCallback(
-      (index: number, val: number): Omit<TooltipProps, 'children'> => {
-        const outProps: Partial<Omit<TooltipProps, 'children'>> = tooltipProps
-          ? tooltipProps(index, val, step)
-          : {};
-
-        return {
-          ...outProps,
-          content: outProps.content
-            ? outProps.content
-            : formatNumberValue(val, step, getNumDecimalPlaces),
-        };
-      },
-      [getNumDecimalPlaces, step, tooltipProps],
-    );
-
-    return (
-      <div
-        ref={ref}
-        className={cx(
-          'iui-slider-component-container',
-          `iui-slider-${orientation}`,
-          { 'iui-disabled': disabled },
-          className,
-        )}
-        {...rest}
-      >
-        {minValueLabel && (
-          <span className='iui-slider-min'>{minValueLabel}</span>
-        )}
-        <div
-          ref={containerRef}
-          className={cx('iui-slider-container', {
-            'iui-grabbing': undefined !== activeThumbIndex,
-          })}
-          onPointerDown={handlePointerDownOnSlider}
-          {...railContainerProps}
+    if (Array.isArray(tickLabels)) {
+      return (
+        <Box
+          as='div'
+          {...ticksProps}
+          className={cx('iui-slider-ticks', ticksProps?.className)}
         >
-          <div className='iui-slider-rail' />
+          {tickLabels.map((label, index) => (
+            <Box
+              as='span'
+              {...tickProps}
+              key={index}
+              className={cx('iui-slider-tick', tickProps?.className)}
+            >
+              {label}
+            </Box>
+          ))}
+        </Box>
+      );
+    }
+
+    return tickLabels;
+  }, [tickLabels, tickProps, ticksProps]);
+
+  const generateTooltipProps = React.useCallback(
+    (index: number, val: number): Omit<TooltipProps, 'children'> => {
+      const outProps: Partial<Omit<TooltipProps, 'children'>> = tooltipProps
+        ? tooltipProps(index, val, step)
+        : {};
+
+      return {
+        ...outProps,
+        content: outProps.content
+          ? outProps.content
+          : formatNumberValue(val, step, getNumDecimalPlaces),
+      };
+    },
+    [getNumDecimalPlaces, step, tooltipProps],
+  );
+
+  return (
+    <Box
+      ref={ref}
+      className={cx('iui-slider-container', className)}
+      data-iui-orientation={orientation}
+      data-iui-disabled={disabled ? 'true' : undefined}
+      {...rest}
+    >
+      {minValueLabel && (
+        <Box
+          as='span'
+          {...minProps}
+          className={cx('iui-slider-min', minProps?.className)}
+        >
+          {minValueLabel}
+        </Box>
+      )}
+      <FloatingDelayGroup delay={defaultTooltipDelay}>
+        <Box
+          ref={containerRef}
+          {...trackContainerProps}
+          className={cx(
+            'iui-slider',
+            {
+              'iui-grabbing': undefined !== activeThumbIndex,
+            },
+            trackContainerProps?.className,
+          )}
+          onPointerDown={handlePointerDownOnSlider}
+        >
           {currentValues.map((thumbValue, index) => {
             const [minVal, maxVal] = getAllowableThumbRange(index);
             const thisThumbProps = thumbProps?.(index);
@@ -500,7 +526,6 @@ export const Slider = React.forwardRef(
                 step={step}
                 sliderMin={min}
                 sliderMax={max}
-                orientation={orientation}
               />
             );
           })}
@@ -510,15 +535,23 @@ export const Slider = React.forwardRef(
             sliderMax={max}
             values={currentValues}
             orientation={orientation}
+            {...trackProps}
           />
-          {tickMarkArea}
-        </div>
-        {maxValueLabel && (
-          <span className='iui-slider-max'>{maxValueLabel}</span>
-        )}
-      </div>
-    );
-  },
-);
-
-export default Slider;
+        </Box>
+      </FloatingDelayGroup>
+      {tickMarkArea}
+      {maxValueLabel && (
+        <Box
+          as='span'
+          {...maxProps}
+          className={cx('iui-slider-max', maxProps?.className)}
+        >
+          {maxValueLabel}
+        </Box>
+      )}
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'div', SliderProps>;
+if (process.env.NODE_ENV === 'development') {
+  Slider.displayName = 'Slider';
+}

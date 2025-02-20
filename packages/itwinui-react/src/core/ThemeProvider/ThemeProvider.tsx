@@ -2,25 +2,60 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import cx from 'classnames';
 import {
-  useTheme,
   useMediaQuery,
   useMergedRefs,
-  useIsThemeAlreadySet,
-} from '../utils';
-import type {
-  PolymorphicComponentProps,
-  PolymorphicForwardRefComponent,
-  ThemeOptions,
-  ThemeType,
-} from '../utils';
-import '@itwin/itwinui-css/css/global.css';
-import '@itwin/itwinui-variables/index.css';
+  Box,
+  useLayoutEffect,
+  useLatestRef,
+  importCss,
+  isUnitTest,
+  HydrationProvider,
+  useHydration,
+  ScopeProvider,
+  portalContainerAtom,
+  useScopedAtom,
+  useId,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { ThemeContext } from './ThemeContext.js';
+import { ToastProvider, Toaster } from '../Toast/Toaster.js';
+import { atom } from 'jotai';
+import { meta } from '../../utils/meta.js';
 
-export type ThemeProviderProps<T extends React.ElementType = 'div'> =
-  PolymorphicComponentProps<T, ThemeProviderOwnProps>;
+const versionWithoutDots = meta.version.replace(/\./g, '');
+
+// ----------------------------------------------------------------------------
+
+const ownerDocumentAtom = atom<Document | undefined>(undefined);
+
+// ----------------------------------------------------------------------------
+
+export type ThemeOptions = {
+  /**
+   * Whether to apply high-contrast versions of light and dark themes.
+   * Will default to user preference if browser supports it.
+   */
+  highContrast?: boolean;
+};
+
+export type FutureOptions = {
+  /**
+   * @alpha
+   *
+   * If enabled, the theme resembles the future iTwinUI version's theme (including alphas) *whenever possible*.
+   *
+   * This is useful in making apps looks like future versions of iTwinUI to help with incremental adoption.
+   *
+   * **NOTE**: Since this is a theme bridge to *future* versions, the theme could have breaking changes.
+   */
+  themeBridge?: boolean;
+};
+
+export type ThemeType = 'light' | 'dark' | 'os';
 
 type RootProps = {
   /**
@@ -30,9 +65,17 @@ type RootProps = {
    * in SSR environments because it is not possible detect system preference on the server.
    * This can cause a flash of incorrect theme on first render.
    *
-   * @default 'light'
+   * The 'inherit' option is intended to be used by packages, to enable incremental adoption
+   * of iTwinUI while respecting the theme set by the consuming app. It will fall back to 'light'
+   * if no parent theme is found. Additionally, it will attempt to inherit `themeOptions.highContrast`
+   * and `portalContainer` (if possible).
+   *
+   * `future.themeBridge` will be inherited regardless of `theme` value. To disable it, explicitly set
+   * `future.themeBridge` to false.
+   *
+   * @default 'inherit'
    */
-  theme?: ThemeType;
+  theme?: ThemeType | 'inherit';
   themeOptions?: Pick<ThemeOptions, 'highContrast'> & {
     /**
      * Whether or not the element should apply the recommended `background-color` on itself.
@@ -41,25 +84,59 @@ type RootProps = {
      * if it is the topmost `ThemeProvider` in the tree. Nested `ThemeProvider`s will
      * be detected using React Context and will not apply a background-color.
      *
+     * Additionally, if theme is set to `'inherit'`, then this will default to false.
+     *
      * When set to true or false, it will override the default behavior.
      */
     applyBackground?: boolean;
   };
+  /**
+   * Options to help with early adoption of features from future versions.
+   */
+  future?: FutureOptions;
 };
 
-type ThemeProviderOwnProps = Pick<RootProps, 'theme'> &
-  (
-    | {
-        themeOptions?: RootProps['themeOptions'];
-        children: Required<React.ReactNode>;
-      }
-    | { themeOptions?: ThemeOptions; children?: undefined }
-  );
+type ThemeProviderOwnProps = Pick<RootProps, 'theme' | 'future'> & {
+  themeOptions?: RootProps['themeOptions'];
+  children: Required<React.ReactNode>;
+  /**
+   * The element used as the portal for floating elements (Tooltip, Toast, DropdownMenu, Dialog, etc).
+   *
+   * Defaults to a `<div>` rendered at the end of the ThemeProvider.
+   *
+   * When passing an element, it is recommended to use state.
+   *
+   * @example
+   * const [myPortal, setMyPortal] = React.useState(null);
+   *
+   * <div ref={setMyPortal} />
+   * <ThemeProvider
+   *   portalContainer={myPortal}
+   * >
+   *   ...
+   * </ThemeProvider>
+   */
+  portalContainer?: HTMLElement;
+  /**
+   * This prop will be used to determine if `styles.css` should be automatically imported at runtime (if not already found).
+   *
+   * By default, this is enabled when using `theme='inherit'`.
+   * This default behavior is useful for packages that want to support incremental adoption of latest iTwinUI,
+   * without requiring consuming applications (that might still be using an older version) to manually import the CSS.
+   *
+   * If true or false is passed, it will override the default behavior.
+   */
+  includeCss?: boolean;
+};
+
+// ----------------------------------------------------------------------------
 
 /**
- * This component provides global styles and applies theme to the entire tree
- * that it is wrapping around. The `theme` prop is optional and defaults to the
- * light theme.
+ * This component provides global state and applies theme to the entire tree
+ * that it is wrapping around.
+ *
+ * The `theme` prop defaults to "inherit", which looks upwards for closest ThemeProvider
+ * and falls back to "light" theme if one is not found.
  *
  * If you want to theme the entire app, you should use this component at the root. You can also
  * use this component to apply a different theme to only a part of the tree.
@@ -82,73 +159,116 @@ type ThemeProviderOwnProps = Pick<RootProps, 'theme'> &
  *  <App />
  * </ThemeProvider>
  */
-export const ThemeProvider = React.forwardRef((props, ref) => {
-  const { theme, children, themeOptions, ...rest } = props;
-
-  const rootRef = React.useRef<HTMLElement>(null);
-  const mergedRefs = useMergedRefs(rootRef, ref);
-
-  const hasChildren = React.Children.count(children) > 0;
-  const parentContext = React.useContext(ThemeContext);
-
-  const contextValue = React.useMemo(
-    () => ({ theme, themeOptions, rootRef }),
-    [theme, themeOptions],
-  );
-
-  // if no children, then fallback to this wrapper component which calls useTheme
-  if (!hasChildren) {
-    return (
-      <ThemeLogicWrapper
-        theme={theme ?? parentContext?.theme}
-        themeOptions={themeOptions ?? parentContext?.themeOptions}
-      />
-    );
-  }
-
-  // now that we know there are children, we can render the root and provide the context value
-  return (
-    <Root theme={theme} themeOptions={themeOptions} ref={mergedRefs} {...rest}>
-      <ThemeContext.Provider value={contextValue}>
-        {children}
-      </ThemeContext.Provider>
-    </Root>
-  );
-}) as PolymorphicForwardRefComponent<'div', ThemeProviderOwnProps>;
-
-export default ThemeProvider;
-
-export const ThemeContext = React.createContext<
-  | {
-      theme?: ThemeType;
-      themeOptions?: ThemeOptions;
-      rootRef: React.RefObject<HTMLElement>;
-    }
-  | undefined
->(undefined);
-
-const Root = React.forwardRef((props, forwardedRef) => {
+export const ThemeProvider = React.forwardRef((props, forwardedRef) => {
   const {
-    theme,
+    theme: themeProp = 'inherit',
     children,
-    themeOptions,
-    as: Element = 'div',
-    className,
+    themeOptions = {},
+    portalContainer: portalContainerProp,
+    includeCss = themeProp === 'inherit',
+    future = {},
     ...rest
   } = props;
 
-  const ref = React.useRef<HTMLElement>(null);
-  const mergedRefs = useMergedRefs(ref, forwardedRef);
+  useInertPolyfill();
+
+  const [rootElement, setRootElement] = React.useState<HTMLElement | null>(
+    null,
+  );
+  const parent = useParentThemeAndContext(rootElement);
+  const theme = themeProp === 'inherit' ? parent.theme || 'light' : themeProp;
+
+  // default apply background only for topmost ThemeProvider
+  themeOptions.applyBackground ??= !parent.theme;
+
+  // default inherit highContrast option from parent if also inheriting base theme
+  themeOptions.highContrast ??=
+    themeProp === 'inherit' ? parent.highContrast : undefined;
+
+  future.themeBridge ??= parent.context?.future?.themeBridge;
+
+  const [portalContainerFromParent] = useScopedAtom(portalContainerAtom);
+
+  const contextValue = React.useMemo(
+    () => ({ theme, themeOptions, future }),
+    // we do include all dependencies below, but we want to stringify the objects as they could be different on each render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [theme, JSON.stringify(themeOptions), JSON.stringify(future)],
+  );
+
+  return (
+    <ScopeProvider>
+      <HydrationProvider>
+        <ThemeContext.Provider value={contextValue}>
+          <ToastProvider
+            inherit={themeProp === 'inherit' && !portalContainerProp}
+          >
+            {includeCss && rootElement ? (
+              <FallbackStyles root={rootElement} />
+            ) : null}
+
+            <MainRoot
+              theme={theme}
+              themeOptions={themeOptions}
+              future={future}
+              ref={useMergedRefs(forwardedRef, setRootElement, useIuiDebugRef)}
+              {...rest}
+            >
+              {children}
+
+              <PortalContainer
+                theme={theme}
+                themeOptions={themeOptions}
+                future={future}
+                portalContainerProp={portalContainerProp}
+                portalContainerFromParent={portalContainerFromParent}
+                isInheritingTheme={themeProp === 'inherit'}
+              />
+            </MainRoot>
+          </ToastProvider>
+        </ThemeContext.Provider>
+      </HydrationProvider>
+    </ScopeProvider>
+  );
+}) as PolymorphicForwardRefComponent<'div', ThemeProviderOwnProps>;
+if (process.env.NODE_ENV === 'development') {
+  ThemeProvider.displayName = 'ThemeProvider';
+}
+
+// ----------------------------------------------------------------------------
+
+const MainRoot = React.forwardRef((props, forwardedRef) => {
+  const [ownerDocument, setOwnerDocument] = useScopedAtom(ownerDocumentAtom);
+  const findOwnerDocumentFromRef = React.useCallback(
+    (el: HTMLElement | null): void => {
+      if (el && el.ownerDocument !== ownerDocument) {
+        setOwnerDocument(el.ownerDocument);
+      }
+    },
+    [ownerDocument, setOwnerDocument],
+  );
+
+  return (
+    <Root
+      {...props}
+      ref={useMergedRefs(findOwnerDocumentFromRef, forwardedRef)}
+    />
+  );
+}) as PolymorphicForwardRefComponent<'div', RootProps>;
+
+// ----------------------------------------------------------------------------
+
+const Root = React.forwardRef((props, forwardedRef) => {
+  const { theme, children, themeOptions, className, future, ...rest } = props;
+
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const prefersHighContrast = useMediaQuery('(prefers-contrast: more)');
   const shouldApplyDark = theme === 'dark' || (theme === 'os' && prefersDark);
   const shouldApplyHC = themeOptions?.highContrast ?? prefersHighContrast;
-  const isThemeAlreadySet = useIsThemeAlreadySet(ref.current?.ownerDocument);
-  const shouldApplyBackground =
-    themeOptions?.applyBackground ?? !isThemeAlreadySet.current;
+  const shouldApplyBackground = themeOptions?.applyBackground;
 
   return (
-    <Element
+    <Box
       className={cx(
         'iui-root',
         { 'iui-root-background': shouldApplyBackground },
@@ -156,15 +276,264 @@ const Root = React.forwardRef((props, forwardedRef) => {
       )}
       data-iui-theme={shouldApplyDark ? 'dark' : 'light'}
       data-iui-contrast={shouldApplyHC ? 'high' : 'default'}
-      ref={mergedRefs}
+      data-iui-bridge={!!future?.themeBridge ? true : undefined}
+      ref={forwardedRef}
       {...rest}
     >
       {children}
-    </Element>
+    </Box>
   );
 }) as PolymorphicForwardRefComponent<'div', RootProps>;
 
-const ThemeLogicWrapper = ({ theme, themeOptions }: ThemeProviderOwnProps) => {
-  useTheme(theme, themeOptions);
+// ----------------------------------------------------------------------------
+
+/**
+ * Returns theme information from either parent ThemeContext or by reading the closest
+ * data-iui-theme attribute if context is not found.
+ *
+ * Also returns the ThemeContext itself (if found).
+ */
+const useParentThemeAndContext = (rootElement: HTMLElement | null) => {
+  const parentContext = React.useContext(ThemeContext);
+  const [parentThemeState, setParentTheme] = React.useState(
+    parentContext?.theme,
+  );
+  const [parentHighContrastState, setParentHighContrastState] = React.useState(
+    parentContext?.themeOptions?.highContrast,
+  );
+
+  const parentThemeRef = useLatestRef(parentContext?.theme);
+
+  useLayoutEffect(() => {
+    // bail if we already have theme from context
+    if (parentThemeRef.current) {
+      return;
+    }
+
+    // find parent theme from closest data-iui-theme attribute
+    const closestRoot = rootElement?.parentElement?.closest('[data-iui-theme]');
+
+    if (!closestRoot) {
+      return;
+    }
+
+    // helper function that updates state to match data attributes from closest root
+    const synchronizeTheme = () => {
+      setParentTheme(closestRoot?.getAttribute('data-iui-theme') as ThemeType);
+      setParentHighContrastState(
+        closestRoot?.getAttribute('data-iui-contrast') === 'high',
+      );
+    };
+
+    // set theme for initial mount
+    synchronizeTheme();
+
+    // use mutation observers to listen to future updates to data attributes
+    const observer = new MutationObserver(() => synchronizeTheme());
+    observer.observe(closestRoot, {
+      attributes: true,
+      attributeFilter: ['data-iui-theme', 'data-iui-contrast'],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [rootElement, parentThemeRef]);
+
+  return {
+    theme: parentContext?.theme ?? parentThemeState,
+    highContrast:
+      parentContext?.themeOptions?.highContrast ?? parentHighContrastState,
+    context: parentContext,
+  } as const;
+};
+
+// ----------------------------------------------------------------------------
+
+/**
+ * Creates a new portal container if necessary, or reuses the parent portal container.
+ *
+ * Updates `portalContainerAtom` with the correct portal container.
+ */
+const PortalContainer = React.memo(
+  ({
+    portalContainerProp,
+    portalContainerFromParent,
+    isInheritingTheme,
+    theme,
+    themeOptions,
+    future,
+  }: {
+    portalContainerProp: HTMLElement | undefined;
+    portalContainerFromParent: HTMLElement | null;
+    isInheritingTheme: boolean;
+  } & RootProps) => {
+    const [ownerDocument] = useScopedAtom(ownerDocumentAtom);
+    const [portalContainer, setPortalContainer] =
+      useScopedAtom(portalContainerAtom);
+
+    // Create a new portal container only if necessary:
+    // - no explicit portalContainer prop
+    // - not inheriting theme
+    // - no parent portal container to portal into
+    // - parent portal container is in a different window (#2006)
+    const shouldSetupPortalContainer =
+      !portalContainerProp &&
+      (!isInheritingTheme ||
+        !portalContainerFromParent ||
+        (!!ownerDocument &&
+          portalContainerFromParent.ownerDocument !== ownerDocument));
+
+    const id = useId();
+
+    // Synchronize atom with the correct portal target if necessary.
+    React.useEffect(() => {
+      if (shouldSetupPortalContainer) {
+        return;
+      }
+
+      const portalTarget = portalContainerProp || portalContainerFromParent;
+
+      if (portalTarget && portalTarget !== portalContainer) {
+        setPortalContainer(portalTarget);
+      }
+    });
+
+    // bail if not hydrated, because portals don't work on server
+    const isHydrated = useHydration() === 'hydrated';
+    if (!isHydrated) {
+      return null;
+    }
+
+    if (shouldSetupPortalContainer && ownerDocument) {
+      return ReactDOM.createPortal(
+        <Root
+          theme={theme}
+          themeOptions={{ ...themeOptions, applyBackground: false }}
+          future={future}
+          data-iui-portal
+          style={{ display: 'contents' }}
+          ref={setPortalContainer}
+          id={id}
+        >
+          <Toaster />
+        </Root>,
+        ownerDocument.body,
+      );
+    } else if (portalContainerProp) {
+      return ReactDOM.createPortal(<Toaster />, portalContainerProp);
+    }
+
+    return null;
+  },
+);
+
+// ----------------------------------------------------------------------------
+
+/**
+ * When `@itwin/itwinui-react/styles.css` is not imported, we will attempt to
+ * dynamically import it (if possible) and fallback to loading it from a CDN.
+ */
+const FallbackStyles = ({ root }: { root: HTMLElement }) => {
+  useLayoutEffect(() => {
+    // bail if styles are already loaded
+    if (
+      getComputedStyle(root).getPropertyValue(
+        `--_iui-v${versionWithoutDots}`,
+      ) === 'yes'
+    ) {
+      return;
+    }
+
+    // bail if isUnitTest because unit tests don't care about CSS 🤷
+    if (isUnitTest) {
+      return;
+    }
+
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        await import('../../../styles.css');
+      } catch (error) {
+        console.log('Error loading styles.css locally', error);
+        const css = await importCss(
+          `https://cdn.jsdelivr.net/npm/@itwin/itwinui-react@${meta.version}/styles.css`,
+        );
+        document.adoptedStyleSheets = [
+          ...document.adoptedStyleSheets,
+          css.default,
+        ];
+      }
+    })();
+  }, [root]);
+
   return <></>;
+};
+
+// ----------------------------------------------------------------------------
+
+/**
+ * This function stores a list of iTwinUI versions in the window object
+ * and displays development-only warnings when multiple versions are detected.
+ */
+const useIuiDebugRef = () => {
+  const _globalThis = globalThis as any;
+  _globalThis.__iui ||= { versions: new Set() };
+
+  if (process.env.NODE_ENV === 'development' && !isUnitTest) {
+    // Override the `add` method to automatically detect multiple versions as they're added
+    _globalThis.__iui.versions.add = (version: string) => {
+      Set.prototype.add.call(_globalThis.__iui.versions, version);
+
+      if (_globalThis.__iui.versions.size > 1) {
+        _globalThis.__iui._shouldWarn = true;
+
+        if (_globalThis.__iui._warnTimeout) {
+          clearTimeout(_globalThis.__iui._warnTimeout);
+        }
+
+        // Warn after 3 seconds, but only once
+        _globalThis.__iui._warnTimeout = setTimeout(() => {
+          if (_globalThis.__iui._shouldWarn) {
+            console.warn(
+              `Multiple versions of iTwinUI were detected on this page. This can lead to unexpected behavior and duplicated code in the bundle. ` +
+                `Make sure you're using a single iTwinUI instance across your app. https://github.com/iTwin/iTwinUI/wiki/Version-conflicts`,
+            );
+            console.groupCollapsed('iTwinUI versions detected:');
+            const versionsTable: any[] = [];
+            _globalThis.__iui.versions.forEach((version: string) => {
+              versionsTable.push(JSON.parse(version));
+            });
+            console.table(versionsTable);
+            console.groupEnd();
+            _globalThis.__iui._shouldWarn = false;
+          }
+        }, 3000);
+      }
+    };
+  }
+
+  _globalThis.__iui.versions.add(JSON.stringify(meta));
+};
+
+// ----------------------------------------------------------------------------
+
+const useInertPolyfill = () => {
+  const loaded = React.useRef(false);
+  const modulePath =
+    'https://cdn.jsdelivr.net/npm/wicg-inert@3.1.2/dist/inert.min.js';
+
+  React.useEffect(() => {
+    (async () => {
+      if (
+        !HTMLElement.prototype.hasOwnProperty('inert') &&
+        !loaded.current &&
+        !isUnitTest
+      ) {
+        await new Function('url', 'return import(url)')(modulePath);
+        loaded.current = true;
+      }
+    })();
+  }, []);
 };

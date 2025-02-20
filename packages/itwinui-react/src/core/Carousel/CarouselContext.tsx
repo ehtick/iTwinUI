@@ -2,7 +2,7 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 
 export const CarouselContext = React.createContext<
   | {
@@ -23,10 +23,6 @@ export const CarouselContext = React.createContext<
        */
       setSlideCount: (length: number | ((old: number) => void)) => void;
       /**
-       * Stateful value of the left/right arrow keys currently pressed.
-       */
-      keysPressed: Record<string, boolean>;
-      /**
        * Prefix used for setting id for internal carousel components.
        */
       idPrefix: string;
@@ -45,3 +41,6 @@ export const CarouselContext = React.createContext<
     }
   | undefined
 >(undefined);
+if (process.env.NODE_ENV === 'development') {
+  CarouselContext.displayName = 'CarouselContext';
+}

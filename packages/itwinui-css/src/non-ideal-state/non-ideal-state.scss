@@ -1,52 +1,52 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
-@import '../text/mixins';
+@use '../mixins' as mixins2;
+@use '../text/mixins';
 
-@mixin iui-non-ideal-state {
+.iui-non-ideal-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   position: absolute;
-  left: 50%;
-  top: 40%;
-  min-width: 220px;
+  inset-inline-start: 50%;
+  inset-block-start: 40%;
+  min-inline-size: 220px;
   transform: translate(-50%, -40%);
 }
 
-@mixin iui-non-ideal-state-illustration {
+.iui-non-ideal-state-illustration {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--iui-size-3xl) * 3);
-  height: calc(var(--iui-size-3xl) * 2);
+  inline-size: calc(var(--iui-size-3xl) * 3);
+  block-size: calc(var(--iui-size-3xl) * 2);
 }
 
-@mixin iui-non-ideal-state-text($type) {
-  @if $type == 'title' {
-    @include iui-text(headline);
-  }
-  @if $type == 'description' {
-    @include iui-text(body);
-  }
-  @include iui-text-block-spacing;
+.iui-non-ideal-state-title {
+  @include mixins.iui-text(headline);
+  @include mixins.iui-text-block-spacing;
 }
 
-@mixin iui-non-ideal-state-actions {
+.iui-non-ideal-state-description {
+  @include mixins.iui-text(body);
+  @include mixins.iui-text-block-spacing;
+}
+
+.iui-non-ideal-state-actions {
   display: flex;
   align-items: center;
-  margin-bottom: var(--iui-size-xs);
+  margin-block-end: var(--iui-size-xs);
 
-  > .iui-input-container {
+  > .iui-input-flex-container {
     display: inline-block;
-    width: 200px;
-    text-align: left;
-    margin: 0 var(--iui-size-2xs) 0 0;
+    inline-size: 200px;
+    text-align: start;
+    margin-inline-end: var(--iui-size-2xs);
   }
 
   > .iui-button {
-    margin: 0 var(--iui-size-2xs);
+    margin-inline: var(--iui-size-2xs);
   }
 }

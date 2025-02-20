@@ -2,13 +2,13 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { IconButton } from '../Buttons';
-import { CommonProps, useTheme, SvgCloseSmall } from '../utils';
-import '@itwin/itwinui-css/css/information-panel.css';
+import { IconButton } from '../Buttons/IconButton.js';
+import { SvgCloseSmall, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type InformationPanelHeaderProps = {
+type InformationPanelHeaderProps = {
   /**
    * Callback fired when close icon is clicked.
    *
@@ -30,7 +30,7 @@ export type InformationPanelHeaderProps = {
    * Content of the panel header.
    */
   children?: React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * Header of the InformationPanel to be passed in the `header` prop.
@@ -48,28 +48,35 @@ export type InformationPanelHeaderProps = {
  *   <Text variant='subheading'>InfoPanel heading</Text>
  * </InformationPanelHeader>
  */
-export const InformationPanelHeader = (props: InformationPanelHeaderProps) => {
-  const { children, onClose, actions, className, ...rest } = props;
+export const InformationPanelHeader = React.forwardRef(
+  (props, forwardedRef) => {
+    const { children, onClose, actions, className, ...rest } = props;
 
-  useTheme();
-
-  return (
-    <div className={cx('iui-information-header', className)} {...rest}>
-      <span className='iui-information-header-label'>{children}</span>
-      <div className='iui-information-header-actions'>
-        {actions}
-        {onClose && (
-          <IconButton
-            styleType='borderless'
-            onClick={onClose}
-            aria-label='Close'
-          >
-            <SvgCloseSmall aria-hidden />
-          </IconButton>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default InformationPanelHeader;
+    return (
+      <Box
+        className={cx('iui-information-header', className)}
+        ref={forwardedRef}
+        {...rest}
+      >
+        <Box as='span' className='iui-information-header-label'>
+          {children}
+        </Box>
+        <Box className='iui-information-header-actions'>
+          {actions}
+          {onClose && (
+            <IconButton
+              styleType='borderless'
+              onClick={onClose}
+              aria-label='Close'
+            >
+              <SvgCloseSmall aria-hidden />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
+    );
+  },
+) as PolymorphicForwardRefComponent<'div', InformationPanelHeaderProps>;
+if (process.env.NODE_ENV === 'development') {
+  InformationPanelHeader.displayName = 'InformationPanelHeader';
+}

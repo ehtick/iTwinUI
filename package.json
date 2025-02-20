@@ -6,73 +6,85 @@
     "packages": [
       "apps/*",
       "packages/*",
-      "playgrounds/*"
+      "playgrounds/*",
+      "internal/*",
+      "examples",
+      "testing/*"
     ]
   },
   "lint-staged": {
     "*.{scss}": [
-      "prettier --write"
-    ],
-    "*.{scss,html}": [
+      "prettier --write",
       "stylelint --fix"
     ],
     "*.{scss,html,js}": [
-      "yarn lint:copyright --fix"
+      "pnpm lint:copyright --fix"
     ],
     "*.{tsx,ts,jsx,js}": [
       "prettier --write",
-      "node packages/configs/copyrightLinter.js --fix"
+      "node scripts/copyrightLinter.js --fix"
     ]
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
-    "test": "turbo run test",
+    "dev": "NODE_ENV=development turbo run dev --concurrency=15",
+    "test": "node scripts/runTests.mjs",
+    "test:css": "pnpm run build --filter=css-workshop && pnpm --filter=css-workshop run test",
+    "test:react": "pnpm run build --filter=react-workshop && pnpm --filter=react-workshop run test",
+    "test:a11y": "pnpm run build --filter=a11y && pnpm --filter=/a11y run test",
+    "test:e2e": "pnpm run build --filter=e2e && pnpm --filter=e2e run test",
+    "test:unit": "pnpm --filter=@itwin/itwinui-react run test:unit",
     "lint": "turbo run lint",
     "format": "turbo run format",
-    "prepare": "husky install",
-    "lint:copyright": "node packages/shared/copyrightLinter.js",
-    "push-docker": "yarn workspace @itwin/itwinui-css push-docker",
-    "createComponent": "yarn workspace @itwin/itwinui-css createComponent",
-    "approve": "yarn workspace @itwin/itwinui-css approve",
-    "clean:images": "yarn workspace @itwin/itwinui-css clean:images",
-    "createComponent:react": "node scripts/createComponent.js",
-    "push-docker:react": "yarn workspace storybook push-docker",
+    "prepare": "husky install && playwright install",
+    "lint:copyright": "node scripts/copyrightLinter.js",
+    "createComponent": "node scripts/createComponent.js",
+    "approve": "pnpm run approve:css && pnpm run approve:react",
+    "approve:css": "pnpm --filter css-workshop approve",
+    "approve:react": "pnpm --filter react-workshop approve",
     "clean": "turbo run clean && rimraf node_modules",
-    "release": "yarn build --filter={./packages/*}... && changeset publish"
+    "changeset": "npx -y @changesets/cli",
+    "release": "pnpm run build --filter=\"{./packages/*}...\" && pnpm node ./scripts/publish-packages.mjs"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@changesets/cli": "^2.26.0",
+    "@itwin/itwinui-css": "workspace:*",
+    "@itwin/itwinui-variables": "workspace:*",
+    "a11y": "workspace:*",
     "chokidar-cli": "^3.0.0",
-    "concurrently": "^7.6.0",
-    "cross-env": "^7.0.3",
-    "husky": "^8.0.2",
-    "lint-staged": "^12.5.0",
-    "prettier": "2.8.0",
-    "rimraf": "^3.0.2",
-    "turbo": "~1.6.3"
+    "concurrently": "^8.2.2",
+    "configs": "workspace:*",
+    "cypress": "13.8.1",
+    "e2e": "workspace:*",
+    "examples": "workspace:*",
+    "execa": "^8.0.1",
+    "helpers": "workspace:*",
+    "husky": "^9.0.10",
+    "lint-staged": "^15.2.9",
+    "octokit": "^3.1.2",
+    "prettier": "~3.1.0",
+    "rimraf": "^5.0.5",
+    "turbo": "~1.12.3"
   },
   "resolutions": {
-    "hosted-git-info": "6.1.1",
-    "jimp": "0.16.2",
-    "trim-newlines": "3.0.1",
-    "minimatch": "3.1.2",
-    "glob-parent": "6.0.2",
-    "jpeg-js": "0.4.4",
-    "ansi-regex": "5.0.1",
-    "async": "3.2.4",
-    "trim": "0.0.3",
-    "set-value": "4.1.0",
-    "postcss": "8.4.20",
-    "prettier": "2.8.0",
-    "nanoid": "3.3.4",
-    "loader-utils": "2.0.4"
+    "normalize-package-data": "^6.0.0",
+    "glob-parent": "^6.0.2",
+    "strip-ansi": "^6.0.0",
+    "async": "^3.2.5",
+    "postcss": "^8.4.34",
+    "prettier": "~3.1.0",
+    "autoprefixer": "^10.4.17",
+    "semver": "^7.5.4",
+    "typescript": "~5.5.2",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "astro": "~4.16.3",
+    "cypress": "13.8.1",
+    "ws@8": "^8.17.1",
+    "cookie@<0.7.0": ">=0.7.0"
   },
   "engines": {
-    "npm": ">=7.0.0",
-    "node": ">=16.0.0"
+    "node": ">=18.14.1"
   },
-  "packageManager": "yarn@1.22.18",
+  "packageManager": "pnpm@9.1.0",
   "prettier": "configs/prettier-config"
 }

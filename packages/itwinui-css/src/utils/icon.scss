@@ -1,0 +1,53 @@
+// Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+// See LICENSE.md in the project root for license terms and full copyright notice.
+@use 'sass:math';
+@use 'sass:map';
+
+$icon-sizes: (
+  's': #{math.div(12, 16)}rem,
+  'm': #{math.div(16, 16)}rem,
+  'l': #{math.div(24, 16)}rem,
+  'auto': #{math.div(16, 14)}em,
+);
+
+$default-size: #{map.get($icon-sizes, m)};
+$default-fill: var(--iui-color-icon-muted);
+
+.iui-svg-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+
+  svg {
+    inline-size: var(--iui-svg-size, var(--_iui-svg-size, #{$default-size}));
+    block-size: var(--iui-svg-size, var(--_iui-svg-size, #{$default-size}));
+    fill: var(--iui-svg-fill, var(--_iui-svg-fill, #{$default-fill}));
+  }
+
+  @each $size in 's', 'm', 'l', 'auto' {
+    &[data-iui-icon-size='#{$size}'] {
+      --_iui-svg-size: #{map.get($icon-sizes, $size)};
+    }
+  }
+
+  @each $fill in 'informational', 'positive', 'warning', 'negative' {
+    &[data-iui-icon-color='#{$fill}'] {
+      --_iui-svg-fill: var(--iui-color-icon-#{$fill});
+    }
+  }
+
+  @media (forced-colors: active) {
+    // override forced colors only if it doesn't have a status fill
+    &:where(:not([data-iui-icon-color]), [data-iui-icon-color='default']) {
+      --_iui-svg-fill: CanvasText;
+    }
+  }
+
+  &[data-iui-padded='true'] {
+    padding-inline: var(--iui-size-xs);
+  }
+
+  // collapse padding between adjacent icons
+  & + & {
+    padding-inline-start: 0;
+  }
+}

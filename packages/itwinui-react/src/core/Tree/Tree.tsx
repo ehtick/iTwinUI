@@ -2,18 +2,19 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import {
-  CommonProps,
-  useTheme,
   getFocusableElements,
-  useVirtualization,
-  mergeRefs,
-  StylingProps,
-} from '../utils';
-import '@itwin/itwinui-css/css/tree.css';
-import cx from 'classnames';
-import { TreeContext } from './TreeContext';
+  polymorphic,
+  cloneElementWithRef,
+  useVirtualScroll,
+  ShadowRoot,
+  useMergedRefs,
+  useLayoutEffect,
+} from '../../utils/index.js';
+import type { CommonProps } from '../../utils/index.js';
+import { TreeContext } from './TreeContext.js';
+import type { Virtualizer, VirtualItem } from '@tanstack/react-virtual';
 
 export type NodeData<T> = {
   /**
@@ -59,9 +60,16 @@ export type NodeRenderProps<T> = Omit<NodeData<T>, 'subNodes'>;
 
 export type TreeProps<T> = {
   /**
+   * Modify size of the tree.
+   *
+   * @default 'default'
+   */
+  size?: 'default' | 'small';
+  /**
    * Render function that should return the node element.
    * Recommended to use `TreeNode` component.
-   * Must be memoized.
+   *
+   ***Note**: When virtualization is enabled, the return value of `nodeRenderer()` is cloned and a `ref` is passed to it. Thus, you would need a `React.forwardRef` in the component returned by `nodeRenderer()`, except if you are returning `TreeNode` since that already forwards its ref.
    * @example
    * const nodeRenderer = React.useCallback(({ node, ...rest }: NodeRenderProps<DataType>) => (
    *   <TreeNode
@@ -71,7 +79,7 @@ export type TreeProps<T> = {
    *   />
    * ), [onNodeExpanded])
    */
-  nodeRenderer: (props: NodeRenderProps<T>) => JSX.Element;
+  nodeRenderer: (props: NodeRenderProps<T>) => React.JSX.Element;
   /**
    * Array of custom data used for `TreeNodes` inside `Tree`.
    */
@@ -101,7 +109,7 @@ export type TreeProps<T> = {
    * @beta
    */
   enableVirtualization?: boolean;
-} & Omit<CommonProps, 'title'>;
+} & CommonProps;
 
 /**
  * Tree component used to display a hierarchical structure of `TreeNodes`. 
@@ -160,13 +168,13 @@ export const Tree = <T,>(props: TreeProps<T>) => {
     className,
     nodeRenderer,
     getNode,
+    size = 'default',
     enableVirtualization = false,
     style,
     ...rest
   } = props;
-  useTheme();
 
-  const treeRef = React.useRef<HTMLUListElement>(null);
+  const treeRef = React.useRef<HTMLDivElement>(null);
 
   const focusedIndex = React.useRef<number>(0);
   React.useEffect(() => {
@@ -181,7 +189,10 @@ export const Tree = <T,>(props: TreeProps<T>) => {
     ) as HTMLElement[];
   }, []);
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLUListElement>) => {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey) {
+      return;
+    }
     const items = getFocusableNodes();
     if (!items?.length) {
       return;
@@ -249,7 +260,11 @@ export const Tree = <T,>(props: TreeProps<T>) => {
   }, [data, getNode]);
 
   const itemRenderer = React.useCallback(
-    (index: number) => {
+    (
+      index: number,
+      virtualItem?: VirtualItem,
+      virtualizer?: Virtualizer<Element, Element>,
+    ) => {
       const node = flatNodesList[index];
       return (
         <TreeContext.Provider
@@ -272,13 +287,27 @@ export const Tree = <T,>(props: TreeProps<T>) => {
                   setScrollToIndex(parentNodeIndex);
                 }
               : undefined,
+            size,
           }}
         >
-          {nodeRenderer(node.nodeProps)}
+          {virtualItem && virtualizer
+            ? cloneElementWithRef(nodeRenderer(node.nodeProps), (children) => ({
+                ...children.props,
+                key: virtualItem.key,
+                'data-iui-index': virtualItem.index,
+                'data-iui-virtualizer': 'item',
+                ref: virtualizer.measureElement,
+                style: {
+                  ...children.props.style,
+                  '--_iui-width': '100%',
+                  transform: `translateY(${virtualItem.start}px)`,
+                },
+              }))
+            : nodeRenderer(node.nodeProps)}
         </TreeContext.Provider>
       );
     },
-    [firstLevelNodesList.length, flatNodesList, nodeRenderer],
+    [firstLevelNodesList.length, flatNodesList, nodeRenderer, size],
   );
 
   const [scrollToIndex, setScrollToIndex] = React.useState<number>();
@@ -325,6 +354,7 @@ export const Tree = <T,>(props: TreeProps<T>) => {
           onKeyDown={handleKeyDown}
           ref={treeRef}
           className={className}
+          data-iui-size={size === 'small' ? 'small' : undefined}
           style={style}
           {...rest}
         />
@@ -333,6 +363,7 @@ export const Tree = <T,>(props: TreeProps<T>) => {
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           className={className}
+          data-iui-size={size === 'small' ? 'small' : undefined}
           style={style}
           ref={treeRef}
           {...rest}
@@ -343,39 +374,26 @@ export const Tree = <T,>(props: TreeProps<T>) => {
     </>
   );
 };
+if (process.env.NODE_ENV === 'development') {
+  Tree.displayName = 'Tree';
+}
 
-type TreeElementProps = {
-  children: React.ReactNode;
-  onKeyDown: React.KeyboardEventHandler<HTMLUListElement>;
-  onFocus: React.FocusEventHandler<HTMLUListElement>;
-} & Omit<CommonProps, 'title'>;
-
-const TreeElement = React.forwardRef(
-  (
-    { children, className, ...rest }: TreeElementProps,
-    ref: React.ForwardedRef<HTMLUListElement>,
-  ) => {
-    return (
-      <ul
-        className={cx('iui-tree', className)}
-        role='tree'
-        ref={ref}
-        tabIndex={0}
-        {...rest}
-      >
-        {children}
-      </ul>
-    );
-  },
-);
+const TreeElement = polymorphic.div('iui-tree', {
+  role: 'tree',
+  tabIndex: 0,
+});
 
 type VirtualizedTreeProps<T> = {
   flatNodesList: FlatNode<T>[];
-  itemRenderer: (index: number) => JSX.Element;
+  itemRenderer: (
+    index: number,
+    virtualItem?: VirtualItem,
+    virtualizer?: Virtualizer<Element, Element>,
+  ) => React.JSX.Element;
   scrollToIndex?: number;
-  onKeyDown: React.KeyboardEventHandler<HTMLUListElement>;
-  onFocus: React.FocusEventHandler<HTMLUListElement>;
-} & StylingProps;
+  onKeyDown: React.KeyboardEventHandler<HTMLDivElement>;
+  onFocus: React.FocusEventHandler<HTMLDivElement>;
+} & CommonProps;
 
 // Having virtualized tree separately prevents from running all virtualization logic
 const VirtualizedTree = React.forwardRef(
@@ -384,36 +402,50 @@ const VirtualizedTree = React.forwardRef(
       flatNodesList,
       itemRenderer,
       scrollToIndex,
-      className,
-      style,
       ...rest
     }: VirtualizedTreeProps<T>,
-    ref: React.ForwardedRef<HTMLUListElement>,
+    ref: React.ForwardedRef<HTMLDivElement>,
   ) => {
-    const { outerProps, innerProps, visibleChildren } = useVirtualization({
-      itemsLength: flatNodesList.length,
-      itemRenderer: itemRenderer,
-      scrollToIndex,
+    const parentRef = React.useRef<HTMLDivElement | null>(null);
+
+    const getItemKey = React.useCallback(
+      (index: number) => {
+        return flatNodesList[index].nodeProps.nodeId;
+      },
+      [flatNodesList],
+    );
+
+    const { virtualizer, css: virtualizerCss } = useVirtualScroll({
+      count: flatNodesList.length,
+      getScrollElement: () => parentRef.current,
+      estimateSize: () => 39, //Set to 39px since that is the height of a treeNode with a sub label with the default font size.
+      getItemKey,
     });
 
+    useLayoutEffect(() => {
+      if (scrollToIndex) {
+        virtualizer.scrollToIndex(scrollToIndex);
+      }
+    }, [virtualizer, scrollToIndex]);
+
     return (
-      <div
-        {...{
-          ...outerProps,
-          className: cx(className, outerProps.className),
-          style: { ...style, ...outerProps.style },
-        }}
-      >
-        <TreeElement
-          {...innerProps}
-          {...rest}
-          ref={mergeRefs(ref, innerProps.ref)}
-        >
-          {visibleChildren}
-        </TreeElement>
-      </div>
+      <TreeElement {...rest} ref={useMergedRefs(ref, parentRef)}>
+        <ShadowRoot css={virtualizerCss}>
+          <div
+            data-iui-virtualizer='root'
+            style={{ minBlockSize: virtualizer.getTotalSize() }}
+          >
+            <slot />
+          </div>
+        </ShadowRoot>
+        <>
+          {virtualizer
+            .getVirtualItems()
+            .map((virtualItem) =>
+              itemRenderer(virtualItem.index, virtualItem, virtualizer),
+            )}
+        </>
+      </TreeElement>
     );
   },
 );
-
-export default Tree;

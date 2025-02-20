@@ -2,22 +2,21 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { HeaderGroup } from 'react-table';
-import '@itwin/itwinui-css/css/table.css';
+import type { HeaderGroup } from '../../../react-table/react-table.js';
 import {
-  useTheme,
-  Popover,
-  StylingProps,
+  useGlobals,
   SvgFilterHollow,
   SvgFilter,
-} from '../../utils';
-import { IconButton } from '../../Buttons';
+} from '../../../utils/index.js';
+import type { CommonProps } from '../../../utils/index.js';
+import { IconButton } from '../../Buttons/IconButton.js';
+import { Popover } from '../../Popover/Popover.js';
 
 export type FilterToggleProps<T extends Record<string, unknown>> = {
   column: HeaderGroup<T>;
-} & StylingProps;
+} & CommonProps;
 
 /**
  * Handles showing filter icon and opening filter component.
@@ -27,7 +26,7 @@ export const FilterToggle = <T extends Record<string, unknown>>(
 ) => {
   const { column, className, ...rest } = props;
 
-  useTheme();
+  useGlobals();
 
   const [isVisible, setIsVisible] = React.useState(false);
   const close = React.useCallback(() => setIsVisible(false), []);
@@ -55,17 +54,20 @@ export const FilterToggle = <T extends Record<string, unknown>>(
           content={column.render('Filter', { close, setFilter, clearFilter })}
           placement='bottom-start'
           visible={isVisible}
-          onClickOutside={close}
+          onVisibleChange={setIsVisible}
+          closeOnOutsideClick
+          applyBackground
         >
           <IconButton
             styleType='borderless'
             isActive={isVisible || isColumnFiltered}
             className={cx('iui-table-filter-button', className)}
+            aria-label='Filter'
             onClick={(e) => {
-              setIsVisible((v) => !v);
               // Prevents from triggering sort
               e.stopPropagation();
             }}
+            data-iui-shift='left'
             {...rest}
           >
             {isColumnFiltered ? <SvgFilter /> : <SvgFilterHollow />}

@@ -2,23 +2,24 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useTheme, StylingProps } from '../utils';
-import '@itwin/itwinui-css/css/footer.css';
-import { FooterItem } from './FooterItem';
-import { FooterSeparator } from './FooterSeparator';
-import { FooterList } from './FooterList';
+import { Box } from '../../utils/index.js';
+import type { CommonProps } from '../../utils/index.js';
+import { FooterItem } from './FooterItem.js';
+import { FooterSeparator } from './FooterSeparator.js';
+import { FooterList } from './FooterList.js';
+import { Anchor } from '../Typography/Anchor.js';
 
 export type TitleTranslations = {
-  termsOfService: string;
-  privacy: string;
-  termsOfUse: string;
-  cookies: string;
-  legalNotices: string;
+  termsOfService?: string;
+  privacy?: string;
+  termsOfUse?: string;
+  cookies?: string;
+  legalNotices?: string;
 };
 
-export type FooterProps = {
+type FooterProps = {
   /**
    * Customize footer elements.
    * Providing a `FooterElement[]` will append the custom elements to the end of the default elements.
@@ -36,7 +37,7 @@ export type FooterProps = {
    * Use `defaultFooterElements` to get the default footer elements.
    */
   children?: React.ReactNode;
-} & StylingProps;
+} & CommonProps;
 
 export type FooterElement = {
   /**
@@ -54,7 +55,7 @@ export type FooterElement = {
   key?: keyof TitleTranslations | 'copyright' | (string & Record<never, never>);
 };
 
-const footerTranslations: TitleTranslations = {
+const defaultTranslatedTitles: Required<TitleTranslations> = {
   cookies: 'Cookies',
   legalNotices: 'Legal notices',
   privacy: 'Privacy',
@@ -69,27 +70,27 @@ export const defaultFooterElements: FooterElement[] = [
   },
   {
     key: 'termsOfService',
-    title: footerTranslations.termsOfService,
+    title: defaultTranslatedTitles.termsOfService,
     url: 'https://connect-agreementportal.bentley.com/AgreementApp/Home/Eula/view/readonly/BentleyConnect',
   },
   {
     key: 'privacy',
-    title: footerTranslations.privacy,
+    title: defaultTranslatedTitles.privacy,
     url: 'https://www.bentley.com/en/privacy-policy',
   },
   {
     key: 'termsOfUse',
-    title: footerTranslations.termsOfUse,
+    title: defaultTranslatedTitles.termsOfUse,
     url: 'https://www.bentley.com/en/terms-of-use-and-select-online-agreement',
   },
   {
     key: 'cookies',
-    title: footerTranslations.cookies,
+    title: defaultTranslatedTitles.cookies,
     url: 'https://www.bentley.com/en/cookie-policy',
   },
   {
     key: 'legalNotices',
-    title: footerTranslations.legalNotices,
+    title: defaultTranslatedTitles.legalNotices,
     url: 'https://connect.bentley.com/Legal',
   },
 ];
@@ -112,9 +113,7 @@ export const Footer = Object.assign(
     const { children, customElements, translatedTitles, className, ...rest } =
       props;
 
-    useTheme();
-
-    const titles = { ...footerTranslations, ...translatedTitles };
+    const titles = { ...defaultTranslatedTitles, ...translatedTitles };
     const translatedElements = defaultFooterElements.map((element) => {
       if (element.key && titles.hasOwnProperty(element.key)) {
         const key = element.key as keyof TitleTranslations;
@@ -135,7 +134,7 @@ export const Footer = Object.assign(
     }
 
     return (
-      <footer className={cx('iui-legal-footer', className)} {...rest}>
+      <Box as='footer' className={cx('iui-legal-footer', className)} {...rest}>
         {children ? (
           children
         ) : (
@@ -148,9 +147,13 @@ export const Footer = Object.assign(
                   {index > 0 && <FooterSeparator />}
                   <FooterItem>
                     {element.url ? (
-                      <a href={element.url} target='_blank' rel='noreferrer'>
+                      <Anchor
+                        href={element.url}
+                        target='_blank'
+                        rel='noreferrer'
+                      >
                         {element.title}
-                      </a>
+                      </Anchor>
                     ) : (
                       element.title
                     )}
@@ -160,7 +163,7 @@ export const Footer = Object.assign(
             })}
           </FooterList>
         )}
-      </footer>
+      </Box>
     );
   },
   {
@@ -169,5 +172,6 @@ export const Footer = Object.assign(
     Separator: FooterSeparator,
   },
 );
-
-export default Footer;
+if (process.env.NODE_ENV === 'development') {
+  (Footer as any).displayName = 'Footer';
+}

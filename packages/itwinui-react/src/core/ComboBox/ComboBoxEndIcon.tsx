@@ -3,52 +3,37 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { useSafeContext, useMergedRefs, SvgCaretDownSmall } from '../utils';
-import { ComboBoxActionContext, ComboBoxRefsContext } from './helpers';
+import * as React from 'react';
+import { SvgCaretDownSmall } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { Icon } from '../Icon/Icon.js';
 
-type ComboBoxEndIconProps = React.ComponentPropsWithoutRef<'span'> & {
+type ComboBoxEndIconProps = {
   disabled?: boolean;
   isOpen?: boolean;
 };
 
-export const ComboBoxEndIcon = React.forwardRef(
-  (props: ComboBoxEndIconProps, forwardedRef: React.Ref<HTMLSpanElement>) => {
-    const {
-      className,
-      children,
-      onClick: onClickProp,
-      disabled,
-      isOpen,
-      ...rest
-    } = props;
-    const dispatch = useSafeContext(ComboBoxActionContext);
-    const { toggleButtonRef } = useSafeContext(ComboBoxRefsContext);
-    const refs = useMergedRefs(toggleButtonRef, forwardedRef);
+export const ComboBoxEndIcon = React.forwardRef((props, forwardedRef) => {
+  const { className, children, disabled, isOpen, ...rest } = props;
 
-    return (
-      <span
-        ref={refs}
-        className={cx(
-          'iui-end-icon',
-          {
-            'iui-actionable': !disabled,
-            'iui-disabled': disabled,
-            'iui-open': isOpen,
-          },
-          className,
-        )}
-        onClick={(e) => {
-          onClickProp?.(e);
-          if (!e.isDefaultPrevented()) {
-            dispatch({ type: isOpen ? 'close' : 'open' });
-          }
-        }}
-        {...rest}
-      >
-        {children ?? <SvgCaretDownSmall aria-hidden />}
-      </span>
-    );
-  },
-);
-ComboBoxEndIcon.displayName = 'ComboBoxEndIcon';
+  return (
+    <Icon
+      as='span'
+      ref={forwardedRef}
+      className={cx(
+        'iui-end-icon',
+        {
+          'iui-disabled': disabled,
+          'iui-open': isOpen,
+        },
+        className,
+      )}
+      {...rest}
+    >
+      {children ?? <SvgCaretDownSmall aria-hidden />}
+    </Icon>
+  );
+}) as PolymorphicForwardRefComponent<'span', ComboBoxEndIconProps>;
+if (process.env.NODE_ENV === 'development') {
+  ComboBoxEndIcon.displayName = 'ComboBoxEndIcon';
+}

@@ -2,9 +2,8 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
-import SkipToContentLink from './SkipToContentLink';
+import { SkipToContentLink } from './SkipToContentLink.js';
 
 it('should render link in its most basic state', () => {
   const { container } = render(<SkipToContentLink href='#main-content-id' />);
@@ -45,7 +44,7 @@ it('should propagate misc props in link', () => {
   ) as HTMLElement;
   expect(link).toHaveAttribute('href', '#main-content-id');
   expect(link).toHaveClass('test-class');
-  expect(link).toHaveStyle('color: red');
+  expect(link.style.color).toEqual('red');
   expect(link).toHaveAttribute('aria-label', 'test-label');
   expect(link).toHaveAttribute('id', 'test-id');
 });

@@ -3,11 +3,11 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { CommonProps, useMergedRefs, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/information-panel.css';
+import * as React from 'react';
+import { useMergedRefs, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type InformationPanelProps = {
+type InformationPanelProps = {
   /**
    * Is the panel open?
    * @default false
@@ -27,7 +27,7 @@ export type InformationPanelProps = {
    * Content of the panel.
    */
   children?: React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * InformationPanel provides a way to view additional content or attributes
@@ -50,85 +50,92 @@ export type InformationPanelProps = {
  *   </InformationPanel>
  * </InformationPanelWrapper>
  */
-export const InformationPanel = React.forwardRef(
-  (props: InformationPanelProps, ref: React.RefObject<HTMLDivElement>) => {
-    const {
-      className,
-      isOpen = false,
-      orientation = 'vertical',
-      resizable = true,
-      children,
-      ...rest
-    } = props;
+export const InformationPanel = React.forwardRef((props, forwardedRef) => {
+  const {
+    className,
+    isOpen = false,
+    orientation = 'vertical',
+    resizable = true,
+    children,
+    ...rest
+  } = props;
 
-    useTheme();
+  const [infoPanelSize, setInfoPanelSize] = React.useState<{
+    width: number | undefined;
+    height: number | undefined;
+  }>({ width: undefined, height: undefined });
 
-    const infoPanelRef = React.useRef<HTMLDivElement>(null);
-    const refs = useMergedRefs(ref, infoPanelRef);
+  const infoPanelRef = React.useRef<HTMLDivElement>(null);
+  const refs = useMergedRefs(forwardedRef, infoPanelRef);
 
-    const startResize = (e: React.PointerEvent) => {
+  const startResize = (e: React.PointerEvent) => {
+    if (!infoPanelRef.current) {
+      return;
+    }
+    if (e.button != undefined && e.button !== 0) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    infoPanelRef.current.ownerDocument.addEventListener(
+      'pointermove',
+      onResize,
+    );
+    infoPanelRef.current.ownerDocument.addEventListener(
+      'pointerup',
+      () =>
+        infoPanelRef.current?.ownerDocument.removeEventListener(
+          'pointermove',
+          onResize,
+        ),
+      { once: true },
+    );
+  };
+
+  const onResize = React.useCallback(
+    (e: PointerEvent) => {
+      e.preventDefault();
       if (!infoPanelRef.current) {
         return;
       }
-      if (e.button != undefined && e.button !== 0) {
-        return;
+      const { right, bottom } = infoPanelRef.current.getBoundingClientRect();
+      if (orientation === 'vertical') {
+        setInfoPanelSize({ width: right - e.clientX, height: undefined });
+      } else {
+        setInfoPanelSize({ height: bottom - e.clientY, width: undefined });
       }
-      e.preventDefault();
-      e.stopPropagation();
-      infoPanelRef.current.ownerDocument.addEventListener(
-        'pointermove',
-        onResize,
-      );
-      infoPanelRef.current.ownerDocument.addEventListener(
-        'pointerup',
-        () =>
-          infoPanelRef.current?.ownerDocument.removeEventListener(
-            'pointermove',
-            onResize,
-          ),
-        { once: true },
-      );
-    };
+    },
+    [orientation],
+  );
 
-    const onResize = React.useCallback(
-      (e: PointerEvent) => {
-        e.preventDefault();
-        if (!infoPanelRef.current) {
-          return;
-        }
-        const { right, bottom } = infoPanelRef.current.getBoundingClientRect();
-        if (orientation === 'vertical') {
-          infoPanelRef.current.style.width = `${right - e.clientX}px`;
-        } else {
-          infoPanelRef.current.style.height = `${bottom - e.clientY}px`;
-        }
-      },
-      [orientation],
-    );
-
-    return (
-      <div
-        className={cx(
-          'iui-information-panel',
-          {
-            'iui-right': orientation === 'vertical',
-            'iui-bottom': orientation === 'horizontal',
-            'iui-visible': isOpen,
-          },
-          className,
-        )}
-        ref={refs}
-        {...rest}
-      >
-        {resizable && (
-          <div className='iui-resizer' onPointerDown={startResize}>
-            <div className='iui-resizer-bar' />
-          </div>
-        )}
-        {children}
-      </div>
-    );
-  },
-);
-
-export default InformationPanel;
+  return (
+    <Box
+      className={cx(
+        'iui-information-panel',
+        {
+          'iui-right': orientation === 'vertical',
+          'iui-bottom': orientation === 'horizontal',
+          'iui-visible': isOpen,
+        },
+        className,
+      )}
+      ref={refs}
+      {...rest}
+      style={{
+        width: orientation === 'vertical' ? infoPanelSize.width : undefined,
+        height: orientation === 'horizontal' ? infoPanelSize.height : undefined,
+        ...props.style,
+      }}
+    >
+      {resizable && (
+        <Box className='iui-resizer' onPointerDown={startResize}>
+          <Box className='iui-resizer-bar' />
+        </Box>
+      )}
+      {children}
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'div', InformationPanelProps>;
+if (process.env.NODE_ENV === 'development') {
+  InformationPanel.displayName = 'InformationPanel';
+}

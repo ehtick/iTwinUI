@@ -3,17 +3,23 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
+import * as React from 'react';
 import {
-  useTheme,
   SvgChevronLeft,
   SvgChevronRight,
   SvgChevronLeftDouble,
   SvgChevronRightDouble,
-} from '../utils';
-import '@itwin/itwinui-css/css/date-picker.css';
-import { IconButton } from '../Buttons/IconButton';
-import { TimePicker, TimePickerProps } from '../TimePicker';
+  isBefore,
+  Box,
+  useId,
+  useLayoutEffect,
+  useWarningLogger,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { IconButton } from '../Buttons/IconButton.js';
+import { TimePicker } from '../TimePicker/TimePicker.js';
+import type { TimePickerProps } from '../TimePicker/TimePicker.js';
+import { PopoverInitialFocusContext } from '../Popover/Popover.js';
 
 const isSameDay = (a: Date | undefined, b: Date | undefined) => {
   return (
@@ -40,21 +46,6 @@ const isInDateRange = (
   minDate && minDate.setHours(0, 0, 0, 0);
   maxDate && maxDate.setHours(0, 0, 0, 0);
   return testDate > minDate && testDate < maxDate;
-};
-
-// compares to see if one date is earlier than another
-const isBefore = (
-  beforeDate: Date | undefined,
-  afterDate: Date | undefined,
-) => {
-  if (!beforeDate || !afterDate) {
-    return false;
-  }
-  const firstDate = new Date(beforeDate);
-  const secondDate = new Date(afterDate);
-  firstDate && firstDate.setHours(0, 0, 0, 0);
-  secondDate && secondDate.setHours(0, 0, 0, 0);
-  return firstDate < secondDate;
 };
 
 // Type guard for multiple did not work
@@ -94,13 +85,17 @@ const defaultLongDays = [
   'Saturday',
 ];
 
+export type DatePickerLocalizedNames = {
+  [key in 'months' | 'shortDays' | 'days']: string[];
+};
+
 /**
  * Generate localized months and days strings using `Intl.DateTimeFormat` for passed locale to use in DatePicker component.
  * If locale is not passed, browser locale will be used.
  */
 export const generateLocalizedStrings = (
   locale?: string,
-): { [key in 'months' | 'shortDays' | 'days']: string[] } => {
+): DatePickerLocalizedNames => {
   const shortWeekDayFormatter = new Intl.DateTimeFormat(locale, {
     weekday: 'short',
   });
@@ -172,12 +167,12 @@ export type DateRangePickerProps =
     }
   | {
       enableRangeSelect: true;
-      startDate: Date;
-      endDate: Date;
+      startDate?: Date;
+      endDate?: Date;
       onChange?: (startDate: Date, endDate: Date) => void;
     };
 
-export type DatePickerProps = {
+type DatePickerProps = {
   /**
    * Selected date.
    */
@@ -186,7 +181,7 @@ export type DatePickerProps = {
    * Pass localized week days (start from sunday) and months.
    * Use helper function `generateLocalizedStrings` to generate strings using `Intl.DateTimeFormat`.
    */
-  localizedNames?: { [key in 'months' | 'shortDays' | 'days']: string[] };
+  localizedNames?: DatePickerLocalizedNames;
   /**
    * Set focus on selected day or today.
    * @default false
@@ -202,6 +197,52 @@ export type DatePickerProps = {
    * @default false
    */
   showYearSelection?: boolean;
+  /**
+   * Allows props to be passed for calendar month year, referring to the div that wraps around the month/year and the next/previous buttons.
+   */
+  monthYearProps?: React.ComponentProps<'div'>;
+  /**
+   * Allows props to be passed for only month, referring to span that wraps around the month title.
+   */
+  monthProps?: React.ComponentProps<'span'>;
+  /**
+   * Allows props to be passed for week days, referring to div that wraps around the week day title.
+   */
+  weekDayProps?: React.ComponentProps<'div'>;
+  /**
+   * Allows props to be passed for individual day , referring to div element the wraps around single day number.
+   */
+  dayProps?: React.ComponentProps<'div'>;
+  /**
+   * Allows props to be passed for calendar, referring to div that is used for listbox for wraping days and weeks.
+   */
+  calendarProps?: React.ComponentProps<'div'>;
+  /**
+   * Allows props to be passed for weeks, referring to div that wraps around weeks.
+   */
+  weekProps?: React.ComponentProps<'div'>;
+  /**
+   * Will disable dates for which this function returns true.
+   * Disabled dates cannot be selected.
+   */
+  isDateDisabled?: (date: Date) => boolean;
+  /**
+   * Whether there is a background, border, shadow, etc.
+   *
+   * Should be set to true if used in a popover that doesn't have its own background,
+   * or set to false if the popover has its own background or embedding within a page.
+   *
+   * @default true
+   */
+  applyBackground?: boolean;
+  /**
+   * Whether dates outside the current month should be displayed (in a muted text style).
+   *
+   * It is recommended to set this to false. Currently it defaults to true for backward compatibility.
+   *
+   * @default true
+   */
+  showDatesOutsideMonth?: boolean;
 } & DateRangePickerProps &
   Omit<TimePickerProps, 'date' | 'onChange' | 'setFocusHour'>;
 
@@ -210,13 +251,12 @@ export type DatePickerProps = {
  * @example
  * <DatePicker date={new Date()} onChange={(e) => console.log('New date value: ' + e)} />
  */
-export const DatePicker = (props: DatePickerProps): JSX.Element => {
+export const DatePicker = React.forwardRef((props, forwardedRef) => {
   const {
     date,
     onChange,
     localizedNames,
     className,
-    style,
     setFocus = false,
     showTime = false,
     use12Hours = false,
@@ -234,10 +274,29 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
     enableRangeSelect = false,
     startDate,
     endDate,
+    monthYearProps,
+    calendarProps,
+    monthProps,
+    weekDayProps,
+    dayProps,
+    weekProps,
+    isDateDisabled,
+    applyBackground = true,
+    showDatesOutsideMonth = true,
     ...rest
   } = props;
 
-  useTheme();
+  const logWarning = useWarningLogger();
+
+  if (process.env.NODE_ENV === 'development') {
+    const onlyOneRangePropPassed =
+      (!!startDate ? 1 : 0) + (!!endDate ? 1 : 0) === 1;
+    if (enableRangeSelect && onlyOneRangePropPassed) {
+      logWarning(
+        '`DatePicker` with `enableRangeSelect` needs *both* `startDate` and `endDate` to either be `Date` or `undefined`. Passing `Date` to just one of them is not allowed.',
+      );
+    }
+  }
 
   const monthNames = localizedNames?.months ?? defaultMonths;
   const shortDays = localizedNames?.shortDays ?? defaultShortDays;
@@ -297,6 +356,16 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
     );
   }, [date, setMonthAndYear, startDate, endDate, enableRangeSelect]);
 
+  const popoverInitialFocusContext = React.useContext(
+    PopoverInitialFocusContext,
+  );
+  useLayoutEffect(() => {
+    // If setFocus and the DatePicker is in a Popover, tell Popover to not focus anything since we handle focus.
+    if (setFocus && popoverInitialFocusContext) {
+      popoverInitialFocusContext.setInitialFocus(-1);
+    }
+  }, [popoverInitialFocusContext, setFocus]);
+
   const days = React.useMemo(() => {
     let offsetToFirst = new Date(
       displayedYear,
@@ -304,8 +373,9 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
       1,
     ).getDay();
 
-    // if its sunday, show one week before
-    if (0 === offsetToFirst) {
+    // If it's sunday, show one week before, but only if dates outside month are shown.
+    // (We do not want empty space at the top if dates outside month are not shown.)
+    if (0 === offsetToFirst && showDatesOutsideMonth) {
       offsetToFirst = 7;
     }
 
@@ -318,7 +388,7 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
       );
     }
     return daysInMonth;
-  }, [displayedMonthIndex, displayedYear]);
+  }, [displayedMonthIndex, displayedYear, showDatesOutsideMonth]);
 
   const weeks = React.useMemo(() => {
     const weeksInMonth = [];
@@ -444,6 +514,10 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
   const handleCalendarKeyDown = (
     event: React.KeyboardEvent<HTMLDivElement>,
   ) => {
+    if (event.altKey) {
+      return;
+    }
+
     if (!focusedDay) {
       return;
     }
@@ -488,7 +562,9 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
       case 'Enter':
       case ' ':
       case 'Spacebar':
-        onDayClick(focusedDay);
+        if (!isDateDisabled?.(focusedDay)) {
+          onDayClick(focusedDay);
+        }
         event.preventDefault();
         break;
     }
@@ -529,10 +605,24 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
     return dayClass;
   };
 
+  const dateTableId = useId();
+
   return (
-    <div className={cx('iui-date-picker', className)} style={style} {...rest}>
+    <Box
+      className={cx(
+        'iui-date-picker',
+        { 'iui-popover-surface': applyBackground },
+        className,
+      )}
+      ref={forwardedRef as React.Ref<HTMLDivElement>}
+      {...rest}
+    >
       <div>
-        <div className='iui-calendar-month-year'>
+        <Box
+          as='div'
+          {...monthYearProps}
+          className={cx('iui-calendar-month-year', monthYearProps?.className)}
+        >
           {showYearSelection && (
             <IconButton
               styleType='borderless'
@@ -552,12 +642,15 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
             <SvgChevronLeft />
           </IconButton>
           <span aria-live='polite'>
-            <span
-              className='iui-calendar-month'
+            <Box
+              as='span'
+              id={dateTableId}
               title={monthNames[displayedMonthIndex]}
+              {...monthProps}
+              className={cx('iui-calendar-month', monthProps?.className)}
             >
               {monthNames[displayedMonthIndex]}
-            </span>
+            </Box>
             &nbsp;{displayedYear}
           </span>
           <IconButton
@@ -578,41 +671,79 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
               <SvgChevronRightDouble />
             </IconButton>
           )}
-        </div>
-        <div className='iui-calendar-weekdays'>
+        </Box>
+        <Box
+          as='div'
+          {...weekDayProps}
+          className={cx('iui-calendar-weekdays', weekDayProps?.className)}
+        >
           {shortDays.map((day, index) => (
             <div key={day} title={longDays[index]}>
               {day}
             </div>
           ))}
-        </div>
-        <div onKeyDown={handleCalendarKeyDown} role='listbox'>
+        </Box>
+        <div
+          onKeyDown={handleCalendarKeyDown}
+          role='listbox'
+          aria-labelledby={dateTableId}
+          {...calendarProps}
+        >
           {weeks.map((weekDays, weekIndex) => {
             return (
-              <div
+              <Box
+                as='div'
                 key={`week-${displayedMonthIndex}-${weekIndex}`}
-                className='iui-calendar-week'
+                {...weekProps}
+                className={cx('iui-calendar-week', weekProps?.className)}
               >
                 {weekDays.map((weekDay, dayIndex) => {
                   const dateValue = weekDay.getDate();
+                  const isDisabled = isDateDisabled?.(weekDay);
+                  const isOutsideMonth =
+                    weekDay.getMonth() !== displayedMonthIndex;
+
+                  if (isOutsideMonth && !showDatesOutsideMonth) {
+                    return (
+                      <Box
+                        key={`day-${displayedMonthIndex}-${dayIndex}`}
+                        className={cx(
+                          getDayClass(weekDay),
+                          dayProps?.className,
+                        )}
+                        aria-hidden
+                      />
+                    );
+                  }
+
                   return (
-                    <div
+                    <Box
+                      as='div'
                       key={`day-${displayedMonthIndex}-${dayIndex}`}
-                      className={getDayClass(weekDay)}
-                      onClick={() => onDayClick(weekDay)}
+                      onClick={() => !isDisabled && onDayClick(weekDay)}
                       role='option'
                       tabIndex={isSameDay(weekDay, focusedDay) ? 0 : -1}
-                      ref={(element) =>
-                        isSameDay(weekDay, focusedDay) &&
-                        needFocus.current &&
-                        element?.focus()
-                      }
+                      aria-disabled={isDisabled ? 'true' : undefined}
+                      ref={(element) => {
+                        if (
+                          isSameDay(weekDay, focusedDay) &&
+                          needFocus.current
+                        ) {
+                          // Wait for DateRangeFilter's portaling to finish before focusing
+                          // See: https://github.com/iTwin/iTwinUI/pull/2297
+                          setTimeout(() => {
+                            element?.focus();
+                          });
+                        }
+                      }}
+                      {...dayProps}
+                      className={cx(getDayClass(weekDay), dayProps?.className)}
                     >
                       {dateValue}
-                    </div>
+                    </Box>
                   );
                 })}
-              </div>
+              </Box>
             );
           })}
         </div>
@@ -655,8 +786,9 @@ export const DatePicker = (props: DatePickerProps): JSX.Element => {
           }
         />
       )}
-    </div>
+    </Box>
   );
-};
-
-export default DatePicker;
+}) as PolymorphicForwardRefComponent<'div', DatePickerProps>;
+if (process.env.NODE_ENV === 'development') {
+  DatePicker.displayName = 'DatePicker';
+}

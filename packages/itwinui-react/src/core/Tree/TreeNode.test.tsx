@@ -2,19 +2,19 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 
-import { TreeNode, TreeNodeProps } from './TreeNode';
-import { TreeContextProps, TreeContext } from './TreeContext';
-import { Checkbox } from '../Checkbox';
-import { SvgMore as SvgPlaceholder } from '../utils';
+import { TreeNode } from './TreeNode.js';
+import { type TreeContextProps, TreeContext } from './TreeContext.js';
+import { Checkbox } from '../Checkbox/Checkbox.js';
+import { SvgMore as SvgPlaceholder } from '../../utils/index.js';
 
 const renderComponent = ({
   props,
   contextProps,
 }: {
-  props?: Partial<TreeNodeProps>;
+  props?: Partial<React.ComponentProps<typeof TreeNode>>;
   contextProps?: Partial<TreeContextProps>;
 } = {}) => {
   return render(
@@ -25,7 +25,7 @@ const renderComponent = ({
         nodeId='testId'
         label='label'
         sublabel='sublabel'
-        onExpanded={jest.fn()}
+        onExpanded={vi.fn()}
         {...props}
       />
     </TreeContext.Provider>,
@@ -35,7 +35,7 @@ const renderComponent = ({
 it('should render in its most basic state', () => {
   const { container } = renderComponent();
 
-  const treeItem = container.querySelector('li');
+  const treeItem = container.querySelector('[role="treeitem"]');
   expect(treeItem).toBeTruthy();
   expect(treeItem).toHaveAttribute('role', 'treeitem');
   expect(treeItem).toHaveAttribute('id', 'testId');
@@ -88,7 +88,7 @@ it('should render node with a checkbox', () => {
   });
 
   expect(
-    container.querySelector('.iui-tree-node-checkbox.testClass'),
+    container.querySelector('.iui-tree-node-checkbox .testClass'),
   ).not.toBeDisabled();
 });
 
@@ -98,7 +98,7 @@ it('should render node with an icon', () => {
   });
 
   expect(
-    container.querySelector('.iui-tree-node-content-icon.testClass'),
+    container.querySelector('.iui-tree-node-content-icon .testClass'),
   ).toBeTruthy();
 });
 
@@ -116,8 +116,8 @@ it('should render custom expander', () => {
 it.each([true, false])(
   'should render node when isExpanded is %s',
   (isExpanded) => {
-    const onExpanded = jest.fn();
-    const onSelected = jest.fn();
+    const onExpanded = vi.fn();
+    const onSelected = vi.fn();
     const { container } = renderComponent({
       props: {
         isExpanded,
@@ -128,14 +128,14 @@ it.each([true, false])(
       contextProps: { subNodeIds: ['subNode1', 'subNode2'] },
     });
 
-    const treeItem = container.querySelector('li');
+    const treeItem = container.querySelector('[role="treeitem"]');
     expect(treeItem).toBeTruthy();
     expect(treeItem).toHaveAttribute('aria-expanded', isExpanded.toString());
 
     const subTree = container.querySelector('.iui-sub-tree');
     expect(subTree).toBeTruthy();
     expect(subTree).toHaveAttribute('role', 'group');
-    expect(subTree).toHaveAttribute('aria-owns', 'subNode1,subNode2');
+    expect(subTree).toHaveAttribute('aria-owns', 'subNode1 subNode2');
 
     const expanderIcon = container.querySelector(
       '.iui-tree-node-content-expander-icon',
@@ -160,8 +160,8 @@ it.each([true, false])(
 );
 
 it('should render disabled node', () => {
-  const onSelected = jest.fn();
-  const onExpanded = jest.fn();
+  const onSelected = vi.fn();
+  const onExpanded = vi.fn();
   const { container } = renderComponent({
     props: {
       isDisabled: true,
@@ -172,7 +172,7 @@ it('should render disabled node', () => {
     },
   });
 
-  expect(container.querySelector('li')).toHaveAttribute(
+  expect(container.querySelector('[role="treeitem"]')).toHaveAttribute(
     'aria-disabled',
     'true',
   );
@@ -181,13 +181,15 @@ it('should render disabled node', () => {
   expect(treeNode).toBeTruthy();
   expect(treeNode?.classList.contains('iui-disabled')).toBe(true);
 
-  expect(container.querySelector('.iui-tree-node-checkbox')).toBeDisabled();
+  expect(
+    container.querySelector('.iui-tree-node-checkbox input'),
+  ).toBeDisabled();
 
   const button = container.querySelector(
     '.iui-button[data-iui-variant="borderless"][data-iui-size="small"]',
   ) as HTMLButtonElement;
   expect(button).toBeTruthy();
-  expect(button.disabled).toBe(true);
+  expect(button).toHaveAttribute('aria-disabled', 'true');
 
   fireEvent.click(button);
   expect(onSelected).not.toHaveBeenCalled();
@@ -197,7 +199,7 @@ it('should render disabled node', () => {
 });
 
 it('should render selected node', () => {
-  const onSelected = jest.fn();
+  const onSelected = vi.fn();
   const { container } = renderComponent({
     props: {
       isSelected: true,
@@ -205,7 +207,7 @@ it('should render selected node', () => {
     },
   });
 
-  expect(container.querySelector('li')).toHaveAttribute(
+  expect(container.querySelector('[role="treeitem"]')).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -217,4 +219,120 @@ it('should render selected node', () => {
   expect(onSelected).not.toHaveBeenCalled();
   fireEvent.click(treeNode);
   expect(onSelected).toHaveBeenCalledWith('testId', false);
+});
+
+it('should render treeNode with [x]Props correctly', () => {
+  const onClick = vi.fn();
+  const onKeyDown = vi.fn();
+
+  const { container } = renderComponent({
+    props: {
+      className: 'custom-class',
+      onClick,
+      onKeyDown,
+      checkbox: <Checkbox variant='eyeball' />,
+      checkboxProps: {
+        style: { color: 'green' },
+        className: 'custom-checkbox-class',
+      },
+      icon: <SvgPlaceholder />,
+      iconProps: {
+        style: { color: 'orange' },
+        className: 'custom-icon-class',
+      },
+      sublabelProps: {
+        style: { color: 'red' },
+        className: 'custom-sublabel-class',
+      },
+      labelProps: {
+        style: { color: 'blue' },
+        className: 'custom-label-class',
+      },
+      nodeProps: {
+        style: { color: 'purple' },
+        className: 'custom-node-class',
+      },
+      hasSubNodes: true,
+      subTreeProps: {
+        style: { color: 'yellow' },
+        className: 'custom-subnode-class',
+      },
+      titleProps: {
+        style: { color: 'black' },
+        className: 'custom-title-class',
+      },
+      expanderProps: {
+        expanderIconProps: {
+          style: { color: 'white' },
+          className: 'custom-expander-icon-class',
+        },
+      },
+    },
+  });
+
+  const treeItem = container.querySelector('.iui-tree-item') as HTMLElement;
+  expect(treeItem).toBeTruthy();
+  expect(treeItem).toHaveClass('custom-class');
+
+  fireEvent.click(treeItem);
+  expect(onClick).toHaveBeenCalled();
+
+  fireEvent.keyDown(treeItem, { key: 'Enter' });
+  expect(onKeyDown).toHaveBeenCalled();
+
+  const treeNode = container.querySelector('.iui-tree-node') as HTMLElement;
+
+  expect(treeNode).toBeTruthy();
+  expect(treeNode).toHaveClass('custom-node-class');
+  expect(treeNode?.style.color).toBe('purple');
+
+  const checkbox = container.querySelector(
+    '.custom-checkbox-class',
+  ) as HTMLElement;
+
+  expect(checkbox).toBeTruthy();
+  expect(checkbox).toHaveClass('iui-tree-node-checkbox');
+  expect(checkbox?.style.color).toBe('green');
+
+  const icon = container.querySelector('.custom-icon-class') as HTMLElement;
+
+  expect(icon).toBeTruthy();
+  expect(icon).toHaveClass('iui-tree-node-content-icon');
+  expect(icon?.style.color).toBe('orange');
+
+  const sublabel = container.querySelector(
+    '.custom-sublabel-class',
+  ) as HTMLElement;
+
+  expect(sublabel).toBeTruthy();
+  expect(sublabel).toHaveClass('iui-tree-node-content-caption');
+  expect(sublabel?.style.color).toBe('red');
+
+  const label = container.querySelector('.custom-label-class') as HTMLElement;
+
+  expect(label).toBeTruthy();
+  expect(label).toHaveClass('iui-tree-node-content-label');
+  expect(label?.style.color).toBe('blue');
+
+  const subtree = container.querySelector(
+    '.custom-subnode-class',
+  ) as HTMLElement;
+
+  expect(subtree).toBeTruthy();
+  expect(subtree).toHaveClass('iui-sub-tree');
+  expect(subtree?.style.color).toBe('yellow');
+
+  const title = container.querySelector('.custom-title-class') as HTMLElement;
+
+  expect(title).toBeTruthy();
+  expect(title).toHaveClass('iui-tree-node-content-title');
+  expect(title?.style.color).toBe('black');
+
+  const expanderIcon = container.querySelector(
+    '.custom-expander-icon-class',
+  ) as HTMLElement;
+
+  expect(expanderIcon).toBeTruthy();
+  expect(expanderIcon).toHaveClass('iui-tree-node-content-expander-icon');
+  expect(expanderIcon?.style.color).toBe('white');
 });

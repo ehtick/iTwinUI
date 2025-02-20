@@ -2,125 +2,157 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
+import * as React from 'react';
 import cx from 'classnames';
-import React from 'react';
-import { Menu, MenuProps } from '../Menu';
-import { Surface } from '../Surface';
+import { Menu } from '../Menu/Menu.js';
 import {
   useSafeContext,
   useMergedRefs,
-  useVirtualization,
-  mergeRefs,
-  getWindow,
-} from '../utils';
-import { ComboBoxStateContext, ComboBoxRefsContext } from './helpers';
+  Portal,
+  Box,
+  useVirtualScroll,
+  ShadowRoot,
+  useLayoutEffect,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { ComboBoxStateContext, ComboBoxRefsContext } from './helpers.js';
+import { List } from '../List/List.js';
+import type { VirtualItem } from '@tanstack/react-virtual';
 
-type ComboBoxMenuProps = Omit<MenuProps, 'onClick'> &
-  React.ComponentPropsWithoutRef<'ul'>;
+type ComboBoxMenuProps = Omit<
+  React.ComponentPropsWithoutRef<typeof Menu>,
+  'onClick' | 'trigger'
+> &
+  React.ComponentPropsWithoutRef<'div'>;
 
-const isOverflowOverlaySupported = () =>
-  getWindow()?.CSS?.supports?.('overflow: overlay');
+const VirtualizedComboBoxMenu = (props: React.ComponentProps<'div'>) => {
+  const { children, ...rest } = props;
+  const { filteredOptions, getMenuItem, focusedIndex } =
+    useSafeContext(ComboBoxStateContext);
+  const { menuRef } = useSafeContext(ComboBoxRefsContext);
 
-const VirtualizedComboBoxMenu = React.forwardRef(
-  (
-    { children, className, style, ...rest }: ComboBoxMenuProps,
-    forwardedRef: React.Ref<HTMLUListElement>,
-  ) => {
-    const { minWidth, id, filteredOptions, getMenuItem, focusedIndex } =
-      useSafeContext(ComboBoxStateContext);
-    const { menuRef } = useSafeContext(ComboBoxRefsContext);
-
-    const virtualItemRenderer = React.useCallback(
-      (index: number) =>
-        filteredOptions.length > 0
-          ? getMenuItem(filteredOptions[index], index)
-          : (children as JSX.Element), // Here is expected empty state content
-      [filteredOptions, getMenuItem, children],
-    );
-
-    const focusedVisibleIndex = React.useMemo(() => {
-      const currentElement = menuRef.current?.querySelector(
-        `[data-iui-index="${focusedIndex}"]`,
-      );
-      if (!currentElement) {
-        return focusedIndex;
+  /**
+   * Checks the first five (or all, if there are less than 5) filtered options. If at least three (or all, if there are
+   * less than 3 options) have sub labels, returns true.
+   */
+  const mostlySubLabeled = React.useMemo(() => {
+    let numberOfSubLabels = 0;
+    for (let i = 0; i < Math.min(5, filteredOptions.length); i++) {
+      if (filteredOptions[i].sublabel) {
+        numberOfSubLabels++;
       }
+    }
+    return numberOfSubLabels >= Math.min(3, filteredOptions.length);
+  }, [filteredOptions]);
 
-      return Number(
-        currentElement.getAttribute('data-iui-filtered-index') ?? focusedIndex,
-      );
-    }, [focusedIndex, menuRef]);
-
-    const { outerProps, innerProps, visibleChildren } = useVirtualization({
-      // 'Fool' VirtualScroll by passing length 1
-      // whenever there is no elements, to show empty state message
-      itemsLength: filteredOptions.length || 1,
-      itemRenderer: virtualItemRenderer,
-      scrollToIndex: focusedVisibleIndex,
-    });
-
-    const surfaceStyles = {
-      minWidth,
-      maxWidth: `min(${minWidth * 2}px, 90vw)`,
-      // max-height must be on the outermost element for virtual scroll
-      maxHeight: 'calc((var(--iui-component-height) - 1px) * 8.5)',
-      overflowY: isOverflowOverlaySupported() ? 'overlay' : 'auto',
-      ...style,
-    } as React.CSSProperties;
-
-    return (
-      <Surface style={surfaceStyles} {...rest}>
-        <div {...outerProps}>
-          <Menu
-            id={`${id}-list`}
-            setFocus={false}
-            role='listbox'
-            ref={mergeRefs(menuRef, innerProps.ref, forwardedRef)}
-            className={className}
-            style={innerProps.style}
-          >
-            {visibleChildren}
-          </Menu>
-        </div>
-      </Surface>
+  const focusedVisibleIndex = React.useMemo(() => {
+    const currentElement = menuRef.current?.querySelector(
+      `[data-iui-index="${focusedIndex}"]`,
     );
-  },
-);
+    if (!currentElement) {
+      return focusedIndex;
+    }
 
-export const ComboBoxMenu = React.forwardRef(
-  (props: ComboBoxMenuProps, forwardedRef: React.Ref<HTMLUListElement>) => {
-    const { className, style, ...rest } = props;
-    const { minWidth, id, enableVirtualization } =
-      useSafeContext(ComboBoxStateContext);
-    const { menuRef } = useSafeContext(ComboBoxRefsContext);
-
-    const refs = useMergedRefs(menuRef, forwardedRef);
-
-    const styles = React.useMemo(
-      () => ({
-        minWidth,
-        maxWidth: `min(${minWidth * 2}px, 90vw)`,
-      }),
-      [minWidth],
+    return Number(
+      currentElement.getAttribute('data-iui-filtered-index') ?? focusedIndex,
     );
+  }, [focusedIndex, menuRef]);
 
-    return (
+  const { virtualizer, css: virtualizerCss } = useVirtualScroll({
+    // 'Fool' useVirtualScroll by passing length 1
+    // whenever there is no elements, to show empty state message
+    count: filteredOptions.length || 1,
+    getScrollElement: () => menuRef.current,
+    estimateSize: () => (mostlySubLabeled ? 48 : 36), // Sets estimate to 48 if mostlySubLabeled returns true, else sets estimate to 36.
+    gap: -1,
+  });
+
+  useLayoutEffect(() => {
+    virtualizer.scrollToIndex(focusedVisibleIndex);
+  }, [virtualizer, focusedVisibleIndex]);
+
+  const virtualItemRenderer = React.useCallback(
+    (virtualItem: VirtualItem) => {
+      const menuItem =
+        filteredOptions.length > 0
+          ? getMenuItem(filteredOptions[virtualItem.index], virtualItem.index)
+          : (children as React.JSX.Element); // Here is expected empty state content
+      return React.cloneElement(menuItem, {
+        key: virtualItem.key,
+        ref: virtualizer.measureElement,
+        'data-iui-virtualizer': 'item',
+        style: {
+          width: '100%',
+          transform: `translateY(${virtualItem.start}px)`,
+        },
+      });
+    },
+    [filteredOptions, getMenuItem, children, virtualizer.measureElement],
+  );
+
+  return (
+    <>
+      <ShadowRoot css={virtualizerCss}>
+        <Box
+          as='div'
+          data-iui-virtualizer='root'
+          {...rest}
+          style={{
+            minBlockSize: virtualizer.getTotalSize(),
+            ...props.style,
+          }}
+        >
+          <slot />
+        </Box>
+      </ShadowRoot>
       <>
-        {!enableVirtualization ? (
-          <Menu
-            id={`${id}-list`}
-            style={{ ...styles, ...style }}
-            setFocus={false}
-            role='listbox'
-            ref={refs}
-            className={cx('iui-scroll', className)}
-            {...rest}
-          />
-        ) : (
-          <VirtualizedComboBoxMenu ref={forwardedRef} {...props} />
-        )}
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          return virtualItemRenderer(virtualItem);
+        })}
       </>
-    );
-  },
-);
-ComboBoxMenu.displayName = 'ComboBoxMenu';
+    </>
+  );
+};
+
+export const ComboBoxMenu = React.forwardRef((props, forwardedRef) => {
+  const { className, children, style, portal = true, ...rest } = props;
+  const { id, enableVirtualization, popover } =
+    useSafeContext(ComboBoxStateContext);
+  const { menuRef } = useSafeContext(ComboBoxRefsContext);
+
+  const refs = useMergedRefs(popover.refs.setFloating, forwardedRef, menuRef);
+
+  return (
+    popover.open && (
+      <Portal portal={portal}>
+        <List
+          as='div'
+          className={cx('iui-menu', className)}
+          id={`${id}-list`}
+          role='listbox'
+          ref={refs}
+          {...popover.getFloatingProps({
+            style: !enableVirtualization
+              ? style
+              : ({
+                  // set as constant because we don't want it shifting when items are unmounted
+                  maxInlineSize: 0,
+
+                  ...style,
+                } as React.CSSProperties),
+            ...rest,
+          })}
+        >
+          {!enableVirtualization ? (
+            children
+          ) : (
+            <VirtualizedComboBoxMenu>{children}</VirtualizedComboBoxMenu>
+          )}
+        </List>
+      </Portal>
+    )
+  );
+}) as PolymorphicForwardRefComponent<'div', ComboBoxMenuProps>;
+if (process.env.NODE_ENV === 'development') {
+  ComboBoxMenu.displayName = 'ComboBoxMenu';
+}

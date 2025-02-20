@@ -2,18 +2,22 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { CarouselContext } from './CarouselContext';
-import { getWindow, useMergedRefs, useIsomorphicLayoutEffect } from '../utils';
+import { CarouselContext } from './CarouselContext.js';
+import {
+  getWindow,
+  useMergedRefs,
+  useLayoutEffect,
+  Box,
+  useMediaQuery,
+} from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
 /**
  * `CarouselSlider` is the scrollable list that should consist of `CarouselSlide` components.
  */
-export const CarouselSlider = React.forwardRef<
-  HTMLOListElement,
-  React.ComponentPropsWithoutRef<'ol'>
->((props, ref) => {
+export const CarouselSlider = React.forwardRef((props, ref) => {
   const { children, className, ...rest } = props;
   const context = React.useContext(CarouselContext);
 
@@ -28,8 +32,9 @@ export const CarouselSlider = React.forwardRef<
     () =>
       React.Children.map(children, (child, index) =>
         React.isValidElement(child)
-          ? React.cloneElement(child, {
+          ? React.cloneElement(child as React.JSX.Element, {
               id: `${idPrefix}--slide-${index}`,
+              'aria-labelledby': `${idPrefix}--dot-${index}`,
               index,
             })
           : child,
@@ -37,12 +42,14 @@ export const CarouselSlider = React.forwardRef<
     [children, idPrefix],
   ) as React.ReactNode[];
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     setSlideCount(items.length);
   }, [items.length, setSlideCount]);
 
-  const sliderRef = React.useRef<HTMLOListElement>(null);
+  const sliderRef = React.useRef<HTMLElement>(null);
   const refs = useMergedRefs(sliderRef, ref);
+
+  const motionOk = useMediaQuery('(prefers-reduced-motion: no-preference)');
 
   scrollToSlide.current = (
     slideIndex: number,
@@ -58,17 +65,13 @@ export const CarouselSlider = React.forwardRef<
       return;
     }
 
-    const motionOk = getWindow()?.matchMedia(
-      '(prefers-reduced-motion: no-preference)',
-    )?.matches;
-
     sliderRef.current.scrollTo({
       left: slideToShow.offsetLeft - sliderRef.current.offsetLeft,
-      behavior: (instant || !motionOk ? 'instant' : 'smooth') as ScrollBehavior, // scrollTo accepts 'instant' but ScrollBehavior type is wrong
+      behavior: instant || !motionOk ? 'instant' : 'smooth',
     });
   };
 
-  const scrollTimeout = React.useRef<number>();
+  const scrollTimeout = React.useRef<number>(undefined);
 
   // reset isManuallyUpdating.current to false after the last scroll event
   const handleOnScroll = React.useCallback(() => {
@@ -82,14 +85,17 @@ export const CarouselSlider = React.forwardRef<
   }, [isManuallyUpdating]);
 
   return (
-    <ol
-      aria-live='polite'
+    <Box
       className={cx('iui-carousel-slider', className)}
       ref={refs}
       onScroll={handleOnScroll}
+      tabIndex={-1} // this prevents undesirable tabbing to the list in Firefox/Chrome
       {...rest}
     >
       {items}
-    </ol>
+    </Box>
   );
-});
+}) as PolymorphicForwardRefComponent<'div'>;
+if (process.env.NODE_ENV === 'development') {
+  CarouselSlider.displayName = 'Carousel.Slider';
+}

@@ -1,0 +1,145 @@
+// Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+// See LICENSE.md in the project root for license terms and full copyright notice.
+@use 'sass:map';
+
+@mixin iui-focus($color: var(--iui-color-border-accent), $offset: -1px, $thickness: 1px) {
+  &:focus-visible {
+    outline: $thickness solid $color;
+    outline-offset: $offset;
+  }
+}
+
+@mixin iui-reset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  vertical-align: baseline;
+}
+
+@mixin iui-text-selection($status: accent) {
+  &::selection,
+  *::selection {
+    background-color: hsl(var(--iui-color-#{$status}-hsl) / var(--iui-opacity-5));
+  }
+}
+
+@mixin iui-line-clamp($lines: 1) {
+  overflow: hidden;
+  display: -webkit-box; /* stylelint-disable-line */
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical; /* stylelint-disable-line */
+}
+
+@mixin iui-blur($hsl: 0 0% 0%, $opacity: 4) {
+  // Blur fallback
+  background-color: Hsl($hsl / var(--iui-opacity-#{$opacity - 1}));
+
+  // With blur
+  @supports (backdrop-filter: blur(5px)) {
+    background-color: Hsl($hsl / var(--iui-opacity-#{$opacity}));
+    backdrop-filter: blur(5px);
+  }
+}
+
+@mixin safari-only {
+  @supports (-apple-pay-button-style: inherit) {
+    @content;
+  }
+}
+
+/// Visually hides an element but keeps it accessible to screen readers.
+/// Because it applies some potentially invasive styles, use this mixin on a wrapper element for best results.
+/// If it contains a focusable element, make sure to revert/exclude these styles.
+@mixin visually-hidden {
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  white-space: nowrap !important;
+  block-size: 1px !important;
+  inline-size: 1px !important;
+}
+
+// setup for toggling values at runtime using the css var space toggle technique
+// https://lea.verou.me/2020/10/the-var-space-hack-to-toggle-multiple-values-with-one-custom-property
+//
+// Usage:
+//
+// @include space-toggle-states;
+// --is-red: var(--iui-off);
+// background: var(--is-red, red);
+//
+// // later:
+// --is-red: var(--iui-on);
+@mixin space-toggle-states {
+  --iui-off: ; // whitespace means "off"
+  --iui-on: initial;
+}
+
+// ----------------------------------------------------------------------------
+// helpers for icon
+
+$iui-icon-color-multicolor-disabled: grayscale(100%);
+
+$iui-icon-sizes: (
+  // 12px
+  s: var(--iui-size-s),
+  // 16px
+  m: var(--iui-size-m),
+  // 24px
+  l: calc(1.5 * var(--iui-size-m)),
+  // 32px
+  xl: var(--iui-size-xl),
+  // 48px
+  2xl: calc(3 * var(--iui-size-m)),
+  // 64px
+  3xl: var(--iui-size-2xl)
+);
+
+/// @arg $size Can be one of: s, m, l, xl, 2xl, 3xl
+@mixin iui-icon-style($size: 'm') {
+  display: flex;
+  flex-shrink: 0;
+
+  $icon-size: map.get($iui-icon-sizes, $size);
+  inline-size: $icon-size;
+  block-size: $icon-size;
+}
+
+/// @arg $color Can be one of: default, informational, positive, warning, negative
+@mixin iui-icon-color($color: 'default') {
+  @if $color == 'default' {
+    fill: var(--iui-color-icon-muted);
+    @media (forced-colors: active) {
+      fill: CanvasText;
+    }
+  }
+  @if $color == 'informational' {
+    fill: var(--iui-color-icon-informational);
+  }
+  @if $color == 'positive' {
+    fill: var(--iui-color-icon-positive);
+  }
+  @if $color == 'warning' {
+    fill: var(--iui-color-icon-warning);
+  }
+  @if $color == 'negative' {
+    fill: var(--iui-color-icon-negative);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// animations
+
+// Should only be imported in global.scss
+@mixin animations {
+  @keyframes iui-fade-in {
+    from {
+      visibility: visible;
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+}

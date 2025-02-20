@@ -2,9 +2,8 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
-import { Backdrop } from './Backdrop';
+import { Backdrop } from './Backdrop.js';
 
 it('should render in most basic form', () => {
   const { container } = render(<Backdrop />);
@@ -26,5 +25,5 @@ it('should render with custom style and className', () => {
   expect(backdrop).toBeTruthy();
   expect(backdrop).toBeTruthy();
   expect(backdrop.classList.contains('test-class')).toBeTruthy();
-  expect(backdrop).toHaveStyle('color: red');
+  expect(backdrop.style.color).toEqual('red');
 });

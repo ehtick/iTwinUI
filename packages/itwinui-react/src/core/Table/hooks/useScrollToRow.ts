@@ -2,9 +2,9 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import type { Row } from 'react-table';
-import { TableProps } from '../Table';
+import * as React from 'react';
+import type { Row } from '../../../react-table/react-table.js';
+import type { TableProps } from '../Table.js';
 
 type ScrollToRow<T extends Record<string, unknown>> = {
   scrollToIndex: number | undefined;
@@ -32,7 +32,7 @@ export function useScrollToRow<T extends Record<string, unknown>>({
   dataRef.current = data;
 
   // For virtualized tables, all we need to do is pass the index of the item
-  // to the VirtualScroll component
+  // to the useVirtualScroll hook
   const scrollToIndex = React.useMemo((): number | undefined => {
     if (!scrollToRow || paginatorRenderer) {
       return undefined;
@@ -54,7 +54,7 @@ export function useScrollToRow<T extends Record<string, unknown>>({
       return;
     }
 
-    rowRefs.current[pageRef.current[scrollToIndex].id]?.scrollIntoView();
+    rowRefs.current[pageRef.current[scrollToIndex]?.id]?.scrollIntoView();
   }, [enableVirtualization, scrollToIndex]);
 
   const tableRowRef = React.useCallback((row: Row<T>) => {

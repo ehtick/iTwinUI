@@ -1,20 +1,20 @@
 ## Style guide
 
-### Import only React and use members from there instead of separate imports
+### Import only the React namespace and use members from there instead of separate imports
 
 ```jsx
-// Good
-import React from 'react';
-```
-
-```jsx
-// Bad
-import React, { useState } from 'react';
-```
-
-```jsx
-// Bad
+// Good: namespace import
 import * as React from 'react';
+```
+
+```jsx
+// Bad: named import
+import { useState } from 'react';
+```
+
+```jsx
+// Bad: default import
+import React from 'react';
 ```
 
 ### Use type instead of interface
@@ -29,7 +29,7 @@ export type AlertProps = { ... };
 export interface IAlertProps {}
 ```
 
-### Comment all props in multiline using jsdoc
+### Add JSDocs to all props
 
 ```jsx
 // Good
@@ -43,16 +43,7 @@ export type AlertProps = {
 ```
 
 ```jsx
-
-// Bad (single line)
-export type AlertProps = {
-  /** Type of the alert. */
-  type?: 'positive' | 'warning' | 'negative' | 'informational';
-  ...
-```
-
-```jsx
-// Bad (no comment at all)
+// Bad (no comment)
 export type AlertProps = {
   type?: 'positive' | 'warning' | 'negative' | 'informational';
   ...
@@ -86,39 +77,6 @@ export const Alert = (props: AlertProps) => {
  * A small box to quickly grab user attention and communicate a brief message.
  */
 export const Alert = (props: AlertProps) => {
-  ...
-```
-
-### Destruct props and set default values
-
-```jsx
-// Good
-export const Alert = (props: AlertProps) => {
-  const {
-    children,
-    className,
-    type = 'informational',
-    clickableText,
-    onClick,
-    onClose,
-    style,
-    isSticky = false,
-  } = props;
-  ...
-```
-
-```jsx
-// Bad
-export const Alert = ({
-    children,
-    className,
-    type = 'informational',
-    clickableText,
-    onClick,
-    onClose,
-    style,
-    isSticky = false,
-  }: AlertProps) => {
   ...
 ```
 
@@ -168,11 +126,13 @@ window.clearTimeout(1);
 document.createElement('div');
 ```
 
-### Use `useIsomorphicLayoutEffect` instead of `useLayoutEffect`
+### Import `useLayoutEffect` (SSR-safe) from `utils` instead of using `React.useLayoutEffect` (client only)
 
 ```jsx
 // Good
-useIsomorphicLayoutEffect(() => {});
+import { useLayoutEffect } from '../../utils/index.js';
+
+useLayoutEffect(() => {});
 ```
 
 ```jsx

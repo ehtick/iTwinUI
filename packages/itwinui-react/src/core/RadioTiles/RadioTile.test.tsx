@@ -2,11 +2,10 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
 import { render } from '@testing-library/react';
 
-import RadioTile from './RadioTile';
-import { SvgMore as SvgPlaceholder } from '../utils';
+import { RadioTile } from './RadioTile.js';
+import { SvgMore as SvgPlaceholder } from '../../utils/index.js';
 
 it('should render empty radio tile', () => {
   const { container } = render(<RadioTile />);
@@ -45,32 +44,53 @@ it('should render radio tile with icon', () => {
   expect(container.querySelector('.iui-radio-tile-icon')).toBeTruthy();
 });
 
-it('should take class and style', () => {
+it('should apply class and style to different parts of the RadioTile component', () => {
   const { container } = render(
     <RadioTile
-      className='my-class'
+      className='custom-class'
       style={{ width: 80 }}
+      wrapperProps={{ className: 'wrapper-class', style: { width: 80 } }}
+      iconProps={{ className: 'icon-class', style: { width: 80 } }}
+      labelProps={{ className: 'label-class', style: { width: 80 } }}
+      subLabelProps={{ className: 'sublabel-class', style: { width: 80 } }}
+      label='Tile Label'
+      description='Tile Description'
       icon={<SvgPlaceholder />}
     />,
   );
-  const element = container.querySelector(
-    '.iui-radio-tile.my-class',
+
+  // Test for RadioTile wrapper
+  const wrapperElement = container.querySelector(
+    '.iui-radio-tile.wrapper-class',
   ) as HTMLElement;
-  expect(element).toBeTruthy();
-  expect(element.style.width).toBe('80px');
-});
+  expect(wrapperElement).toBeTruthy();
+  expect(wrapperElement.style.width).toBe('80px');
 
-it('should set focus', () => {
-  let element: HTMLInputElement | null = null;
-  const onRef = (ref: HTMLInputElement) => {
-    element = ref;
-  };
-  const { container } = render(
-    <RadioTile label='Some label' ref={onRef} setFocus />,
-  );
+  // Test for RadioTile input
+  const inputElement = container.querySelector(
+    '.iui-radio-tile-input.custom-class',
+  ) as HTMLElement;
+  expect(inputElement).toBeTruthy();
+  expect(inputElement.style.width).toBe('80px');
 
-  expect(container.querySelector('.iui-radio-tile')).toBeTruthy();
+  // Test for RadioTile icon
+  const iconElement = container.querySelector(
+    '.iui-radio-tile-icon.icon-class',
+  ) as HTMLElement;
+  expect(iconElement).toBeTruthy();
+  expect(iconElement.style.width).toBe('80px');
 
-  expect(element).toBeTruthy();
-  expect(document.activeElement).toEqual(element);
+  // Test for RadioTile label
+  const labelElement = container.querySelector(
+    '.iui-radio-tile-label.label-class',
+  ) as HTMLElement;
+  expect(labelElement).toBeTruthy();
+  expect(labelElement.style.width).toBe('80px');
+
+  // Test for RadioTile sublabel
+  const sublabelElement = container.querySelector(
+    '.iui-radio-tile-sublabel.sublabel-class',
+  ) as HTMLElement;
+  expect(sublabelElement).toBeTruthy();
+  expect(sublabelElement.style.width).toBe('80px');
 });

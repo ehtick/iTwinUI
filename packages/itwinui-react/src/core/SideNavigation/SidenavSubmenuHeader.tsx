@@ -3,20 +3,16 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { CommonProps, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/side-navigation.css';
+import * as React from 'react';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type SidenavSubmenuHeaderProps = {
-  /**
-   * Content of the submenu header (e.g. label)
-   */
-  children?: React.ReactNode;
+type SidenavSubmenuHeaderProps = {
   /**
    * Actions shown at the end of the submenu label.
    */
   actions?: React.ReactNode;
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * Header content for `SidenavSubmenu`. Supports truncated label and actions buttons.
@@ -32,24 +28,24 @@ export type SidenavSubmenuHeaderProps = {
  *   <span>Documents</span>
  * </SidenavSubmenuHeader>
  */
-export const SidenavSubmenuHeader = (props: SidenavSubmenuHeaderProps) => {
+export const SidenavSubmenuHeader = React.forwardRef((props, forwardedRef) => {
   const { children, actions, className, ...rest } = props;
 
-  useTheme();
-
   return (
-    <div
+    <Box
       className={cx('iui-side-navigation-submenu-header', className)}
+      ref={forwardedRef}
       {...rest}
     >
-      <div className='iui-side-navigation-submenu-header-label'>{children}</div>
+      <Box className='iui-side-navigation-submenu-header-label'>{children}</Box>
       {actions && (
-        <div className='iui-side-navigation-submenu-header-actions'>
+        <Box className='iui-side-navigation-submenu-header-actions'>
           {actions}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
-};
-
-export default SidenavSubmenuHeader;
+}) as PolymorphicForwardRefComponent<'div', SidenavSubmenuHeaderProps>;
+if (process.env.NODE_ENV === 'development') {
+  SidenavSubmenuHeader.displayName = 'SidenavSubmenuHeader';
+}

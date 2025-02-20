@@ -1,0 +1,17 @@
+/*---------------------------------------------------------------------------------------------
+ * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+ * See LICENSE.md in the project root for license terms and full copyright notice.
+ *--------------------------------------------------------------------------------------------*/
+
+@layer reset, itwinui.v1, itwinui.v2;
+
+@import '@itwin/itwinui-variables' layer(itwinui.foundations.v3);
+@import '@itwin/itwinui-css';
+
+@layer itwinui.v3 {
+  .iui-root * {
+    /* When --_iui-width is set, inline-size will use it, otherwise it will be automatically reverted. */
+    --_iui-width: initial;
+    inline-size: var(--_iui-width, revert-layer);
+  }
+}

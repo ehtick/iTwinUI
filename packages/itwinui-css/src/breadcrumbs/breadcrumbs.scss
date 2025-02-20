@@ -1,116 +1,76 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../anchor/index';
-@import '../button/borderless';
-@import '../utils/index';
+@use '../mixins';
+@use '../button/base';
+@use '../button/borderless';
 
-@mixin iui-breadcrumbs($breadcrumbs-height: var(--iui-component-height)) {
-  --_iui-breadcrumbs-height: #{$breadcrumbs-height};
+.iui-breadcrumbs {
+  --_iui-breadcrumbs-height: var(--iui-component-height);
 
-  @include iui-reset;
+  @include mixins.iui-reset;
   display: flex;
   align-items: center;
-  height: var(--_iui-breadcrumbs-height);
+  block-size: var(--_iui-breadcrumbs-height);
 }
 
-@mixin iui-breadcrumbs-list {
-  @include iui-reset;
+.iui-breadcrumbs-list {
+  @include mixins.iui-reset;
   display: flex;
   align-items: center;
   list-style-type: none;
   user-select: none;
-  height: 100%;
+  block-size: 100%;
+  inline-size: 100%;
 }
 
-@mixin iui-breadcrumbs-item {
+.iui-breadcrumbs-item {
   display: flex;
   align-items: center;
-  height: 100%;
+  block-size: 100%;
 
   > * {
-    max-width: 26ch;
+    max-inline-size: 26ch;
   }
 }
 
-@mixin iui-breadcrumbs-item-overrides {
+.iui-breadcrumbs-content {
+  padding-inline: var(--iui-size-xs);
+  line-height: var(--iui-component-height);
+
+  &,
   > * {
-    padding: 0 var(--iui-size-xs);
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
 
-    &:not(.iui-button) {
+  &:is(:any-link) {
+    outline-offset: -1px;
+
+    &:hover {
+      color: var(--iui-color-text-accent-hover);
+      text-decoration: underline;
+    }
+  }
+
+  &:where(button, :any-link) {
+    @include base.iui-button;
+    @include borderless.iui-button-borderless;
+    color: var(--iui-color-text-accent);
+
+    &[aria-current] {
       color: var(--iui-color-text);
     }
   }
-
-  > :any-link {
-    @include iui-anchor;
-    box-sizing: border-box;
-    line-height: var(--iui-component-height);
-
-    &:focus {
-      outline-offset: -1px;
-    }
-  }
-
-  .iui-button {
-    &.iui-button {
-      @include iui-button-borderless;
-      border: none;
-    }
-
-    > span {
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-
-    &:not([aria-current]) {
-      &,
-      &:hover,
-      &:active {
-        --_iui-button-text-color: var(--iui-color-text-accent);
-      }
-    }
-  }
 }
 
-@mixin iui-breadcrumbs-text {
-  padding: 0 var(--iui-size-xs);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  line-height: var(--iui-component-height);
-
-  @at-root a#{&} {
-    @include iui-anchor;
-
-    &:focus {
-      outline-offset: -1px;
-    }
-  }
-}
-
-@mixin iui-breadcrumbs-button {
-  @include iui-button;
-  @include iui-button-borderless;
-  padding: 0;
-  border: none;
-  color: var(--iui-color-text-accent);
-
-  &[aria-current] {
-    color: var(--iui-color-text);
-  }
-}
-
-@mixin iui-breadcrumbs-separator {
+.iui-breadcrumbs-separator {
   display: flex;
-  margin: 0 var(--iui-size-3xs);
+  margin-inline: var(--iui-size-3xs);
 
   svg {
-    @include iui-icon-style('s');
-    @include iui-icon-color;
+    @include mixins.iui-icon-style('s');
+    @include mixins.iui-icon-color;
     @media (forced-colors: active) {
       fill: CanvasText;
     }

@@ -2,12 +2,7 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import cx from 'classnames';
-import { CommonProps, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/menu.css';
-
-export type MenuDividerProps = Omit<CommonProps, 'title'>;
+import { polymorphic } from '../../utils/index.js';
 
 /**
  * Divider between menu items. Should be used inside `Menu`.
@@ -24,16 +19,9 @@ export type MenuDividerProps = Omit<CommonProps, 'title'>;
  *   ]}
  * </Menu>
  */
-export const MenuDivider = (props: MenuDividerProps) => {
-  const { className, ...rest } = props;
-  useTheme();
-  return (
-    <li
-      role='separator'
-      className={cx('iui-menu-divider', className)}
-      {...rest}
-    />
-  );
-};
-
-export default MenuDivider;
+export const MenuDivider = polymorphic.div('iui-menu-divider', {
+  role: 'separator',
+});
+if (process.env.NODE_ENV === 'development') {
+  MenuDivider.displayName = 'MenuDivider';
+}

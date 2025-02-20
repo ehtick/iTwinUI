@@ -2,11 +2,13 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { useTheme, SvgUpload } from '../utils';
-import '@itwin/itwinui-css/css/file-upload.css';
+import * as React from 'react';
+import cx from 'classnames';
+import { SvgUpload, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { Anchor } from '../Typography/Anchor.js';
 
-export type FileUploadTemplateProps = {
+type FileUploadTemplateProps = {
   /**
    * Callback fired when a file is selected from the device.
    */
@@ -39,12 +41,14 @@ export type FileUploadTemplateProps = {
 };
 
 /**
+ * @deprecated Use [`FileUploadCard`](https://itwinui.bentley.com/docs/fileupload#fileuploadcard) instead.
+ *
  * Default template to be used with the `FileUpload` wrapper component.
  * Contains a hidden input with styled labels (customizable).
  * @example
  * <FileUploadTemplate onChange={(e) => console.log(e.target.files)} />
  */
-export const FileUploadTemplate = (props: FileUploadTemplateProps) => {
+export const FileUploadTemplate = React.forwardRef((props, ref) => {
   const {
     onChange,
     acceptMultiple = true,
@@ -52,15 +56,21 @@ export const FileUploadTemplate = (props: FileUploadTemplateProps) => {
     label = 'Choose a file',
     subtitle = 'or drag & drop it here.',
     children,
+    className,
+    ...rest
   } = props;
-  useTheme();
 
   return (
-    <>
-      <SvgUpload className='iui-icon' aria-hidden />
-      <div className='iui-template-text'>
-        <label className='iui-anchor'>
-          <input
+    <Box
+      className={cx('iui-file-upload-template', className)}
+      ref={ref}
+      {...rest}
+    >
+      <SvgUpload className='iui-template-icon' aria-hidden />
+      <Box className='iui-template-text'>
+        <Anchor as='label'>
+          <Box
+            as='input'
             className='iui-browse-input'
             type='file'
             onChange={onChange}
@@ -68,12 +78,13 @@ export const FileUploadTemplate = (props: FileUploadTemplateProps) => {
             accept={acceptType}
           />
           {label}
-        </label>
+        </Anchor>
         <div>{subtitle}</div>
         {children}
-      </div>
-    </>
+      </Box>
+    </Box>
   );
-};
-
-export default FileUploadTemplate;
+}) as PolymorphicForwardRefComponent<'div', FileUploadTemplateProps>;
+if (process.env.NODE_ENV === 'development') {
+  FileUploadTemplate.displayName = 'FileUploadTemplate';
+}

@@ -3,20 +3,30 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { CommonProps, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/avatar.css';
+import * as React from 'react';
+import { Box, SoftBackgrounds, isSoftBackground } from '../../utils/index.js';
+import type {
+  AnyString,
+  PolymorphicForwardRefComponent,
+} from '../../utils/index.js';
+import { VisuallyHidden } from '../VisuallyHidden/VisuallyHidden.js';
+
+/**
+ * Helper function that returns one of the preset badge color values.
+ */
+const getBackground = (color: AvatarProps['backgroundColor']) => {
+  if (!color) {
+    return '';
+  }
+
+  return isSoftBackground(color) ? SoftBackgrounds[color] : color;
+};
 
 export type AvatarStatus = 'online' | 'busy' | 'away' | 'offline';
 
-/**
- * @deprecated Since v2, this has been renamed to `AvatarStatus` (Use with `Avatar`)
- */
-export type UserIconStatus = AvatarStatus;
+type StatusTitles = { [key in Exclude<AvatarStatus, ''>]: string };
 
-export type StatusTitles = { [key in Exclude<AvatarStatus, ''>]: string };
-
-export type AvatarProps = {
+type AvatarProps = {
   /**
    * Size of an avatar.
    * @default 'small'
@@ -35,24 +45,18 @@ export type AvatarProps = {
    */
   abbreviation?: string;
   /**
-   * User image to be displayed. MUST be an <img> element!
+   * User image to be displayed. Can be `<img>` or `<svg>` or anything else.
    */
-  image?: JSX.Element;
+  image?: React.JSX.Element;
   /**
-   * Color of the icon. You can use `getUserColor` function to generate color from user name or email.
-   * @default 'white'
+   * Color of the icon. You can use `getUserColor` function to generate color from user name or email. If not provided, default background color from CSS styling will be used (hsl(72, 51%, 56%) / olive green).
    */
-  backgroundColor?: string;
+  backgroundColor?: keyof typeof SoftBackgrounds | AnyString;
   /**
    * Translated status messages shown on hover.
    */
   translatedStatusTitles?: StatusTitles;
-} & Omit<CommonProps, 'title'>;
-
-/**
- * @deprecated Since v2, this has been renamed to `AvatarProps` (Use with `Avatar`)
- */
-export type UserIconProps = AvatarProps;
+};
 
 export const defaultStatusTitles: StatusTitles = {
   away: 'Away',
@@ -76,13 +80,13 @@ export const defaultStatusTitles: StatusTitles = {
  * <caption>X-large icon with image</caption>
  * <Avatar size='x-large' title='Terry Rivers' abbreviation='TR' backgroundColor='green' image={<img src="https://cdn.example.com/user/profile/pic.png" />}/>
  */
-export const Avatar = (props: AvatarProps) => {
+export const Avatar = React.forwardRef((props, ref) => {
   const {
     size = 'small',
     status,
     abbreviation,
     image,
-    backgroundColor = 'white',
+    backgroundColor,
     title,
     translatedStatusTitles,
     className,
@@ -90,43 +94,25 @@ export const Avatar = (props: AvatarProps) => {
     ...rest
   } = props;
 
-  useTheme();
-
   const statusTitles = { ...defaultStatusTitles, ...translatedStatusTitles };
 
   return (
-    <span
-      className={cx(
-        'iui-avatar',
-        { [`iui-${size}`]: size !== 'medium' },
-        className,
-      )}
+    <Box
+      as='span'
+      className={cx('iui-avatar', className)}
+      data-iui-size={size !== 'medium' ? size : undefined}
+      data-iui-status={status}
       title={title}
-      style={style}
+      style={{ backgroundColor: getBackground(backgroundColor), ...style }}
+      ref={ref}
       {...rest}
     >
-      {image ?? (
-        <abbr className='iui-initials' style={{ backgroundColor }}>
-          {abbreviation?.substring(0, 2)}
-        </abbr>
-      )}
-      <span className='iui-stroke' />
-      {status && (
-        <span
-          title={statusTitles[status]}
-          className={cx('iui-status', {
-            [`iui-${status}`]: !!status,
-          })}
-          aria-label={statusTitles[status]}
-        />
-      )}
-    </span>
+      {!image ? abbreviation?.substring(0, 2) : null}
+      {image}
+      {status ? <VisuallyHidden>{statusTitles[status]}</VisuallyHidden> : null}
+    </Box>
   );
-};
-
-/**
- * @deprecated Since v2, this has been renamed to `Avatar`
- */
-export const UserIcon = Avatar;
-
-export default Avatar;
+}) as PolymorphicForwardRefComponent<'span', AvatarProps>;
+if (process.env.NODE_ENV === 'development') {
+  Avatar.displayName = 'Avatar';
+}

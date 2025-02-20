@@ -3,11 +3,10 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 
-import { render, RenderResult, screen } from '@testing-library/react';
-import React from 'react';
-import type { HeaderGroup } from 'react-table';
-import { FilterToggle, FilterToggleProps } from './FilterToggle';
-import { tableFilters } from './tableFilters';
+import { render, type RenderResult, screen } from '@testing-library/react';
+import type { HeaderGroup } from '../../../react-table/react-table.js';
+import { FilterToggle, type FilterToggleProps } from './FilterToggle.js';
+import { tableFilters } from './tableFilters.js';
 
 function renderComponent<
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -24,8 +23,8 @@ it('should display active filter', () => {
   const column = {
     canFilter: true,
     filterValue: 'value',
-    render: jest.fn(),
-    setFilter: jest.fn(),
+    render: vi.fn(),
+    setFilter: vi.fn(),
     Filter: tableFilters.TextFilter(),
   } as object as HeaderGroup;
 
@@ -39,8 +38,8 @@ it('should display active filter for false filter value', () => {
   const column = {
     canFilter: true,
     filterValue: false,
-    render: jest.fn(),
-    setFilter: jest.fn(),
+    render: vi.fn(),
+    setFilter: vi.fn(),
     Filter: tableFilters.TextFilter(),
   } as object as HeaderGroup;
 
@@ -53,8 +52,8 @@ it('should display active filter for false filter value', () => {
 it('should hide active filter when not defined', () => {
   const column = {
     canFilter: true,
-    render: jest.fn(),
-    setFilter: jest.fn(),
+    render: vi.fn(),
+    setFilter: vi.fn(),
     Filter: tableFilters.TextFilter(),
   } as object as HeaderGroup;
 
@@ -68,8 +67,8 @@ it('should hide active filter for empty filter value', () => {
   const column = {
     canFilter: true,
     filterValue: '',
-    render: jest.fn(),
-    setFilter: jest.fn(),
+    render: vi.fn(),
+    setFilter: vi.fn(),
     Filter: tableFilters.TextFilter(),
   } as object as HeaderGroup;
 

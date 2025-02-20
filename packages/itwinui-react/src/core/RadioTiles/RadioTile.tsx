@@ -3,15 +3,15 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import cx from 'classnames';
-import React from 'react';
-import { useMergedRefs, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/radio-tile.css';
+import * as React from 'react';
+import { useMergedRefs, Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
 
-export type RadioTileProps = {
+type RadioTileProps = {
   /**
    * Icon to be used.
    */
-  icon?: JSX.Element;
+  icon?: React.JSX.Element;
   /**
    * Label of the Radio tile.
    */
@@ -21,61 +21,91 @@ export type RadioTileProps = {
    */
   description?: React.ReactNode;
   /**
-   * Set focus on radio tile element.
-   * @default false
+   * Passes props to tile wrapper.
    */
-  setFocus?: boolean;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>;
+  wrapperProps?: React.ComponentProps<'label'>;
+  /**
+   * Passes props to tile icon.
+   */
+  iconProps?: React.ComponentProps<'span'>;
+  /**
+   * Passes props to tile label.
+   */
+  labelProps?: React.ComponentProps<'div'>;
+  /**
+   * Passes props to tile sublabel.
+   */
+  subLabelProps?: React.ComponentProps<'div'>;
+};
 
 /**
  * RadioTile component to be used in RadioTileGroup component
  * @example
  * <RadioTile label='My tile' description='Some info' icon={<SvgSmileyHappy />} />
  */
-export const RadioTile = React.forwardRef(
-  (props: RadioTileProps, ref: React.RefObject<HTMLInputElement>) => {
-    const {
-      icon,
-      label,
-      description,
-      setFocus = false,
-      className,
-      style,
-      ...rest
-    } = props;
+export const RadioTile = React.forwardRef((props, ref) => {
+  const {
+    icon,
+    label,
+    description,
+    className,
+    wrapperProps,
+    iconProps,
+    labelProps,
+    subLabelProps,
+    style,
+    ...rest
+  } = props;
 
-    useTheme();
+  const inputElementRef = React.useRef<HTMLInputElement>(null);
+  const refs = useMergedRefs<HTMLInputElement>(inputElementRef, ref);
 
-    const inputElementRef = React.useRef<HTMLInputElement>(null);
-    const refs = useMergedRefs<HTMLInputElement>(inputElementRef, ref);
-
-    React.useEffect(() => {
-      if (inputElementRef.current && setFocus) {
-        inputElementRef.current.focus();
-      }
-    }, [setFocus]);
-
-    return (
-      <label className={cx('iui-radio-tile', className)} style={style}>
-        <input
-          className='iui-radio-tile-input'
-          type='radio'
-          ref={refs}
-          {...rest}
-        />
-        <div className='iui-radio-tile-content'>
-          {icon &&
-            React.cloneElement(icon, {
-              className: cx('iui-radio-tile-icon', icon.props.className),
-            })}
-          {label && <div className='iui-radio-tile-label'>{label}</div>}
-          {description && (
-            <div className='iui-radio-tile-sublabel'>{description}</div>
-          )}
-        </div>
-      </label>
-    );
-  },
-);
-
-export default RadioTile;
+  return (
+    <Box
+      as='label'
+      data-iui-disabled={props.disabled ? 'true' : undefined}
+      {...wrapperProps}
+      className={cx('iui-radio-tile', wrapperProps?.className)}
+    >
+      <Box
+        as='input'
+        ref={refs}
+        className={cx('iui-radio-tile-input', className)}
+        style={style}
+        type='radio'
+        {...rest}
+      />
+      {icon && (
+        <Box
+          as='span'
+          aria-hidden
+          {...iconProps}
+          className={cx('iui-radio-tile-icon', iconProps?.className)}
+        >
+          {icon}
+        </Box>
+      )}
+      {label && (
+        <Box
+          as='div'
+          {...labelProps}
+          className={cx('iui-radio-tile-label', labelProps?.className)}
+        >
+          {label}
+        </Box>
+      )}
+      {description && (
+        <Box
+          as='div'
+          {...subLabelProps}
+          className={cx('iui-radio-tile-sublabel', subLabelProps?.className)}
+        >
+          {description}
+        </Box>
+      )}
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'input', RadioTileProps>;
+if (process.env.NODE_ENV === 'development') {
+  RadioTile.displayName = 'RadioTile';
+}

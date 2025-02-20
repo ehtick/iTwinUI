@@ -1,60 +1,53 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import '../utils/index';
+@use '../mixins';
 
-@mixin iui-checkbox {
-  &-wrapper {
-    @include iui-reset;
-    display: flex;
-    align-items: center;
-    font-size: var(--iui-font-size-1);
-    width: fit-content;
-    user-select: none;
-    position: relative;
-    cursor: pointer;
-    color: var(--iui-color-text);
-    gap: var(--iui-size-xs);
+.iui-checkbox-wrapper {
+  @include mixins.iui-reset;
+  display: flex;
+  align-items: center;
+  font-size: var(--iui-font-size-1);
+  inline-size: fit-content;
+  user-select: none;
+  position: relative;
+  cursor: pointer;
+  color: var(--iui-color-text);
+  gap: var(--iui-size-xs);
 
-    &.iui-loading {
-      cursor: progress;
-      font-style: italic;
-      color: var(--iui-color-text-disabled);
-    }
+  &[data-iui-loading='true'] {
+    cursor: progress;
+    font-style: italic;
+    color: var(--iui-color-text-disabled);
+  }
 
-    > .iui-checkbox-label,
-    > .iui-radio-label {
-      display: flex;
-      align-items: center;
+  > .iui-checkbox-label,
+  > .iui-radio-label {
+    line-height: var(--iui-size-l);
 
-      svg {
-        @include iui-icon-style('m');
-        vertical-align: middle;
-        fill: var(--iui-color-icon);
-      }
-    }
-
-    &.iui-disabled {
-      cursor: not-allowed;
-      color: var(--iui-color-text-disabled);
-
-      svg {
-        fill: var(--iui-color-icon-disabled);
-      }
-    }
-
-    &.iui-positive {
-      color: var(--iui-color-text-positive);
-    }
-
-    &.iui-warning {
-      color: var(--iui-color-text-warning);
-    }
-
-    &.iui-negative {
-      color: var(--iui-color-text-negative);
+    svg {
+      @include mixins.iui-icon-style('m');
+      vertical-align: middle;
+      fill: var(--iui-color-icon);
     }
   }
 
+  &[data-iui-disabled='true'] {
+    cursor: not-allowed;
+    color: var(--iui-color-text-disabled);
+
+    svg {
+      fill: var(--iui-color-icon-disabled);
+    }
+  }
+
+  @each $status in ('positive', 'warning', 'negative') {
+    &[data-iui-status='#{$status}'] {
+      color: var(--iui-color-text-#{$status});
+    }
+  }
+}
+
+.iui-checkbox {
   --_iui-checkbox-checkmark-svg: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="m6.5 12.5-4.5-4.5 1.5-1.5 3 3 6-6 1.5 1.5z" /></svg>');
   --_iui-checkbox-indeterminate-svg: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="m2.75 6.875h10.5v2.25h-10.5z" /></svg>');
   --_iui-checkbox-unchecked-svg: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16"></svg>');
@@ -64,23 +57,22 @@
   --_iui-checkbox-background-color: var(--iui-color-background);
   --_iui-checkbox-mask-image: initial;
 
-  @include iui-icon-style('m');
+  @include mixins.iui-icon-style('m');
   appearance: none; // disable default browser styles
   margin: 0;
   position: relative;
   border-radius: var(--iui-border-radius-1);
   background-color: var(--_iui-checkbox-background-color);
   cursor: pointer;
+  transition: outline-color var(--iui-duration-1) ease-out;
+  outline: solid 1px var(--_iui-checkbox-border-color);
+  outline-offset: -1px;
 
+  // increase tap target size to 24x24 by default and allow adjusting through CSS var
   &::before {
     content: '';
     position: absolute;
-    inset: 0;
-    transition: border-color var(--iui-duration-1) ease-out;
-    border-radius: inherit;
-    border-style: solid;
-    border-width: 1px;
-    border-color: var(--_iui-checkbox-border-color);
+    inset: calc((var(--iui-checkbox-target-size, 24px) - 16px) / -2);
   }
 
   &::after {
@@ -107,7 +99,7 @@
     --_iui-checkbox-border-color: var(--iui-color-border-foreground-hover);
   }
 
-  @include iui-focus($thickness: 2px);
+  @include mixins.iui-focus($thickness: 2px);
 
   &:disabled {
     --_iui-checkbox-svg-color: var(--iui-color-icon-disabled);
@@ -141,7 +133,7 @@
     }
   }
 
-  &.iui-loading {
+  &[data-iui-loading='true'] {
     --_iui-checkbox-border-color: transparent;
     --_iui-checkbox-background-color: transparent;
     opacity: 0;

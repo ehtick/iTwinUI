@@ -2,21 +2,39 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
-import { Button } from '../Buttons/Button';
-import { NonIdealState } from './NonIdealState';
-import { CommonProps } from '../utils';
-import {
-  Svg401,
-  Svg403,
-  Svg404,
-  Svg500,
-  Svg502,
-  Svg503,
-  SvgError,
-  SvgRedirect,
-  SvgTimedOut,
-} from '@itwin/itwinui-illustrations-react';
+import * as React from 'react';
+import { Button } from '../Buttons/Button.js';
+import { NonIdealState } from './NonIdealState.js';
+import { ProgressRadial } from '../ProgressIndicators/ProgressRadial.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+
+const Svg401 = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/Svg401'),
+);
+const Svg403 = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/Svg403'),
+);
+const Svg404 = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/Svg404'),
+);
+const Svg500 = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/Svg500'),
+);
+const Svg502 = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/Svg502'),
+);
+const Svg503 = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/Svg503'),
+);
+const SvgError = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/SvgError'),
+);
+const SvgRedirect = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/SvgRedirect'),
+);
+const SvgTimedOut = React.lazy(
+  () => import('@itwin/itwinui-illustrations-react/SvgTimedOut'),
+);
 
 /** @deprecated Use `NonIdealState` instead. */
 export type ErrorPageType =
@@ -51,8 +69,7 @@ export type ErrorTypeTranslations = {
   unauthorized: string;
 };
 
-/** @deprecated Use `NonIdealState` instead. */
-export type ErrorPageProps = {
+type ErrorPageProps = {
   /**
    * Type of error controls image and default text
    */
@@ -94,7 +111,7 @@ export type ErrorPageProps = {
    * Used to translate default error messages, if no specific @errorName passed in
    */
   translatedErrorMessages?: ErrorTypeTranslations;
-} & Omit<CommonProps, 'title'>;
+};
 
 /**
  * @deprecated Use `NonIdealState` instead for a smaller client bundle.
@@ -103,7 +120,7 @@ export type ErrorPageProps = {
  * @example
  * <ErrorPage errorType='401' />
  */
-export const ErrorPage = (props: ErrorPageProps): JSX.Element => {
+export const ErrorPage = React.forwardRef((props, forwardedRef) => {
   const {
     errorType,
     errorName,
@@ -129,7 +146,7 @@ export const ErrorPage = (props: ErrorPageProps): JSX.Element => {
     ...translatedErrorMessages,
   } as ErrorTypeTranslations;
 
-  function getErrorIcon(): JSX.Element {
+  function getErrorIcon(): React.JSX.Element {
     switch (errorType) {
       case '300':
       case '301':
@@ -215,9 +232,9 @@ export const ErrorPage = (props: ErrorPageProps): JSX.Element => {
     }
   }
 
-  function getPrimaryButton(): JSX.Element | undefined {
+  function getPrimaryButton(): React.JSX.Element | null {
     if (!primaryButtonHandle || !primaryButtonLabel) {
-      return undefined;
+      return null;
     }
     return (
       <Button styleType='high-visibility' onClick={primaryButtonHandle}>
@@ -226,9 +243,9 @@ export const ErrorPage = (props: ErrorPageProps): JSX.Element => {
     );
   }
 
-  function getSecondaryButton(): JSX.Element | undefined {
+  function getSecondaryButton(): React.JSX.Element | null {
     if (!secondaryButtonHandle || !secondaryButtonLabel) {
-      return undefined;
+      return null;
     }
     return (
       <Button styleType='default' onClick={secondaryButtonHandle}>
@@ -237,12 +254,12 @@ export const ErrorPage = (props: ErrorPageProps): JSX.Element => {
     );
   }
 
-  function getActions(): JSX.Element | undefined {
+  function getActions(): React.JSX.Element | null {
     const primaryButton = getPrimaryButton();
     const secondaryButton = getSecondaryButton();
 
     if (!primaryButton && !secondaryButton) {
-      return undefined;
+      return null;
     }
 
     return (
@@ -255,13 +272,19 @@ export const ErrorPage = (props: ErrorPageProps): JSX.Element => {
 
   return (
     <NonIdealState
-      svg={getErrorIcon()}
+      svg={
+        <React.Suspense fallback={<ProgressRadial />}>
+          {getErrorIcon()}
+        </React.Suspense>
+      }
       heading={getHeadingMessage()}
       description={errorMessage}
       actions={getActions()}
+      ref={forwardedRef}
       {...rest}
     />
   );
-};
-
-export default ErrorPage;
+}) as PolymorphicForwardRefComponent<'div', ErrorPageProps>;
+if (process.env.NODE_ENV === 'development') {
+  ErrorPage.displayName = 'ErrorPage';
+}

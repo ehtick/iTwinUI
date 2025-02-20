@@ -3,9 +3,8 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 import { render } from '@testing-library/react';
-import React from 'react';
 
-import { DialogTitleBar } from './DialogTitleBar';
+import { DialogTitleBar } from './DialogTitleBar.js';
 
 it('should render in its most basic state', () => {
   const { container } = render(<DialogTitleBar titleText='test-title' />);
@@ -35,7 +34,7 @@ it('should render only render children while ignoring title prop', () => {
 });
 
 it('should render close button when isDismissible is true', () => {
-  const onClose = jest.fn();
+  const onClose = vi.fn();
   const { container } = render(
     <DialogTitleBar isDismissible onClose={onClose} titleText='test-title' />,
   );
@@ -67,7 +66,7 @@ it('should propagate miscellaneous props', () => {
     '.iui-dialog-title-bar',
   ) as HTMLElement;
   expect(titleBar).toHaveClass('test-class');
-  expect(titleBar).toHaveStyle('color: red;');
+  expect(titleBar.style.color).toEqual('red');
   expect(titleBar.id).toEqual('test-id');
 });
 

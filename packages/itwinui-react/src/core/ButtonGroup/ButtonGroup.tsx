@@ -2,12 +2,33 @@
  * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
-import React from 'react';
+import * as React from 'react';
 import cx from 'classnames';
-import { useTheme, useOverflow, useMergedRefs } from '../utils';
-import '@itwin/itwinui-css/css/button.css';
+import { Box, OverflowContainer } from '../../utils/index.js';
+import type {
+  AnyString,
+  PolymorphicForwardRefComponent,
+} from '../../utils/index.js';
+import {
+  Composite,
+  CompositeItem,
+  FloatingDelayGroup,
+} from '@floating-ui/react';
+import { defaultTooltipDelay } from '../Tooltip/Tooltip.js';
 
-export type ButtonGroupProps = {
+// ----------------------------------------------------------------------------
+
+/** This context is used for letting descendant IconButtons know the ButtonGroup's orientation. */
+export const ButtonGroupContext = React.createContext<string | undefined>(
+  undefined,
+);
+if (process.env.NODE_ENV === 'development') {
+  ButtonGroupContext.displayName = 'ButtonGroupContext';
+}
+
+// ----------------------------------------------------------------------------
+
+type ButtonGroupProps = {
   /**
    * Buttons in the ButtonGroup.
    */
@@ -32,14 +53,23 @@ export type ButtonGroupProps = {
    * @default 'horizontal'
    */
   orientation?: 'horizontal' | 'vertical';
-} & React.ComponentPropsWithRef<'div'>;
+  /**
+   * ARIA role for the ButtonGroup.
+   *
+   * If set to toolbar', it will automatically support arrow-key navigation.
+   *
+   * **Note**: `role="toolbar"` should not be used when the ButtonGroup contains
+   * non-button elements (such as inputs).
+   */
+  role?: 'toolbar' | AnyString;
+};
 
 /**
  * Group buttons together for common actions.
  * Handles responsive overflow when the `overflowButton` prop is specified.
  *
  * @example
- * <ButtonGroup>
+ * <ButtonGroup role="toolbar">
  *   <IconButton>
  *     <SvgAdd />
  *   </IconButton>
@@ -62,66 +92,167 @@ export type ButtonGroupProps = {
  *   {buttons}
  * </ButtonGroup>
  */
-export const ButtonGroup = React.forwardRef<HTMLDivElement, ButtonGroupProps>(
-  (props, ref) => {
-    const {
-      children,
-      className,
-      overflowButton,
-      overflowPlacement = 'end',
-      orientation = 'horizontal',
-      ...rest
-    } = props;
+export const ButtonGroup = React.forwardRef((props, forwardedRef) => {
+  const {
+    children: childrenProp,
+    overflowButton,
+    overflowPlacement = 'end',
+    orientation = 'horizontal',
+    ...rest
+  } = props;
 
-    const items = React.useMemo(
-      () => React.Children.map(children, (child) => <div>{child}</div>) ?? [],
-      [children],
+  const children = React.useMemo(() => {
+    if (props.role !== 'toolbar') {
+      return childrenProp;
+    }
+
+    return React.Children.map(childrenProp, (child, index) =>
+      React.isValidElement(child) ? (
+        <CompositeItem key={index} render={child} />
+      ) : (
+        child
+      ),
     );
+  }, [childrenProp, props.role]);
 
-    useTheme();
+  const node = overflowButton ? (
+    <OverflowGroup
+      orientation={orientation}
+      overflowButton={overflowButton}
+      overflowPlacement={overflowPlacement}
+      ref={forwardedRef}
+      {...rest}
+    >
+      {children}
+    </OverflowGroup>
+  ) : (
+    <BaseGroup orientation={orientation} ref={forwardedRef} {...rest}>
+      {children}
+    </BaseGroup>
+  );
 
-    const [overflowRef, visibleCount] = useOverflow(
-      items,
-      !overflowButton,
-      orientation,
-    );
-    const refs = useMergedRefs(overflowRef, ref);
-
-    return (
-      <div
-        className={cx(
-          {
-            'iui-button-group': orientation === 'horizontal',
-            'iui-button-group-vertical': orientation === 'vertical',
-            'iui-button-group-overflow-x':
-              !!overflowButton && orientation === 'horizontal',
-          },
-          className,
+  return (
+    <FloatingDelayGroup delay={defaultTooltipDelay}>
+      <ButtonGroupContext.Provider value={orientation}>
+        {props.role === 'toolbar' ? (
+          <Composite
+            orientation={orientation}
+            render={node}
+            disabledIndices={[]}
+          />
+        ) : (
+          node
         )}
-        aria-orientation={orientation}
-        ref={refs}
-        {...rest}
-      >
-        <>
-          {visibleCount < items.length &&
-            overflowButton &&
-            overflowPlacement === 'start' && (
-              <div>{overflowButton(visibleCount)}</div>
-            )}
+      </ButtonGroupContext.Provider>
+    </FloatingDelayGroup>
+  );
+}) as PolymorphicForwardRefComponent<'div', ButtonGroupProps>;
+if (process.env.NODE_ENV === 'development') {
+  ButtonGroup.displayName = 'ButtonGroup';
+}
 
-          {visibleCount < items.length
-            ? items.slice(0, Math.max(0, visibleCount - 1))
-            : items}
+// ----------------------------------------------------------------------------
 
-          {visibleCount < items.length &&
-            overflowButton &&
-            overflowPlacement === 'end' && (
-              <div>{overflowButton(visibleCount)}</div>
-            )}
-        </>
-      </div>
-    );
-  },
-);
+const BaseGroup = React.forwardRef((props, forwardedRef) => {
+  const { orientation, className, ...rest } = props;
 
-export default ButtonGroup;
+  return (
+    <Box
+      className={cx('iui-button-group', className)}
+      data-iui-orientation={
+        orientation === 'vertical' ? orientation : undefined
+      }
+      ref={forwardedRef}
+      {...rest}
+    />
+  );
+}) as PolymorphicForwardRefComponent<
+  'div',
+  Pick<ButtonGroupProps, 'orientation'>
+>;
+
+// ----------------------------------------------------------------------------
+
+type OverflowGroupProps = Pick<
+  ButtonGroupProps,
+  'children' | 'orientation' | 'overflowPlacement'
+> &
+  Required<Pick<ButtonGroupProps, 'overflowButton'>>;
+
+const OverflowGroup = React.forwardRef((props, forwardedRef) => {
+  const {
+    children: childrenProp,
+    orientation,
+    overflowButton,
+    overflowPlacement,
+    ...rest
+  } = props;
+
+  const items = React.useMemo(
+    () => React.Children.toArray(childrenProp).filter(Boolean),
+    [childrenProp],
+  );
+
+  return (
+    <OverflowContainer
+      as={BaseGroup}
+      itemsCount={items.length}
+      overflowOrientation={orientation}
+      orientation={orientation}
+      {...rest}
+      className={cx(
+        {
+          'iui-button-group-overflow-x':
+            !!overflowButton && orientation === 'horizontal',
+        },
+        props.className,
+      )}
+      ref={forwardedRef}
+    >
+      <OverflowGroupContent
+        overflowButton={overflowButton}
+        overflowPlacement={overflowPlacement}
+        items={items}
+      />
+    </OverflowContainer>
+  );
+}) as PolymorphicForwardRefComponent<'div', OverflowGroupProps>;
+
+// ----------------------------------------------------------------------------
+
+type OverflowGroupContentProps = Pick<
+  OverflowGroupProps,
+  'overflowButton' | 'overflowPlacement'
+> & {
+  items: ReturnType<typeof React.Children.toArray>;
+};
+
+const OverflowGroupContent = (props: OverflowGroupContentProps) => {
+  const { overflowButton, overflowPlacement, items } = props;
+  const { visibleCount } = OverflowContainer.useContext();
+
+  const overflowStart =
+    overflowPlacement === 'start'
+      ? items.length - visibleCount
+      : visibleCount - 1;
+
+  if (!(visibleCount < items.length)) {
+    return items;
+  }
+
+  return (
+    <>
+      {overflowButton &&
+        overflowPlacement === 'start' &&
+        overflowButton(overflowStart)}
+
+      {overflowPlacement === 'start'
+        ? items.slice(overflowStart + 1)
+        : items.slice(0, Math.max(0, overflowStart))}
+
+      {overflowButton &&
+        overflowPlacement === 'end' &&
+        overflowButton(overflowStart)}
+    </>
+  );
+};

@@ -1,0 +1,57 @@
+---
+import Layout from './_layout.astro';
+import Anchor_ from '../components/Anchor.astro';
+---
+
+<Layout title='Anchor'>
+  <style is:global>
+    section[id^='demo'] {
+      margin: 0 -4px;
+      padding: 4px;
+    }
+  </style>
+
+  <h1>Anchor</h1>
+  <hr />
+
+  <section id='demo-default'>
+    <p>
+      <Anchor_ href='https://itwin.github.io/iTwinUI/' id='test-1'>iTwinUI components list</Anchor_>
+       - A basic anchor link.
+    </p>
+
+    <p>
+      <!-- prettier-ignore -->
+      <Anchor_
+        isExternal
+        referrerpolicy='no-referrer'
+        target='_blank'
+        href='https://www.bentley.com/en'
+        id='test-2'
+      >Bentley Systems<span class='iui-visually-hidden'> (opens in new tab)</span></Anchor_>
+       - An anchor link that opens in a new tab / window.
+    </p>
+
+    <p>
+      <Anchor_ underline href='#'>This one</Anchor_> is underlined by default.
+    </p>
+  </section>
+
+  <section id='demo-status'>
+    <p>
+      <Anchor_ href='#'>Accent</Anchor_>
+    </p>
+    <p>
+      <Anchor_ status='informational' href='#'>Informational</Anchor_>
+    </p>
+    <p>
+      <Anchor_ status='positive' href='#'>Positive</Anchor_>
+    </p>
+    <p>
+      <Anchor_ status='warning' href='#'>Warning</Anchor_>
+    </p>
+    <p>
+      <Anchor_ status='negative' href='#'>Negative</Anchor_>
+    </p>
+  </section>
+</Layout>

@@ -1,6 +1,6 @@
 // Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 // See LICENSE.md in the project root for license terms and full copyright notice.
-@import './tabs';
+@use 'base';
 
 @mixin iui-tabs-borderless {
   .iui-tab {
@@ -9,44 +9,40 @@
     background-color: transparent;
 
     &::after {
-      bottom: 0;
-      right: 0;
+      inset-block-end: 0;
+      inset-inline-end: 0;
     }
 
     &:hover {
       background-color: var(--iui-color-background-transparent-hover);
     }
 
-    &.iui-active {
+    &[aria-selected='true'] {
       background-color: var(--iui-color-background-accent-muted);
     }
   }
 
-  @at-root {
-    .iui-horizontal & ~ .iui-tabs-content {
-      margin-top: calc(0px - var(--iui-size-3xs));
-      border-top: var(--iui-size-3xs) solid var(--iui-color-border);
-    }
+  .iui-horizontal & ~ .iui-tabs-content {
+    margin-block-start: calc(0px - var(--iui-size-3xs));
+    border-block-start: var(--iui-size-3xs) solid var(--iui-color-border);
   }
 
-  @at-root {
-    .iui-vertical & ~ .iui-tabs-content {
-      margin-left: calc(0px - var(--iui-size-3xs));
-      padding-left: var(--iui-size-s);
-      padding-right: var(--iui-size-s);
-      border-left: var(--iui-size-3xs) solid var(--iui-color-border);
-    }
+  .iui-vertical & ~ .iui-tabs-content {
+    margin-inline-start: calc(0px - var(--iui-size-3xs));
+    padding-inline-start: var(--iui-size-s);
+    padding-inline-end: var(--iui-size-s);
+    border-inline-start: var(--iui-size-3xs) solid var(--iui-color-border);
   }
 
   &.iui-green {
-    .iui-active {
+    [aria-selected='true'] {
       background-color: var(--iui-color-background-positive-muted);
     }
   }
 
   &.iui-large {
     .iui-tab {
-      min-height: calc(var(--iui-size-m) * 3.5);
+      min-block-size: calc(var(--iui-size-m) * 3.5);
     }
 
     .iui-tab-description {
@@ -54,7 +50,7 @@
     }
   }
 
-  .iui-tab[disabled]:hover {
+  .iui-tab:is([disabled], :disabled, [aria-disabled='true'], [data-iui-disabled='true']):hover {
     background-color: transparent;
   }
 }

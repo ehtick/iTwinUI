@@ -1,0 +1,7 @@
+.demo-container {
+  display: grid;
+  gap: var(--iui-size-xs);
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  justify-items: end;
+}

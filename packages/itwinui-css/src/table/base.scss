@@ -1,0 +1,553 @@
+// Copyright (c) Bentley Systems, Incorporated. All rights reserved.
+// See LICENSE.md in the project root for license terms and full copyright notice.
+@use '../mixins';
+
+@mixin iui-table {
+  @include mixins.iui-reset;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  background-color: var(--iui-color-background);
+  border-radius: var(--iui-border-radius-1);
+
+  @include iui-table-cell-icon;
+
+  > .iui-table-paginator {
+    position: sticky;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    z-index: 3; // Above the table body and sticky columns/cells
+  }
+}
+
+@mixin iui-table-header-wrapper {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 3; // Above the table body and sticky columns/cells
+
+  display: flex;
+  flex-shrink: 0;
+}
+
+@mixin iui-table-header {
+  display: flex;
+  user-select: none;
+  min-inline-size: 100%;
+  flex-shrink: 0;
+  font-weight: var(--iui-font-weight-semibold);
+  border-block-end: 1px solid var(--iui-color-border);
+
+  .iui-table-cell {
+    background-color: var(--iui-color-background);
+  }
+
+  .iui-table-cell:not(.iui-slot) {
+    @include mixins.iui-focus;
+    column-gap: var(--iui-size-2xs);
+    padding-block: calc(var(--iui-size-s) * 0.5);
+
+    &.iui-actionable {
+      cursor: pointer;
+    }
+
+    &.iui-grabbing {
+      cursor: grabbing;
+    }
+
+    > .iui-table-resizer {
+      block-size: 100%;
+      inline-size: var(--iui-size-m);
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-end: 0;
+      transform: translateX(50%);
+      touch-action: none;
+      cursor: ew-resize;
+      z-index: 1;
+      opacity: 0;
+
+      > .iui-table-resizer-bar {
+        block-size: 100%;
+        inline-size: var(--iui-size-3xs);
+        margin-inline: auto;
+        transition:
+          background-color var(--iui-duration-1) ease-out,
+          width var(--iui-duration-1) ease-out;
+        background-color: var(--iui-color-border);
+      }
+
+      &:hover > .iui-table-resizer-bar {
+        inline-size: var(--iui-size-2xs);
+        background-color: var(--iui-color-border-accent);
+      }
+    }
+
+    &:hover > .iui-table-resizer {
+      opacity: 1;
+    }
+
+    &:is(:hover, :focus-visible),
+    &:has(:focus-visible) {
+      background-color: var(--iui-color-background-hover);
+
+      .iui-table-sort {
+        opacity: 1;
+      }
+    }
+  }
+
+  .iui-table-reorder-bar {
+    position: absolute;
+    block-size: 100%;
+    inline-size: var(--iui-size-3xs);
+  }
+
+  .iui-table-reorder-column-right {
+    > .iui-table-reorder-bar {
+      inset-inline-end: 0;
+    }
+  }
+
+  .iui-table-reorder-column-left {
+    > .iui-table-reorder-bar {
+      inset-inline-start: 0;
+    }
+  }
+
+  .iui-table-reorder-column-left,
+  .iui-table-reorder-column-right {
+    > .iui-table-reorder-bar {
+      background-color: var(--iui-color-border-accent);
+    }
+  }
+
+  // Sort icon
+  .iui-table-sort {
+    opacity: 0;
+    --_iui-table-cell-icon-fill: var(--iui-color-icon-muted);
+  }
+
+  // Sorted column
+  .iui-sorted {
+    background-color: var(--iui-color-background-hover);
+
+    .iui-table-sort {
+      opacity: 1;
+      --_iui-table-cell-icon-fill: var(--iui-color-icon);
+    }
+  }
+}
+
+@mixin iui-table-column-manager {
+  padding: var(--iui-size-xs);
+  max-block-size: 17.25rem; // Show approximately 8.5 checkboxes
+  overflow-y: auto;
+}
+
+@mixin iui-table-row {
+  --_iui-table-cell-icon-fill: var(--iui-color-icon-muted);
+
+  min-inline-size: 100%;
+  display: flex;
+
+  // To prevent the row from being overlapped by the tallest header when scrollToRow is used.
+  scroll-margin-block-start: calc(var(--_iui-table-header-size) + var(--iui-size-xl));
+
+  .iui-table-header & {
+    flex-grow: 1;
+  }
+
+  .iui-table-body & {
+    .iui-table-cell {
+      border-block-start: solid 1px transparent;
+      border-block-end: solid 1px transparent;
+      border-block-end-color: var(--iui-color-border);
+      background-color: var(--iui-color-background);
+      transition: border var(--iui-duration-1) ease-out;
+    }
+
+    > .iui-slot > .iui-table-more-options {
+      opacity: 0;
+    }
+
+    &:where(:hover, :focus-within) > .iui-slot > .iui-table-more-options {
+      opacity: 1;
+    }
+
+    &:where(:hover:not(.iui-loading):not([aria-disabled='true'])) .iui-table-cell {
+      background-color: var(--iui-color-background-hover);
+    }
+
+    .iui-table-row-expander > .iui-button-icon {
+      @media (prefers-reduced-motion: no-preference) {
+        transition: transform var(--iui-duration-1) ease-out;
+      }
+    }
+
+    &.iui-table-row-expanded {
+      overflow: hidden;
+
+      .iui-table-cell {
+        border-inline-start-color: var(--iui-color-border);
+        border-inline-end-color: var(--iui-color-border);
+        border-block-end-color: transparent;
+      }
+
+      .iui-table-row-expander > .iui-button-icon {
+        transform: rotate(90deg);
+      }
+
+      + .iui-table-expanded-content {
+        border-inline-start-color: var(--iui-color-border);
+        border-inline-end-color: var(--iui-color-border);
+      }
+    }
+
+    &.iui-table-expanded-content {
+      overflow: hidden;
+      border-inline-start: 1px solid transparent;
+      border-inline-end: 1px solid transparent;
+      border-block-end: 1px solid var(--iui-color-border);
+      flex-shrink: 0;
+    }
+
+    // #region Selection
+    &:not([aria-selected='true']) + [aria-selected='true'] .iui-table-cell,
+    &[aria-selected='true']:first-child .iui-table-cell {
+      border-block-end-color: transparent;
+    }
+
+    &[aria-selected='true'] {
+      .iui-table-cell {
+        border-color: var(--iui-color-border-accent);
+        background-color: var(--iui-color-background-accent-muted);
+      }
+
+      + [aria-selected='true'] .iui-table-cell {
+        border-block-end-color: transparent;
+        border-block-start-color: hsl(var(--iui-color-accent-hsl) / var(--iui-opacity-4));
+      }
+
+      &:last-child .iui-table-cell {
+        border-block-end-color: var(--iui-color-border-accent);
+      }
+
+      /* stylelint-disable-next-line selector-max-compound-selectors */
+      + :not([aria-selected='true']) .iui-table-cell,
+      + .iui-table-expanded-content + .iui-table-row:not([aria-selected='true']) .iui-table-cell {
+        border-block-start-color: var(--iui-color-border-accent);
+      }
+
+      + .iui-table-expanded-content {
+        border-color: transparent var(--iui-color-border-accent);
+
+        &:last-child {
+          border-block-end-color: var(--iui-color-border-accent);
+        }
+      }
+    }
+    // #endregion Selection
+
+    // #region Statuses & states
+    &.iui-new {
+      font-weight: var(--iui-font-weight-semibold);
+
+      > .iui-main-column::before {
+        content: '•';
+        position: absolute;
+        inset-inline-start: 0;
+        font-size: var(--iui-font-size-4);
+        color: var(--iui-color-icon-positive);
+      }
+    }
+
+    &.iui-loading,
+    .iui-table-cell[aria-disabled='true'],
+    &.iui-table-expanded-content[aria-disabled='true'] {
+      --_iui-table-cell-icon-fill: var(--iui-color-icon-muted);
+      --_iui-table-cell-image-filter: grayscale(100%);
+
+      color: var(--iui-color-text-disabled);
+
+      img,
+      svg,
+      .iui-avatar {
+        filter: var(--_iui-table-cell-image-filter);
+      }
+    }
+
+    &.iui-loading {
+      font-style: italic;
+
+      &,
+      .iui-checkbox {
+        cursor: progress;
+      }
+    }
+
+    .iui-table-cell[aria-disabled='true'],
+    &.iui-table-expanded-content[aria-disabled='true'] {
+      cursor: not-allowed;
+    }
+
+    &[data-iui-status='positive'] {
+      @include iui-table-row-status($status: positive);
+    }
+
+    &[data-iui-status='warning'] {
+      @include iui-table-row-status($status: warning);
+    }
+
+    &[data-iui-status='negative'] {
+      @include iui-table-row-status($status: negative);
+    }
+    // #endregion Statuses & states
+  }
+
+  .iui-table-body:not(:has(+ .iui-table-paginator)) & {
+    &:last-of-type {
+      border-end-start-radius: var(--iui-border-radius-1);
+      border-end-end-radius: var(--iui-border-radius-1);
+    }
+  }
+}
+
+// For content placed after the table body and before the paginator
+@mixin iui-table-body-extra {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // To center the table-body-extra even when scrolling horizontally
+  // (when `isLoading && data.length !== 0`)
+  &[data-iui-loading='true'] {
+    position: sticky;
+    inset-inline-start: 0;
+  }
+}
+
+@mixin iui-table-header-actions-container {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-inline-end: var(--iui-size-s);
+
+  .iui-table-cell-end-icon {
+    inline-size: unset;
+    block-size: unset;
+    margin: 0;
+    margin-inline-start: auto;
+  }
+}
+
+@mixin iui-table-body {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  // Allows columns with static width to take more space than the table width
+  align-items: flex-start;
+
+  // Table body should be sticky only when no rows exist
+  &:has(> .iui-table-empty) {
+    position: sticky;
+    inset-inline-start: 0;
+  }
+
+  &.iui-scroll-snapping {
+    scroll-snap-type: y mandatory;
+
+    .iui-table-row {
+      scroll-snap-align: start none;
+    }
+  }
+
+  &.iui-zebra-striping .iui-table-row:nth-child(even):not([aria-selected='true']) .iui-table-cell {
+    background-color: var(--iui-color-background-zebra);
+  }
+
+  &.iui-zebra-striping .iui-table-row:nth-child(even):not([aria-selected='true']):hover .iui-table-cell {
+    background-color: var(--iui-color-background-hover);
+  }
+
+  // Empty & loading states
+  > .iui-table-empty {
+    text-align: center;
+    margin-inline: auto;
+    padding: var(--iui-size-xl);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    color: var(--iui-color-text-muted);
+    background-color: var(--iui-color-background);
+  }
+}
+
+@mixin iui-table-cell {
+  align-items: center;
+  display: flex;
+  flex-grow: 1;
+  min-inline-size: var(--iui-size-2xl);
+  padding-inline-start: var(--iui-size-m);
+  flex-basis: var(--iui-size-2xl);
+  position: relative;
+  word-break: break-word;
+
+  //Adds the border-radius only to the first and last cells in the last row when the table has no paginator.
+  .iui-table-body:not(:has(+ .iui-table-paginator)) > .iui-table-row:last-of-type & {
+    &:first-of-type {
+      border-end-start-radius: var(--iui-border-radius-1);
+    }
+
+    &:last-of-type {
+      border-end-end-radius: var(--iui-border-radius-1);
+    }
+  }
+
+  &:first-of-type {
+    border-inline-start: solid 1px transparent;
+  }
+
+  &:last-of-type {
+    border-inline-end: solid 1px transparent;
+  }
+
+  &.iui-slot {
+    inline-size: calc(var(--iui-size-l) * 2);
+    padding: 0;
+    flex-grow: 0;
+    min-inline-size: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-basis: calc(var(--iui-size-l) * 2);
+
+    // make the checkbox bigger (32x32) to prevent accidentally clicking on the row
+    --iui-checkbox-target-size: 32px;
+  }
+
+  &.iui-table-cell-sticky {
+    position: sticky;
+    z-index: 2; // Above the non-sticky columns and the table resizer
+    inset-inline-start: var(--iui-table-sticky-left, initial);
+    inset-inline-end: var(--iui-table-sticky-right, initial);
+  }
+
+  &:not(.iui-slot):last-child {
+    padding-inline-end: var(--iui-size-m);
+  }
+
+  &[data-iui-status='positive'] {
+    @include iui-table-cell-status($status: positive);
+  }
+
+  &[data-iui-status='warning'] {
+    @include iui-table-cell-status($status: warning);
+  }
+
+  &[data-iui-status='negative'] {
+    @include iui-table-cell-status($status: negative);
+  }
+
+  &[contenteditable] {
+    outline-offset: -1px;
+
+    &:hover {
+      outline: 1px solid var(--iui-color-border-accent);
+    }
+
+    &:focus {
+      background-color: var(--iui-color-background);
+      outline: 1px solid var(--iui-color-text-accent);
+    }
+  }
+}
+
+@mixin iui-table-row-status($status) {
+  .iui-table-cell:first-of-type,
+  + .iui-table-expanded-content {
+    box-shadow: inset var(--iui-size-2xs) 0 0 0 var(--iui-color-border-#{$status});
+
+    @include mixins.iui-text-selection($status);
+  }
+
+  .iui-table-cell-end-icon {
+    --_iui-table-cell-icon-fill: var(--iui-color-icon-#{$status});
+  }
+
+  .iui-table-cell[aria-disabled='true'] .iui-table-cell-end-icon {
+    --_iui-table-cell-image-filter: none;
+  }
+}
+
+@mixin iui-table-cell-status($status) {
+  @include mixins.iui-text-selection($status);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: hsl(var(--iui-color-#{$status}-hsl) / var(--iui-opacity-6));
+  }
+}
+
+@mixin iui-table-cell-icon {
+  .iui-table-cell-end-icon,
+  .iui-table-cell-start-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    fill: var(--_iui-table-cell-icon-fill);
+
+    svg {
+      @include mixins.iui-icon-style('m');
+    }
+  }
+
+  .iui-table-cell-start-icon {
+    margin-inline-end: var(--iui-size-xs);
+  }
+
+  .iui-table-cell-end-icon {
+    inline-size: var(--iui-size-l);
+    block-size: var(--iui-size-l);
+    margin-inline-end: var(--iui-size-s);
+    margin-inline-start: auto;
+
+    :where(svg) {
+      fill: var(--_iui-table-cell-icon-fill);
+    }
+  }
+}
+
+@mixin iui-table-cell-shadow-base {
+  position: absolute;
+  inset-block: -1px;
+  inline-size: var(--iui-size-l);
+  pointer-events: none;
+
+  // Prevents scrollbar from appearing because `inset-block: -1px`
+  // makes content to overflow
+  .iui-table-header & {
+    inset-block: 0;
+  }
+}
+
+/// @arg side - must be one of: left, right
+@mixin iui-table-cell-shadow($side) {
+  @include iui-table-cell-shadow-base;
+  @if $side == left {
+    inset-inline-start: 0;
+    transform: translate(-100%);
+    box-shadow: inset -10px 0 5px -10px var(--iui-shadow-color);
+  }
+  @if $side == right {
+    inset-inline-end: 0;
+    transform: translate(100%);
+    box-shadow: inset 10px 0 5px -10px var(--iui-shadow-color);
+  }
+}

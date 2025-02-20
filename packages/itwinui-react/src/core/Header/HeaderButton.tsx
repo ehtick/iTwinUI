@@ -3,20 +3,17 @@
  * See LICENSE.md in the project root for license terms and full copyright notice.
  *--------------------------------------------------------------------------------------------*/
 
-import cx from 'classnames';
-import React from 'react';
-import { ButtonProps } from '../Buttons';
+import * as React from 'react';
+import type { ButtonProps } from '../Buttons/Button.js';
 
-import { PolymorphicForwardRefComponent, useTheme } from '../utils';
-import '@itwin/itwinui-css/css/header.css';
-import { HeaderSplitButton, HeaderSplitButtonProps } from './HeaderSplitButton';
-import {
-  HeaderDropdownButton,
-  HeaderDropdownButtonProps,
-} from './HeaderDropdownButton';
-import { HeaderBasicButton } from './HeaderBasicButton';
+import { Box } from '../../utils/index.js';
+import type { PolymorphicForwardRefComponent } from '../../utils/index.js';
+import { HeaderSplitButton } from './HeaderSplitButton.js';
+import { HeaderDropdownButton } from './HeaderDropdownButton.js';
+import type { DropdownButtonProps } from '../Buttons/DropdownButton.js';
+import { HeaderBasicButton } from './HeaderBasicButton.js';
 
-export type HeaderButtonProps = {
+type HeaderButtonProps = {
   /**
    * Main label of the header button.
    */
@@ -30,25 +27,12 @@ export type HeaderButtonProps = {
    * @default false
    */
   isActive?: boolean;
-} & Partial<Pick<HeaderDropdownButtonProps, 'menuItems'>> &
+  /**
+   * Modify the native `name` attribute of the `<button>` element.
+   */
+  htmlName?: string;
+} & Partial<Pick<DropdownButtonProps, 'menuItems'>> &
   Pick<ButtonProps, 'startIcon' | 'endIcon'>;
-
-const isSplitButton = (
-  props: Omit<Partial<HeaderSplitButtonProps>, 'name'>,
-): props is HeaderSplitButtonProps => {
-  return !!props.menuItems && !!props.onClick;
-};
-
-const isDropdownButton = (
-  props: Omit<Partial<HeaderDropdownButtonProps>, 'name'>,
-): props is HeaderDropdownButtonProps => {
-  return !!props.menuItems;
-};
-
-type HeaderButtonComponent = PolymorphicForwardRefComponent<
-  'button',
-  HeaderButtonProps
->;
 
 /**
  * Header button that handles slim state of the `Header` it's in.
@@ -60,67 +44,63 @@ type HeaderButtonComponent = PolymorphicForwardRefComponent<
  * <HeaderButton name='Project C' startIcon={<img style={{ objectFit: 'cover' }} src='project.png' />} />
  * <HeaderButton name='Project D' isActive />
  */
-export const HeaderButton: HeaderButtonComponent = React.forwardRef(
-  (props, ref) => {
-    const {
-      name,
-      description,
-      isActive = false,
-      className,
-      startIcon,
-      menuItems,
-      disabled,
-      ...rest
-    } = props;
+export const HeaderButton = React.forwardRef((props, ref) => {
+  const {
+    name,
+    description,
+    htmlName,
+    isActive = false,
+    startIcon,
+    menuItems,
+    disabled,
+    ...rest
+  } = props;
 
-    useTheme();
+  const buttonProps = {
+    startIcon: startIcon ? (
+      <Box as='span' className='iui-header-breadcrumb-button-icon' aria-hidden>
+        {startIcon}
+      </Box>
+    ) : null,
+    children: (
+      <Box as='span' className='iui-header-breadcrumb-button-text'>
+        <Box as='span' className='iui-header-breadcrumb-button-text-label'>
+          {name}
+        </Box>
+        {description && (
+          <Box as='span' className='iui-header-breadcrumb-button-text-sublabel'>
+            {description}
+          </Box>
+        )}
+      </Box>
+    ),
+    ref: ref,
+    disabled: disabled,
+    name: htmlName,
+    ...(!!menuItems && { menuItems }),
+    ...rest,
+  } as any;
 
-    const buttonProps = {
-      startIcon: React.isValidElement(startIcon)
-        ? React.cloneElement(startIcon as JSX.Element, {
-            className: cx(
-              'iui-header-breadcrumb-button-icon',
-              (startIcon as JSX.Element).props.className,
-            ),
-          })
-        : undefined,
-      className: className,
-      children: (
-        <span className='iui-header-breadcrumb-button-text'>
-          <span className='iui-header-breadcrumb-button-text-label'>
-            {name}
-          </span>
-          {description && (
-            <span className='iui-header-breadcrumb-button-text-sublabel'>
-              {description}
-            </span>
-          )}
-        </span>
-      ),
-      ref: ref,
-      disabled: disabled,
-      ...(!!menuItems && { menuItems }),
-      ...rest,
-    } as const;
-
-    const headerButton = isSplitButton(buttonProps) ? (
+  const headerButton =
+    !!props.menuItems && !!props.onClick ? (
       <HeaderSplitButton {...buttonProps} />
-    ) : isDropdownButton(buttonProps) ? (
+    ) : !!props.menuItems ? (
       <HeaderDropdownButton {...buttonProps} />
     ) : (
       <HeaderBasicButton {...buttonProps} />
     );
 
-    return (
-      <li
-        className='iui-header-breadcrumb-item'
-        aria-current={isActive ? 'location' : undefined}
-        aria-disabled={disabled ? 'true' : undefined}
-      >
-        {headerButton}
-      </li>
-    );
-  },
-);
-
-export default HeaderButton;
+  return (
+    <Box
+      as='li'
+      className='iui-header-breadcrumb-item'
+      aria-current={isActive ? 'location' : undefined}
+      aria-disabled={disabled ? 'true' : undefined}
+    >
+      {headerButton}
+    </Box>
+  );
+}) as PolymorphicForwardRefComponent<'button', HeaderButtonProps>;
+if (process.env.NODE_ENV === 'development') {
+  HeaderButton.displayName = 'HeaderButton';
+}
